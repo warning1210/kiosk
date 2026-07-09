@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아이스크림 키오스크 DFD Presentation</title>
+<style>
+  :root {
+    --primary: #0071e3;
+    --primary-gradient: linear-gradient(135deg, #0071e3, #42a5f5);
+    --bg-color: #000000;
+    --slide-bg: #ffffff;
+    --text-main: #1d1d1f;
+    --text-muted: #86868b;
+    --font-family: "SF Pro Display", "Apple SD Gothic Neo", system-ui, -apple-system, sans-serif;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-behavior: smooth;
+  }
+
+  .slide {
+    height: 100vh;
+    width: 100vw;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 3vw;
+    position: relative;
+  }
+
+  .slide-inner {
+    background: var(--slide-bg);
+    width: 100%;
+    max-width: 1400px;
+    height: 100%;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    padding: 60px;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+  
+  .slide-inner:hover {
+    transform: scale(1.01);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+  }
+
+  .title-slide {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: var(--primary-gradient);
+    color: white;
+  }
+
+  h1 {
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    font-size: 40px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-bottom: 16px;
+    color: var(--text-main);
+  }
+
+  .subtitle {
+    font-size: 28px;
+    font-weight: 400;
+    opacity: 0.9;
+  }
+
+  .desc {
+    margin-bottom: 24px;
+    color: var(--text-muted);
+    font-size: 20px;
+    line-height: 1.5;
+  }
+
+  .diagram-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    background: #fafafc;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #e5e5ea;
+    overflow: auto;
+  }
+
+  .mermaid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    font-size: 16px;
+  }
+
+  .mermaid svg {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    height: auto !important;
+    width: auto !important;
+  }
+
+  /* Navigation indicators */
+  .nav-dots {
+    position: fixed;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.5);
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .nav-dot:hover, .nav-dot.active {
+    background: #ffffff;
+    border-color: #ffffff;
+    transform: scale(1.3);
+  }
+  
+  .footer-note {
+    position: absolute;
+    bottom: 30px;
+    left: 60px;
+    font-size: 16px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <div class="nav-dots">
+    <a href="#slide1" class="nav-dot active"></a>
+    <a href="#slide2" class="nav-dot"></a>
+    <a href="#slide3" class="nav-dot"></a>
+    <a href="#slide4" class="nav-dot"></a>
+    <a href="#slide5" class="nav-dot"></a>
+  </div>
+
+  <!-- Slide 1: Title -->
+  <section class="slide" id="slide1">
+    <div class="slide-inner title-slide">
+      <h1>아이스크림 키오스크 시스템</h1>
+      <div class="subtitle">Data Flow Diagram (DFD) 분석 보고서</div>
+      <p style="margin-top: 40px; font-size: 22px; opacity: 0.8;">v6 실사용 요구사항 기반</p>
+    </div>
+  </section>
+
+  <!-- Slide 2: Context Diagram -->
+  <section class="slide" id="slide2">
+    <div class="slide-inner">
+      <h2>1. 배경도 (Context Diagram)</h2>
+      <p class="desc">시스템의 전체적인 범위와 외부 엔티티(고객, 관리자, 결제 시스템)와의 상호작용을 정의합니다.</p>
+      <div class="diagram-container">
+        <div class="mermaid">
+          flowchart LR
+              Customer([고객])
+              BranchAdmin([가맹점 관리자])
+              HQAdmin([본사 관리자])
+              System((아이스크림\n키오스크 시스템))
+              PG([결제 PG사])
+              
+              Customer -- "주문/결제 정보 (장바구니)" --> System
+              System -- "주문 결과/영수증" --> Customer
+              
+              BranchAdmin -- "재고 확인, 발주 요청" --> System
+              System -- "재고/발주 현황" --> BranchAdmin
+              
+              HQAdmin -- "상품/분점 관리, 발주 처리" --> System
+              System -- "시스템 운영 데이터" --> HQAdmin
+              
+              System -- "결제 요청 정보" --> PG
+              PG -- "결제 승인/실패 내역" --> System
+        </div>
+      </div>
+      <div class="footer-note">Level 0 DFD</div>
+    </div>
+  </section>
+
+  <!-- Slide 3: Level 1 DFD -->
+  <section class="slide" id="slide3">
+    <div class="slide-inner">
+      <h2>2. 최상위 DFD (Level 1 Diagram)</h2>
+      <p class="desc">ERD를 바탕으로 도출된 4개의 주요 프로세스와 데이터 저장소 간의 전체적인 흐름을 보여줍니다.</p>
+      <div class="diagram-container">
+        <div class="mermaid">
+          flowchart TD
+              %% External Entities
+              Customer([고객])
+              BranchAdmin([가맹점 관리자])
+              HQAdmin([본사 관리자])
+              
+              %% Processes
+              P1((1.0\n상품 관리))
+              P2((2.0\n주문 처리))
+              P3((3.0\n재고 및\n발주 관리))
+              P4((4.0\n운영 관리))
+              
+              %% Data Stores
+              D1[(D1 상품/할인)]
+              D2[(D2 주문/장바구니)]
+              D3[(D3 재고/발주)]
+              D4[(D4 가맹점/계정)]
+              
+              %% Flows
+              HQAdmin -->|"할인/상품 정보"| P1
+              P1 -->|"상품 데이터"| D1
+              
+              Customer -->|"장바구니, 결제 요청"| P2
+              D1 -->|"상품 정보, 할인율"| P2
+              P2 -->|"주문 내역, 상태"| D2
+              P2 -->|"결제완료 재고차감"| P3
+              
+              BranchAdmin -->|"수동 조정, 발주"| P3
+              HQAdmin -->|"발주 승인/반려"| P3
+              P3 -->|"재고량, 이력"| D3
+              
+              HQAdmin -->|"가맹점 생성, 상태변경"| P4
+              P4 -->|"계정/상태 변경 이력"| D4
+        </div>
+      </div>
+      <div class="footer-note">Level 1 DFD</div>
+    </div>
+  </section>
+
+  <!-- Slide 4: Level 2 - Order Process -->
+  <section class="slide" id="slide4">
+    <div class="slide-inner">
+      <h2>3. 상세 DFD: 주문 처리 (Process 2.0)</h2>
+      <p class="desc">모바일 장바구니 및 할인율이 적용된 결제 및 주문 생성 흐름입니다.</p>
+      <div class="diagram-container">
+        <div class="mermaid">
+          flowchart TD
+              Customer([고객])
+              
+              P2_1((2.1\n장바구니 담기))
+              P2_2((2.2\n할인 및\n금액 계산))
+              P2_3((2.3\n결제 및\n주문 생성))
+              
+              D1[(D1 PRODUCT)]
+              D2_1[(D2.1 CART)]
+              D2_2[(D2.2 ORDERS)]
+              D3[(D3 INVENTORY)]
+              PG([결제 PG사])
+              
+              Customer -->|"상품, 맛, 옵션 선택"| P2_1
+              P2_1 -->|"장바구니 상태 ACTIVE"| D2_1
+              D1 -->|"상품 할인율 (on_discount_yn)"| P2_2
+              D2_1 -->|"장바구니 아이템"| P2_2
+              P2_2 -->|"최종 금액, 할인액 확인"| P2_3
+              P2_3 -->|"결제 요청"| PG
+              PG -->|"결제 결과 (Approval/Fail)"| P2_3
+              P2_3 -->|"주문내역 생성"| D2_2
+              P2_3 -->|"장바구니 상태 CONVERTED"| D2_1
+              P2_3 -->|"결제완료 시 재고 차감"| D3
+        </div>
+      </div>
+      <div class="footer-note">Level 2 DFD - Process 2.0</div>
+    </div>
+  </section>
+
+  <!-- Slide 5: Level 2 - Inventory & Request -->
+  <section class="slide" id="slide5">
+    <div class="slide-inner">
+      <h2>4. 상세 DFD: 재고 및 발주 관리 (Process 3.0)</h2>
+      <p class="desc">발주 신청부터 승인, 그리고 재고 이력 추적(Ledger)까지의 데이터 흐름입니다.</p>
+      <div class="diagram-container">
+        <div class="mermaid">
+          flowchart TD
+              BranchAdmin1([가맹점 관리자])
+              HQAdmin([본사 관리자])
+              BranchAdmin2([가맹점 관리자])
+              
+              P3_1((3.1\n발주 신청))
+              P3_2((3.2\n발주 처리\n및 상태변경))
+              P3_3((3.3\n재고 입출고\n및 조정))
+              
+              D3_1[(D3.1 STOCK_REQUEST)]
+              D3_2[(D3.2 INVENTORY)]
+              D3_3[(D3.3 INVENTORY_LEDGER)]
+              
+              %% Left Side: Order Requests
+              BranchAdmin1 -->|"필요 상품/수량 입력"| P3_1
+              P3_1 -->|"신청내역 (PENDING)"| D3_1
+              
+              HQAdmin -->|"승인/반려/배송 상태변경"| P3_2
+              P3_2 -->|"상태 이력 업데이트\n(Status History)"| D3_1
+              
+              %% Right Side: Inventory Management
+              BranchAdmin2 -->|"재고 수동 조정 (ADJUST)"| P3_3
+              P3_2 -->|"COMPLETED 시 입고 반영"| P3_3
+              P3_3 -->|"수량 업데이트"| D3_2
+              P3_3 -->|"입/출고/조정 원장 기록\n(Change Type)"| D3_3
+        </div>
+      </div>
+      <div class="footer-note">Level 2 DFD - Process 3.0</div>
+    </div>
+  </section>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      fontFamily: '"SF Pro Display", "Apple SD Gothic Neo", sans-serif',
+      primaryColor: '#e3f2fd',
+      primaryTextColor: '#1d1d1f',
+      primaryBorderColor: '#90caf9',
+      lineColor: '#0071e3',
+      secondaryColor: '#f5f5f7',
+      tertiaryColor: '#ffffff'
+    },
+    flowchart: {
+      curve: 'basis',
+      nodeSpacing: 50,
+      rankSpacing: 50
+    }
+  });
+
+  // Intersection Observer for Nav Dots
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.nav-dot');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        dots.forEach(dot => {
+          dot.classList.toggle('active', dot.getAttribute('href') === `#${id}`);
+        });
+      }
+    });
+  }, { threshold: 0.5 });
+
+  slides.forEach(slide => observer.observe(slide));
+</script>
+</body>
+</html>
