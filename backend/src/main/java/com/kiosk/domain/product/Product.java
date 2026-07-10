@@ -60,7 +60,7 @@ public class Product {
 
     @Column(name = "selectable_flavor_count", nullable = false)
     @Builder.Default
-    private Integer selectableFlavorCount = 0;
+    private Byte selectableFlavorCount = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "container_policy", nullable = false)

@@ -40,7 +40,7 @@ public class Notice {
     private String title;
 
     @Lob
-    @Column(name = "content", nullable = false)
+    @Column(name = "content", nullable = false, length = 65535)
     private String content;
 
     @Column(name = "image_url", length = 500)

@@ -51,11 +51,11 @@ public class OrderItemFlavor {
     private String flavorNameSnapshot;
 
     @Column(name = "selection_order", nullable = false)
-    private Integer selectionOrder;
+    private Byte selectionOrder;
 
     @Column(name = "quantity", nullable = false)
     @Builder.Default
-    private Integer quantity = 1;
+    private Byte quantity = 1;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

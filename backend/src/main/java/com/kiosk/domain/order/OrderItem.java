@@ -61,10 +61,10 @@ public class OrderItem {
 
     @Column(name = "spoon_count", nullable = false)
     @Builder.Default
-    private Integer spoonCount = 0;
+    private Byte spoonCount = 0;
 
     @Column(name = "dry_ice_minutes")
-    private Integer dryIceMinutes;
+    private Byte dryIceMinutes;
 
     @Column(name = "request_note", length = 500)
     private String requestNote;
