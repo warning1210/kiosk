@@ -1,0 +1,117 @@
+package com.kiosk.kiosk.order;
+
+import com.kiosk.domain.branch.Branch;
+import com.kiosk.domain.branch.BranchRepository;
+import com.kiosk.domain.common.Language;
+import com.kiosk.domain.customer.Customer;
+import com.kiosk.domain.customer.CustomerRepository;
+import com.kiosk.domain.flavor.Flavor;
+import com.kiosk.domain.flavor.FlavorRepository;
+import com.kiosk.domain.order.ContainerType;
+import com.kiosk.domain.order.Order;
+import com.kiosk.domain.order.OrderItem;
+import com.kiosk.domain.order.OrderItemFlavor;
+import com.kiosk.domain.order.OrderItemFlavorRepository;
+import com.kiosk.domain.order.OrderItemRepository;
+import com.kiosk.domain.order.OrderRepository;
+import com.kiosk.domain.order.OrderStatus;
+import com.kiosk.domain.product.Product;
+import com.kiosk.domain.product.ProductRepository;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final OrderItemFlavorRepository orderItemFlavorRepository;
+    private final BranchRepository branchRepository;
+    private final ProductRepository productRepository;
+    private final FlavorRepository flavorRepository;
+    private final CustomerRepository customerRepository;
+
+    private record ResolvedItem(Product product, OrderItemRequest request, int itemTotal) {
+    }
+
+    @Transactional
+    public OrderCheckoutResponse checkout(OrderCheckoutRequest request) {
+        Branch branch = branchRepository.findById(request.branchId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "지점을 찾을 수 없습니다."));
+
+        Customer customer = null;
+        if (request.customerMobileNumber() != null && !request.customerMobileNumber().isBlank()) {
+            customer = customerRepository.findByMobileNumber(request.customerMobileNumber()).orElse(null);
+        }
+
+        List<ResolvedItem> resolved = new ArrayList<>();
+        int amountBeforeDiscount = 0;
+        for (OrderItemRequest itemRequest : request.items()) {
+            Product product = productRepository.findById(itemRequest.productId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."));
+            int itemTotal = product.getBasePrice();
+            amountBeforeDiscount += itemTotal;
+            resolved.add(new ResolvedItem(product, itemRequest, itemTotal));
+        }
+
+        int usedPoints = request.usedPoints() != null ? request.usedPoints() : 0;
+        usedPoints = Math.max(0, Math.min(usedPoints, amountBeforeDiscount));
+        usedPoints = customer != null ? Math.min(usedPoints, customer.getPointBalance()) : 0;
+        int finalAmount = amountBeforeDiscount - usedPoints;
+
+        Order order = Order.builder()
+                .branch(branch)
+                .customer(customer)
+                .orderNumber("ORD" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6))
+                .orderType(request.orderType())
+                .pickupAt(request.pickupAt())
+                .orderStatus(OrderStatus.PENDING_PAYMENT)
+                .language(request.language() != null ? request.language() : Language.ko)
+                .usedPoints(usedPoints)
+                .earnedPoints(0)
+                .amountBeforeDiscount(amountBeforeDiscount)
+                .discountAmount(usedPoints)
+                .finalAmount(finalAmount)
+                .build();
+        order = orderRepository.save(order);
+
+        for (ResolvedItem item : resolved) {
+            OrderItem orderItem = OrderItem.builder()
+                    .order(order)
+                    .product(item.product())
+                    .productNameSnapshot(item.product().getProductName())
+                    .unitPriceSnapshot(item.product().getBasePrice())
+                    .quantity(1)
+                    .itemTotal(item.itemTotal())
+                    .containerType(item.request().containerType() != null ? item.request().containerType() : ContainerType.NONE)
+                    .spoonCount(item.request().spoonCount() != null ? item.request().spoonCount() : 0)
+                    .dryIceMinutes(item.request().dryIceMinutes())
+                    .build();
+            orderItem = orderItemRepository.save(orderItem);
+
+            List<Long> flavorIds = item.request().flavorIds() != null ? item.request().flavorIds() : List.of();
+            int selectionOrder = 1;
+            for (Long flavorId : flavorIds) {
+                Flavor flavor = flavorRepository.findById(flavorId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "맛을 찾을 수 없습니다."));
+                OrderItemFlavor orderItemFlavor = OrderItemFlavor.builder()
+                        .orderItem(orderItem)
+                        .flavor(flavor)
+                        .flavorNameSnapshot(flavor.getFlavorName())
+                        .selectionOrder(selectionOrder++)
+                        .quantity(1)
+                        .build();
+                orderItemFlavorRepository.save(orderItemFlavor);
+            }
+        }
+
+        return new OrderCheckoutResponse(order.getOrderId(), order.getOrderNumber(), amountBeforeDiscount, usedPoints, finalAmount);
+    }
+}
