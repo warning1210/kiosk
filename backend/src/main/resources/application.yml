@@ -21,6 +21,10 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+        # DDL은 관례상 boolean 컬럼도 tinyint(1)로 선언했는데, Hibernate 6 기본값은 Boolean을 bit로
+        # 기대해서 스키마 검증이 깨짐 -> tinyint를 선호하도록 명시
+        type:
+          preferred_boolean_jdbc_type: TINYINT
     show-sql: true
 
 logging:

@@ -42,7 +42,7 @@ public class ChatMessage {
     private Admin senderAdmin;
 
     @Lob
-    @Column(name = "message_content", nullable = false)
+    @Column(name = "message_content", nullable = false, columnDefinition = "text")
     private String messageContent;
 
     @Column(name = "read_at")
