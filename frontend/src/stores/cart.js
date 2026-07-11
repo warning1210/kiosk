@@ -5,13 +5,12 @@ const CART_COOKIE_NAME = 'kiosk_cart'
 
 const EMPTY_STATE = () => ({
   orderType: null,
-  pickupAt: null,
   customerMobileNumber: null,
   usedPoints: 0,
   items: []
 })
 
-// 쿠키엔 JSON 문자열 하나로 저장한다. 매장/포장, 픽업일시, 고객번호/사용포인트까지
+// 쿠키엔 JSON 문자열 하나로 저장한다. 매장/포장, 고객번호/사용포인트까지
 // 같이 실어서, 단계를 오가거나 새로고침해도 지금까지 진행 상태가 유지되게 한다.
 function loadFromCookie() {
   const raw = getCookie(CART_COOKIE_NAME)
@@ -36,7 +35,6 @@ function persist(state) {
       CART_COOKIE_NAME,
       JSON.stringify({
         orderType: state.orderType,
-        pickupAt: state.pickupAt,
         customerMobileNumber: state.customerMobileNumber,
         usedPoints: state.usedPoints,
         items: state.items
@@ -53,21 +51,12 @@ export const useCartStore = defineStore('cart', {
     amountBeforeDiscount: (state) => state.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     totalAmount() {
       return Math.max(0, this.amountBeforeDiscount - this.usedPoints)
-    },
-    // 화면 표기용 별칭
-    totalAmountBeforeDiscount() {
-      return this.amountBeforeDiscount
     }
   },
 
   actions: {
     setOrderType(orderType) {
       this.orderType = orderType
-      persist(this)
-    },
-
-    setPickupAt(pickupAt) {
-      this.pickupAt = pickupAt
       persist(this)
     },
 
@@ -81,7 +70,7 @@ export const useCartStore = defineStore('cart', {
       persist(this)
     },
 
-    // item: { productId, productName, unitPrice, quantity, containerType, spoonCount, dryIceMinutes, requestNote, flavors }
+    // item: { productId, productName, unitPrice, quantity, containerType, spoonCount, dryIceMinutes, flavors }
     addItem(item) {
       this.items.push({
         id: crypto.randomUUID(),
@@ -89,7 +78,6 @@ export const useCartStore = defineStore('cart', {
         containerType: 'NONE',
         spoonCount: 0,
         dryIceMinutes: null,
-        requestNote: '',
         flavors: [],
         ...item
       })

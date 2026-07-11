@@ -71,7 +71,6 @@ public class OrderService {
                 .customer(customer)
                 .orderNumber("ORD" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6))
                 .orderType(request.orderType())
-                .pickupAt(request.pickupAt())
                 .orderStatus(OrderStatus.PENDING_PAYMENT)
                 .language(request.language() != null ? request.language() : Language.ko)
                 .usedPoints(usedPoints)

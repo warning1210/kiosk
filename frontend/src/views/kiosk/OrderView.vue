@@ -42,43 +42,14 @@
       </button>
     </div>
 
-    <!-- 4단계: 픽업일시 + 컵/콘 선택 (CU-005) -->
-    <div v-else-if="step === 'pickupContainer'">
-      <h2>{{ selectedProduct.productName }}</h2>
-
-      <div v-if="showPickupTime">
-        <p>픽업일시를 선택하세요</p>
-        <button
-          v-for="option in pickupOptions"
-          :key="option.minutes"
-          type="button"
-          :class="{ active: pendingPickupMinutes === option.minutes }"
-          @click="pendingPickupMinutes = option.minutes"
-        >
-          {{ option.label }}
-        </button>
-      </div>
-
-      <div v-if="selectedProduct.containerPolicy !== 'NONE'">
-        <p>용기 선택</p>
-        <button
-          v-if="selectedProduct.containerPolicy === 'CUP_ONLY' || selectedProduct.containerPolicy === 'CUP_OR_CONE'"
-          type="button"
-          @click="containerType = 'CUP'"
-        >
-          컵{{ containerType === 'CUP' ? ' ✓' : '' }}
-        </button>
-        <button
-          v-if="selectedProduct.containerPolicy === 'CUP_OR_CONE'"
-          type="button"
-          @click="containerType = 'CONE'"
-        >
-          콘{{ containerType === 'CONE' ? ' ✓' : '' }}
-        </button>
-      </div>
+    <!-- 4단계: 컵/콘 선택 (컵/콘 둘 다 가능한 상품만 이 화면을 거침) -->
+    <div v-else-if="step === 'container'">
+      <h2>{{ selectedProduct.productName }} - 용기 선택</h2>
+      <button type="button" @click="containerType = 'CUP'">컵{{ containerType === 'CUP' ? ' ✓' : '' }}</button>
+      <button type="button" @click="containerType = 'CONE'">콘{{ containerType === 'CONE' ? ' ✓' : '' }}</button>
 
       <button type="button" @click="step = 'product'">뒤로</button>
-      <button type="button" :disabled="!canProceedPickupContainer" @click="confirmPickupContainer">다음</button>
+      <button type="button" @click="proceedPastContainer">다음</button>
     </div>
 
     <!-- 5단계: 맛 선택 (CU-006) -->
@@ -87,18 +58,15 @@
 
       <div v-if="selectedProduct.requiresFlavorSelection">
         <!-- CU-006-2: 선택 진행률 표시 -->
-        <p>맛 선택 ({{ selectedFlavorIds.length }} / {{ selectedProduct.selectableFlavorCount }})</p>
+        <p>
+          맛 선택 ({{ selectedFlavorIds.length }} / {{ selectedProduct.selectableFlavorCount }})
+          <span>- 같은 맛을 여러 번 선택할 수 있어요</span>
+        </p>
         <ul>
           <li v-for="flavor in flavors" :key="flavor.flavorId">
-            <button
-              type="button"
-              :disabled="
-                !selectedFlavorIds.includes(flavor.flavorId) &&
-                selectedFlavorIds.length >= selectedProduct.selectableFlavorCount
-              "
-              @click="toggleFlavor(flavor.flavorId)"
-            >
-              {{ flavor.flavorName }}{{ selectedFlavorIds.includes(flavor.flavorId) ? ' ✓' : '' }}
+            <button type="button" :disabled="!canPickMoreFlavor()" @click="toggleFlavor(flavor.flavorId)">
+              {{ flavor.flavorName }}
+              <span v-if="flavorSelectedCount(flavor.flavorId) > 0">(x{{ flavorSelectedCount(flavor.flavorId) }})</span>
             </button>
           </li>
         </ul>
@@ -120,11 +88,22 @@
         </label>
       </div>
 
-      <button type="button" @click="step = 'pickupContainer'">뒤로</button>
+      <button type="button" @click="step = 'product'">뒤로</button>
       <!-- CU-006-1: 조건 충족 전까지 담기 버튼 비활성화 -->
       <button type="button" :disabled="!canConfirmFlavor" @click="confirmAddToCart">
         {{ editingItemId ? '수정 완료' : '장바구니 담기' }}
       </button>
+
+      <!-- 담은 맛을 화면 하단에 실시간 표시 -->
+      <footer v-if="selectedFlavorSummary.length" class="flavor-summary-bar">
+        <p>선택한 맛</p>
+        <ul>
+          <li v-for="entry in selectedFlavorSummary" :key="entry.flavorId">
+            {{ entry.flavorName }} x{{ entry.count }}
+            <button type="button" @click="removeOneFlavor(entry.flavorId)">−</button>
+          </li>
+        </ul>
+      </footer>
     </div>
 
     <!-- 6단계: 장바구니 확인 (CU-007) -->
@@ -134,7 +113,6 @@
         {{ cart.orderType === 'DINE_IN' ? '매장' : '포장' }} · {{ cart.totalCount }}개 ·
         {{ cart.amountBeforeDiscount.toLocaleString() }}원
       </p>
-      <p v-if="cart.pickupAt">픽업 예정: {{ new Date(cart.pickupAt).toLocaleString() }}</p>
       <ul>
         <li v-for="item in cart.items" :key="item.id">
           {{ item.productName }}
@@ -182,6 +160,7 @@
       </div>
       <div v-else class="modal-backdrop">
         <div class="modal">
+          <button type="button" class="modal-close" @click="closeQrModal">×</button>
           <p>결제 금액: {{ qrInfo.requestedAmount.toLocaleString() }}원</p>
           <img :src="qrDataUrl" alt="결제 QR코드" width="200" height="200" />
           <p>휴대폰으로 QR코드를 스캔해서 결제를 완료해주세요.</p>
@@ -189,6 +168,9 @@
           <p v-if="paymentStatus === 'PAID'">결제가 완료되었습니다. 감사합니다!</p>
           <!-- CU-009-1: 결제 실패 시 QR코드 재생성 -->
           <button v-else type="button" @click="regenerateQr">QR코드 재생성</button>
+
+          <h3>결제 요청 JSON</h3>
+          <pre class="payment-json">{{ checkoutJsonText }}</pre>
         </div>
       </div>
     </div>
@@ -218,7 +200,7 @@ const stepLabel = computed(
     ({
       orderType: '매장/포장 선택',
       product: '상품 선택',
-      pickupContainer: '픽업일시/용기 선택',
+      container: '용기 선택',
       flavor: '맛 선택',
       cart: '장바구니 확인',
       customer: '포인트/결제'
@@ -238,13 +220,6 @@ const selectedFlavorIds = ref([])
 const containerType = ref('NONE')
 const spoonCount = ref(0)
 const dryIceMinutes = ref(null)
-
-const pickupOptions = [
-  { minutes: 0, label: '지금 바로' },
-  { minutes: 30, label: '30분 후' },
-  { minutes: 60, label: '1시간 후' }
-]
-const pendingPickupMinutes = ref(null)
 
 const mobileNumberInput = ref('')
 const customer = ref(null)
@@ -271,18 +246,33 @@ onMounted(async () => {
 // 사이즈(레귤러/대용량) 구분 없이, 선택된 카테고리의 상품을 전부 한 화면에 보여준다.
 const visibleProducts = computed(() => products.value.filter((p) => p.categoryId === selectedCategory.value?.categoryId))
 
-const showPickupTime = computed(() => cart.orderType === 'TAKEOUT' && !cart.pickupAt)
-
-const canProceedPickupContainer = computed(() => {
-  const pickupOk = !showPickupTime.value || pendingPickupMinutes.value !== null
-  const containerOk = selectedProduct.value.containerPolicy === 'NONE' || containerType.value !== 'NONE'
-  return pickupOk && containerOk
+// 담은 맛을 {flavorId, flavorName, count} 형태로 집계 (대용량은 같은 맛 중복 선택 가능)
+const selectedFlavorSummary = computed(() => {
+  const counts = new Map()
+  for (const flavorId of selectedFlavorIds.value) {
+    counts.set(flavorId, (counts.get(flavorId) ?? 0) + 1)
+  }
+  return Array.from(counts.entries()).map(([flavorId, count]) => ({
+    flavorId,
+    count,
+    flavorName: flavors.value.find((f) => f.flavorId === flavorId)?.flavorName ?? ''
+  }))
 })
+
+function flavorSelectedCount(flavorId) {
+  return selectedFlavorIds.value.filter((id) => id === flavorId).length
+}
+
+function canPickMoreFlavor() {
+  // 사이즈 상관없이 총 개수(selectableFlavorCount)만 다 안 찼으면 같은 맛도 계속 담을 수 있다
+  return selectedFlavorIds.value.length < selectedProduct.value.selectableFlavorCount
+}
 
 // 등급별 적립률: Friend 3% / Family 5% / VIP 8%
 const EARN_RATE = { FRIEND: 0.03, FAMILY: 0.05, VIP: 0.08 }
 const estimatedEarnedPoints = computed(() => {
-  if (!customer.value) return 0
+  // 포인트를 사용한 결제건은 적립되지 않는다 (백엔드 PaymentService와 동일 규칙)
+  if (!customer.value || cart.usedPoints > 0) return 0
   return Math.floor(cart.totalAmount * (EARN_RATE[customer.value.grade] ?? 0))
 })
 
@@ -305,28 +295,21 @@ function resetFlavorStepState(product) {
   containerType.value = product.containerPolicy === 'NONE' ? 'NONE' : 'CUP'
   spoonCount.value = 0
   dryIceMinutes.value = null
-  pendingPickupMinutes.value = null
 }
 
 function selectProduct(product) {
   editingItemId.value = null
   resetFlavorStepState(product)
 
-  if (showPickupTime.value || product.containerPolicy !== 'NONE') {
-    step.value = 'pickupContainer'
+  if (product.containerPolicy === 'CUP_OR_CONE') {
+    // 컵/콘 둘 다 가능한 상품만 용기 선택 화면을 보여주고, 컵만 되는 상품(파인트/패밀리/하프갤런 등)은 건너뜀
+    step.value = 'container'
     return
   }
-  proceedPastPickupContainer()
+  proceedPastContainer()
 }
 
-function confirmPickupContainer() {
-  if (showPickupTime.value) {
-    cart.setPickupAt(new Date(Date.now() + pendingPickupMinutes.value * 60000).toISOString())
-  }
-  proceedPastPickupContainer()
-}
-
-function proceedPastPickupContainer() {
+function proceedPastContainer() {
   if (!selectedProduct.value.requiresFlavorSelection && !selectedProduct.value.isLarge) {
     // 추가 옵션이 전혀 없는 상품(예: 아메리카노)은 바로 장바구니에 담고 확인 단계로 이동
     addCurrentSelectionToCart()
@@ -350,12 +333,15 @@ function editItem(item) {
 }
 
 function toggleFlavor(flavorId) {
-  const index = selectedFlavorIds.value.indexOf(flavorId)
-  if (index === -1) {
+  // 같은 맛을 여러 번(스쿱 여러 개) 선택할 수 있다 - 총 개수가 찰 때까지 계속 추가, 제거는 하단 요약바에서
+  if (selectedFlavorIds.value.length < selectedProduct.value.selectableFlavorCount) {
     selectedFlavorIds.value.push(flavorId)
-  } else {
-    selectedFlavorIds.value.splice(index, 1)
   }
+}
+
+function removeOneFlavor(flavorId) {
+  const index = selectedFlavorIds.value.indexOf(flavorId)
+  if (index !== -1) selectedFlavorIds.value.splice(index, 1)
 }
 
 function addCurrentSelectionToCart() {
@@ -473,14 +459,17 @@ async function requestQr() {
   startPolling(data.qrToken)
 }
 
+// 결제 대행사(PG) 쪽에 그대로 넘길 수 있는 결제 요청 JSON - 실제 결제 연동 전까지는 화면에 그대로 노출해서 확인용으로 쓴다
+const checkoutPayload = ref(null)
+const checkoutJsonText = computed(() => (checkoutPayload.value ? JSON.stringify(checkoutPayload.value, null, 2) : ''))
+
 async function startPayment() {
   checkoutError.value = ''
   checkoutInProgress.value = true
   try {
-    const { data } = await http.post('/orders/checkout', {
+    checkoutPayload.value = {
       branchId: BRANCH_ID,
       orderType: cart.orderType,
-      pickupAt: cart.pickupAt,
       customerMobileNumber: cart.customerMobileNumber,
       usedPoints: cart.usedPoints,
       language: 'ko',
@@ -491,7 +480,8 @@ async function startPayment() {
         dryIceMinutes: item.dryIceMinutes,
         flavorIds: item.flavors.map((f) => f.flavorId)
       }))
-    })
+    }
+    const { data } = await http.post('/orders/checkout', checkoutPayload.value)
     orderId.value = data.orderId
     await requestQr()
   } catch (e) {
@@ -504,6 +494,14 @@ async function startPayment() {
 // CU-009-1: 결제 실패(QR 만료 등) 시 QR코드를 재생성하여 다시 시도
 async function regenerateQr() {
   await requestQr()
+}
+
+// QR 팝업을 닫고 결제 버튼 화면으로 되돌아간다 (결제가 끝난 건 아니므로 폴링만 멈춘다)
+function closeQrModal() {
+  stopPolling()
+  qrInfo.value = null
+  qrDataUrl.value = null
+  paymentStatus.value = null
 }
 
 onUnmounted(() => {
@@ -519,6 +517,32 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.flavor-summary-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fafafa;
+  border-top: 1px solid #ddd;
+  padding: 0.75rem 1.5rem;
+}
+
+.flavor-summary-bar ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.flavor-summary-bar li {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
 }
 
 .modal {
@@ -542,5 +566,30 @@ onUnmounted(() => {
 button.active {
   background: #333;
   color: #fff;
+}
+
+.modal {
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.payment-json {
+  max-width: 320px;
+  max-height: 200px;
+  overflow: auto;
+  background: #f4f4f4;
+  padding: 0.75rem;
+  text-align: left;
+  font-size: 0.8rem;
 }
 </style>

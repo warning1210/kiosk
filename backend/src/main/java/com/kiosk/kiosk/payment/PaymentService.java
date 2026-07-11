@@ -81,12 +81,18 @@ public class PaymentService {
 
         Customer customer = order.getCustomer();
         if (customer != null) {
-            int earnRatePercent = switch (customer.getGrade()) {
-                case FRIEND -> 3;
-                case FAMILY -> 5;
-                case VIP -> 8;
-            };
-            int earnedPoints = order.getFinalAmount() * earnRatePercent / 100;
+            // 포인트를 사용한 결제건은 적립 대상에서 제외 (사용과 적립 중복 방지)
+            int earnedPoints;
+            if (order.getUsedPoints() > 0) {
+                earnedPoints = 0;
+            } else {
+                int earnRatePercent = switch (customer.getGrade()) {
+                    case FRIEND -> 3;
+                    case FAMILY -> 5;
+                    case VIP -> 8;
+                };
+                earnedPoints = order.getFinalAmount() * earnRatePercent / 100;
+            }
             customer.setPointBalance(customer.getPointBalance() - order.getUsedPoints() + earnedPoints);
             order.setEarnedPoints(earnedPoints);
         }
