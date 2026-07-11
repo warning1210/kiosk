@@ -4,8 +4,8 @@
 // 실제 axios 호출로 바꾸면, 이 파일과 화면 코드는 그대로 재사용 가능하다.
 
 export const DUMMY_CATEGORIES = [
-  { categoryId: 1, categoryName: '아이스크림', hasSizeTiers: true },
-  { categoryId: 2, categoryName: '커피', hasSizeTiers: false }
+  { categoryId: 1, categoryName: '아이스크림' },
+  { categoryId: 2, categoryName: '커피' }
 ]
 
 export const DUMMY_PRODUCTS = [
