@@ -10,7 +10,7 @@ import lombok.Getter;
 public class BranchOrderListResponse {
     private Long orderId;
     private String orderNumber;
-    private int waitingNumber;
+    private Integer waitingNumber;
     private long elapsedMinutes;
     private OrderType orderType;
     private String menuSummary;
