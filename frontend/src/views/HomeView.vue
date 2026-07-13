@@ -3,7 +3,7 @@
     <h1>Kiosk</h1>
     <p>아이스크림 프랜차이즈 키오스크 시스템</p>
     <RouterLink to="/kiosk/order">주문 시작하기</RouterLink>
-    <RouterLink to="/admin/login">관리자 로그인</RouterLink>
+    <RouterLink to="/branch/1/dashboard">지점 대시보드 바로가기 (로그인 임시 생략)</RouterLink>
   </main>
 </template>
 

@@ -37,12 +37,12 @@ public class KioskMenuService {
         // 3. 카테고리별로 데이터 그룹화
         return categories.stream().map(category -> {
             List<MenuProductDto> categoryProducts = products.stream()
-                    .filter(p -> p.getCategory().getCategoryId().equals(category.getCategoryId()))
+                    .filter(p -> p.getCategory() != null && p.getCategory().getCategoryId().equals(category.getCategoryId()))
                     .map(MenuProductDto::from)
                     .collect(Collectors.toList());
 
             List<MenuFlavorDto> categoryFlavors = flavors.stream()
-                    .filter(f -> f.getCategory().getCategoryId().equals(category.getCategoryId()))
+                    .filter(f -> f.getCategory() != null && f.getCategory().getCategoryId().equals(category.getCategoryId()))
                     .map(MenuFlavorDto::from)
                     .collect(Collectors.toList());
 
