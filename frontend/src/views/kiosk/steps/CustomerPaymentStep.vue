@@ -41,6 +41,10 @@
         <p>휴대폰으로 QR코드를 스캔해서 결제를 완료해주세요.</p>
         <p>상태: {{ orderFlow.paymentStatusLabel }}</p>
         <p v-if="orderFlow.paymentStatus === 'PAID'">결제가 완료되었습니다. 감사합니다!</p>
+        <!-- CU-009-2: 포인트를 적립하지 않은 사용자에게 한 번 더 안내 -->
+        <p v-if="orderFlow.paymentStatus === 'PAID' && !cart.customerMobileNumber">
+          포인트를 적립하지 않으셨습니다. 다음 방문 시 휴대폰 번호를 입력하시면 적립 혜택을 받으실 수 있습니다.
+        </p>
         <!-- CU-009-1: 결제 실패 시 QR코드 재생성 -->
         <button v-else type="button" @click="orderFlow.regenerateQr">QR코드 재생성</button>
 

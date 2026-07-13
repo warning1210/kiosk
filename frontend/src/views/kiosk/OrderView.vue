@@ -1,5 +1,7 @@
 <template>
   <section class="order">
+    <!-- CU-014: 홈버튼 - 클릭 시 초기 광고 화면으로 복귀 -->
+    <button type="button" class="home-button" @click="goHome">🏠 처음으로</button>
     <p>단계: {{ orderFlow.stepLabel }}</p>
 
     <OrderTypeStep v-if="orderFlow.step === 'orderType'" />
@@ -13,7 +15,9 @@
 
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useOrderFlowStore } from '../../stores/orderFlow'
+import { useCartStore } from '../../stores/cart'
 import OrderTypeStep from './steps/OrderTypeStep.vue'
 import ProductStep from './steps/ProductStep.vue'
 import ContainerStep from './steps/ContainerStep.vue'
@@ -21,7 +25,9 @@ import FlavorStep from './steps/FlavorStep.vue'
 import CartStep from './steps/CartStep.vue'
 import CustomerPaymentStep from './steps/CustomerPaymentStep.vue'
 
+const router = useRouter()
 const orderFlow = useOrderFlowStore()
+const cart = useCartStore()
 
 onMounted(() => {
   orderFlow.init()
@@ -30,4 +36,21 @@ onMounted(() => {
 onUnmounted(() => {
   orderFlow.stopPolling()
 })
+
+// CU-014: 진행 중인 주문이 있으면 확인 후 초기 화면으로 복귀
+function goHome() {
+  if (cart.items.length > 0 && !confirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?')) return
+  orderFlow.stopPolling()
+  cart.clear()
+  router.push('/')
+}
 </script>
+
+<style scoped>
+.home-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+}
+</style>
