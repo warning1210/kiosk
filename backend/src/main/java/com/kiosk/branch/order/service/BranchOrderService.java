@@ -6,6 +6,7 @@ import com.kiosk.domain.order.Order;
 import com.kiosk.domain.order.OrderItem;
 import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.order.OrderStatus;
+import com.kiosk.global.sms.SmsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class BranchOrderService {
 
     private final OrderRepository orderRepository;
+    private final SmsService smsService;
 
     @Transactional(readOnly = true)
     public List<BranchOrderListResponse> getBranchOrders(Long branchId) {
@@ -64,5 +66,10 @@ public class BranchOrderService {
 
         order.setOrderStatus(request.getStatus());
         // 취소 사유 저장 등의 추가 로직이 필요하면 여기에 작성
+
+        if (request.getStatus() == OrderStatus.COMPLETED && order.getCustomer() != null) {
+            smsService.send(order.getCustomer().getMobileNumber(),
+                    "[아이스크림 키오스크] 주문하신 상품이 준비되었습니다. 주문번호: " + order.getOrderNumber());
+        }
     }
 }

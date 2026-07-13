@@ -8,6 +8,7 @@ import com.kiosk.domain.payment.Payment;
 import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.payment.PaymentStatus;
+import com.kiosk.global.sms.SmsService;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final SmsService smsService;
 
     @Transactional
     public PaymentQrResponse createQr(Long orderId) {
@@ -101,6 +103,11 @@ public class PaymentService {
             order.setEarnedPoints(earnedPoints);
         }
         orderRepository.save(order);
+
+        if (customer != null) {
+            smsService.send(customer.getMobileNumber(),
+                    "[아이스크림 키오스크] 결제가 완료되었습니다. 주문번호: " + order.getOrderNumber());
+        }
 
         return toStatusResponse(payment);
     }
