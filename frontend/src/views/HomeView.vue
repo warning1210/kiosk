@@ -1,13 +1,27 @@
 <template>
-  <main class="home">
+  <!-- CU-001: 광고 화면을 터치(클릭)하면 주문 프로세스가 시작된다 -->
+  <main class="home" @click="startOrder">
     <h1>Kiosk</h1>
     <p>아이스크림 프랜차이즈 키오스크 시스템</p>
-    <RouterLink to="/kiosk/order">주문 시작하기</RouterLink>
-    <RouterLink to="/admin/login">관리자 로그인</RouterLink>
+    <p>화면을 터치하여 시작하세요 / Touch to start</p>
+    <div class="admin-links" @click.stop>
+      <RouterLink to="/branch/1/dashboard" class="admin-link">지점 대시보드 바로가기</RouterLink>
+    </div>
   </main>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import { useCartStore } from '../stores/cart'
+
+const router = useRouter()
+const cart = useCartStore()
+
+function startOrder() {
+  // 이전 고객의 장바구니가 다음 고객에게 이어지면 안 되므로 새 주문 시작 시 초기화
+  cart.clear()
+  router.push('/kiosk/order')
+}
 </script>
 
 <style scoped>
@@ -18,5 +32,22 @@
   justify-content: center;
   min-height: 100vh;
   gap: 1rem;
+  cursor: pointer;
+}
+
+.admin-links {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+}
+
+.admin-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.admin-link:hover {
+  text-decoration: underline;
 }
 </style>

@@ -109,7 +109,7 @@ public class Order {
     @Column(name = "order_completed_at")
     private LocalDateTime orderCompletedAt;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
 

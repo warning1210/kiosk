@@ -25,10 +25,10 @@
           <p class="value">{{ summary.processingOrderCount }}건</p>
         </div>
       </div>
-      <div class="card summary-card completed-order">
+      <div class="card summary-card completed-order clickable" @click="showCompletedList = !showCompletedList" :class="{'active': showCompletedList}">
         <div class="card-icon">✅</div>
         <div class="card-info">
-          <h3>오늘 완료</h3>
+          <h3>오늘 완료 (클릭하여 보기)</h3>
           <p class="value">{{ summary.completedOrderCount }}건</p>
         </div>
       </div>
@@ -42,22 +42,25 @@
     </div>
 
     <div class="orders-section">
-      <h2 class="section-title">실시간 주문 현황</h2>
+      <div class="section-header-row">
+        <h2 class="section-title">{{ showCompletedList ? '오늘 완료된 주문 목록' : '실시간 주문 현황' }}</h2>
+        <button v-if="showCompletedList" class="btn btn-cancel" @click="showCompletedList = false">돌아가기</button>
+      </div>
       
-      <div v-if="orders.length === 0" class="empty-state">
+      <div v-if="currentOrders.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
-        <p>현재 대기 중인 주문이 없습니다.</p>
+        <p>{{ showCompletedList ? '오늘 완료된 주문이 없습니다.' : '현재 대기 중인 주문이 없습니다.' }}</p>
       </div>
 
       <div class="orders-grid">
         <div 
-          v-for="order in orders" 
+          v-for="order in currentOrders" 
           :key="order.orderId" 
           class="card order-card"
           :class="{ 'urgent': order.elapsedMinutes >= 15 }"
         >
           <div class="order-header">
-            <span class="order-number">대기 #{{ order.waitingNumber }}</span>
+            <span class="order-number">대기 번호#{{ order.waitingNumber }}</span>
             <span class="order-time" :class="{ 'warning': order.elapsedMinutes >= 15 }">
               {{ order.elapsedMinutes }}분 전
             </span>
@@ -75,12 +78,22 @@
           </div>
 
           <div class="order-actions">
-            <button v-if="order.status !== 'COMPLETED'" class="btn btn-complete" @click="changeStatus(order.orderId, 'COMPLETED')">
-              제조 완료
-            </button>
-            <button class="btn btn-cancel" @click="changeStatus(order.orderId, 'CANCELLED')">
-              주문 취소
-            </button>
+            <template v-if="order.status === 'COMPLETED'">
+              <button class="btn btn-cancel" @click="changeStatus(order.orderId, 'MAKING')">
+                실행 취소 (제조중으로)
+              </button>
+            </template>
+            <template v-else>
+              <button v-if="order.status !== 'MAKING'" class="btn btn-complete" @click="changeStatus(order.orderId, 'MAKING')">
+                제조 시작
+              </button>
+              <button class="btn btn-complete" @click="changeStatus(order.orderId, 'COMPLETED')">
+                제조 완료
+              </button>
+              <button class="btn btn-cancel" @click="changeStatus(order.orderId, 'CANCELLED')">
+                주문 취소
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -89,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { fetchDashboardSummary, fetchBranchOrders, updateOrderStatus } from '../../api/branch';
 
@@ -99,7 +112,12 @@ const branchId = route.params.branchId || 1; // 기본값 1
 const summary = ref(null);
 const orders = ref([]);
 const isLoading = ref(false);
+const showCompletedList = ref(false);
 let pollingInterval = null;
+
+const activeOrders = computed(() => orders.value.filter(o => o.status !== 'COMPLETED'));
+const completedOrders = computed(() => orders.value.filter(o => o.status === 'COMPLETED'));
+const currentOrders = computed(() => showCompletedList.value ? completedOrders.value : activeOrders.value);
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount || 0);
@@ -129,7 +147,7 @@ const fetchData = async () => {
 };
 
 const changeStatus = async (orderId, newStatus) => {
-  if (newStatus === 'CANCELLED' && !confirm('정말로 이 주문을 취소하시겠습니까?')) {
+  if (newStatus === 'CANCELLED' && !confirm('정말로 이 주문을 취소하시겠습니까?')) {  
     return;
   }
   
@@ -141,6 +159,7 @@ const changeStatus = async (orderId, newStatus) => {
     console.error(error);
   }
 };
+
 
 onMounted(() => {
   fetchData();
@@ -261,13 +280,35 @@ onUnmounted(() => {
 .total-sales .card-icon { background: #ebf8ff; }
 .processing-order .card-icon { background: #fffaf0; }
 
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(255, 107, 158, 0.2);
+  border-color: #FF6B9E;
+}
+
+.clickable.active {
+  border: 2px solid #FF6B9E;
+  background-color: #fff5f8;
+}
+
 /* 주문 리스트 */
-.section-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid #edf2f7;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
 }
 
 .empty-state {

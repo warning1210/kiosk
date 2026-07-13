@@ -13,11 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.CascadeType;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.ArrayList;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -63,11 +59,11 @@ public class OrderItem {
     @Builder.Default
     private ContainerType containerType = ContainerType.NONE;
 
-    @Column(name = "spoon_count", nullable = false)
+    @Column(name = "spoon_count", nullable = false, columnDefinition = "tinyint")
     @Builder.Default
     private Integer spoonCount = 0;
 
-    @Column(name = "dry_ice_minutes")
+    @Column(name = "dry_ice_minutes", columnDefinition = "tinyint")
     private Integer dryIceMinutes;
 
     @Column(name = "request_note", length = 500)
@@ -75,10 +71,6 @@ public class OrderItem {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<OrderItemFlavor> orderItemFlavors = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
