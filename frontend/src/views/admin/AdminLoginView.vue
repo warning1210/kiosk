@@ -11,15 +11,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const loginId = ref('')
 const password = ref('')
 
 function onSubmit() {
-  // TODO: call POST /api/admin/login - 백엔드 인증 붙기 전까지 1번 지점 대시보드로 임시 이동
-  router.push('/branch/1/dashboard')
+  // TODO: call POST /api/admin/login
 }
 </script>
 
