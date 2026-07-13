@@ -52,6 +52,12 @@ public class Flavor {
     @Column(name = "allergy_info", length = 500)
     private String allergyInfo;
 
+    @Column(name = "source_seq")
+    private Integer sourceSeq;
+
+    @Column(name = "source_url", length = 500)
+    private String sourceUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "sale_status", nullable = false)
     @Builder.Default

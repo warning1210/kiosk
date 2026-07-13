@@ -5,3 +5,9 @@ frontend/dist/
 .DS_Store
 *.log
 .idea/
+firebase-service-account.json
+*-service-account.json
+.env
+.env.*
+!.env.example
+backend/src/main/resources/application-local.yml

@@ -63,7 +63,7 @@ public class Branch {
     private Boolean isBusy = false;
 
     @Column(name = "estimated_wait_minutes")
-    private Integer estimatedWaitMinutes;
+    private Byte estimatedWaitMinutes;
 
     @Column(name = "kiosk_code", length = 50)
     private String kioskCode;
