@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.payment;
+package com.kiosk.kiosk.payment.dto;
 
 import java.time.LocalDateTime;
 

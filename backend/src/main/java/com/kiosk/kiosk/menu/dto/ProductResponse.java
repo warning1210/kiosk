@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.menu;
+package com.kiosk.kiosk.menu.dto;
 
 import com.kiosk.domain.product.ContainerPolicy;
 import com.kiosk.domain.product.Product;

@@ -1,5 +1,9 @@
-package com.kiosk.kiosk.payment;
+package com.kiosk.kiosk.payment.controller;
 
+import com.kiosk.kiosk.payment.dto.PaymentQrRequest;
+import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
+import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
+import com.kiosk.kiosk.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.customer;
+package com.kiosk.kiosk.customer.dto;
 
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.customer.CustomerGrade;

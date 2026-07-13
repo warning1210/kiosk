@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.order;
+package com.kiosk.kiosk.order.dto;
 
 public record OrderCheckoutResponse(
         Long orderId,
