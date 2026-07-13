@@ -15,17 +15,19 @@
 <script setup>
 import { ref } from 'vue'
 
+defineProps({
+  submitting: { type: Boolean, default: false }
+})
+
 const emit = defineEmits(['close', 'confirm'])
 const reason = ref('')
 const error = ref('')
-const submitting = ref(false)
 
 function submit() {
   if (!reason.value.trim()) {
     error.value = '반려 사유를 입력해주세요'
     return
   }
-  submitting.value = true
   emit('confirm', reason.value.trim())
 }
 </script>

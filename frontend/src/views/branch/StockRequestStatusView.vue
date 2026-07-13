@@ -89,7 +89,7 @@ async function load() {
     const page = await fetchBranchStockRequests({ size: 100 })
     requests.value = page.content
   } catch (e) {
-    error.value = e.response?.data?.error?.message ?? '신청 현황을 불러오지 못했습니다'
+    error.value = e.response?.data?.message ?? '신청 현황을 불러오지 못했습니다'
   } finally {
     loading.value = false
   }
@@ -137,6 +137,8 @@ async function onCancel(request) {
   try {
     await cancelStockRequest(request.stockRequestId)
     await load()
+  } catch (e) {
+    error.value = e.response?.data?.message ?? '신청을 취소하지 못했습니다'
   } finally {
     actingId.value = null
   }
@@ -147,6 +149,8 @@ async function onConfirmReceipt(request) {
   try {
     await confirmReceipt(request.stockRequestId)
     await load()
+  } catch (e) {
+    error.value = e.response?.data?.message ?? '수령 확인에 실패했습니다'
   } finally {
     actingId.value = null
   }

@@ -15,6 +15,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,7 +24,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "branch_inventory")
+@Table(
+        name = "branch_inventory",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_branch_inventory_branch_flavor",
+                columnNames = {"branch_id", "flavor_id"}
+        )
+)
 @Getter
 @Setter
 @NoArgsConstructor

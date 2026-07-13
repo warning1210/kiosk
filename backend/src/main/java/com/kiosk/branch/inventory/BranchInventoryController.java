@@ -2,7 +2,6 @@ package com.kiosk.branch.inventory;
 
 import com.kiosk.branch.inventory.dto.BranchInventoryItemResponse;
 import com.kiosk.domain.admin.Admin;
-import com.kiosk.global.response.ApiResponse;
 import com.kiosk.global.security.CurrentAdmin;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,10 +18,10 @@ public class BranchInventoryController {
     }
 
     @GetMapping("/api/branch/inventory")
-    public ApiResponse<List<BranchInventoryItemResponse>> getInventory(
+    public List<BranchInventoryItemResponse> getInventory(
             @CurrentAdmin Admin admin,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword) {
-        return ApiResponse.ok(branchInventoryService.getInventory(admin, categoryId, keyword));
+        return branchInventoryService.getInventory(admin, categoryId, keyword);
     }
 }

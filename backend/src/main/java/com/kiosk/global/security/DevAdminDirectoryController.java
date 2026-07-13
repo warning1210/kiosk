@@ -2,7 +2,6 @@ package com.kiosk.global.security;
 
 import com.kiosk.domain.admin.AccountStatus;
 import com.kiosk.domain.admin.AdminRepository;
-import com.kiosk.global.response.ApiResponse;
 import com.kiosk.global.security.dto.AdminSummaryResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +22,9 @@ public class DevAdminDirectoryController {
     }
 
     @GetMapping("/api/admins")
-    public ApiResponse<List<AdminSummaryResponse>> list() {
-        return ApiResponse.ok(adminRepository.findByAccountStatusOrderByRoleAscNameAsc(AccountStatus.ACTIVE).stream()
+    public List<AdminSummaryResponse> list() {
+        return adminRepository.findByAccountStatusOrderByRoleAscNameAsc(AccountStatus.ACTIVE).stream()
                 .map(AdminSummaryResponse::from)
-                .toList());
+                .toList();
     }
 }

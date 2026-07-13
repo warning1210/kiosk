@@ -87,7 +87,7 @@ async function submit() {
     })
     emit('submitted')
   } catch (e) {
-    error.value = e.response?.data?.error?.message ?? '신청에 실패했습니다'
+    error.value = e.response?.data?.message ?? '신청에 실패했습니다'
   } finally {
     submitting.value = false
   }

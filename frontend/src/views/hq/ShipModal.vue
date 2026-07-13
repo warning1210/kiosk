@@ -30,20 +30,22 @@
 <script setup>
 import { ref } from 'vue'
 
+defineProps({
+  submitting: { type: Boolean, default: false }
+})
+
 const emit = defineEmits(['close', 'confirm'])
 const trackingNumber = ref('')
 const courierName = ref('')
 const driverName = ref('')
 const estimatedArrivalAt = ref('')
 const error = ref('')
-const submitting = ref(false)
 
 function submit() {
   if (!trackingNumber.value.trim()) {
     error.value = '운송장번호를 입력해주세요'
     return
   }
-  submitting.value = true
   emit('confirm', {
     trackingNumber: trackingNumber.value.trim(),
     courierName: courierName.value.trim() || null,

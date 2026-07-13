@@ -76,8 +76,18 @@
       </tbody>
     </table>
 
-    <RejectModal v-if="rejectTarget" @close="rejectTarget = null" @confirm="onReject" />
-    <ShipModal v-if="shipTarget" @close="shipTarget = null" @confirm="onShip" />
+    <RejectModal
+      v-if="rejectTarget"
+      :submitting="actingId === rejectTarget.stockRequestId"
+      @close="rejectTarget = null"
+      @confirm="onReject"
+    />
+    <ShipModal
+      v-if="shipTarget"
+      :submitting="actingId === shipTarget.stockRequestId"
+      @close="shipTarget = null"
+      @confirm="onShip"
+    />
   </section>
 </template>
 
@@ -114,7 +124,7 @@ async function load() {
     requests.value = page.content
     summary.value = summaryData
   } catch (e) {
-    error.value = e.response?.data?.error?.message ?? '신청 목록을 불러오지 못했습니다'
+    error.value = e.response?.data?.message ?? '신청 목록을 불러오지 못했습니다'
   } finally {
     loading.value = false
   }
@@ -153,6 +163,8 @@ async function onApprove(request) {
   try {
     await approveStockRequest(request.stockRequestId)
     await load()
+  } catch (e) {
+    error.value = e.response?.data?.message ?? '승인 처리에 실패했습니다'
   } finally {
     actingId.value = null
   }
@@ -169,6 +181,8 @@ async function onReject(reason) {
     await rejectStockRequest(request.stockRequestId, reason)
     rejectTarget.value = null
     await load()
+  } catch (e) {
+    error.value = e.response?.data?.message ?? '반려 처리에 실패했습니다'
   } finally {
     actingId.value = null
   }
@@ -185,6 +199,8 @@ async function onShip(payload) {
     await shipStockRequest(request.stockRequestId, payload)
     shipTarget.value = null
     await load()
+  } catch (e) {
+    error.value = e.response?.data?.message ?? '배송 등록에 실패했습니다'
   } finally {
     actingId.value = null
   }

@@ -9,7 +9,8 @@
     </header>
 
     <div class="toolbar">
-      <input v-model="keyword" type="text" placeholder="상품명 검색..." @input="load" />
+      <input v-model="keyword" type="text" placeholder="상품명 검색..." @keyup.enter="load" />
+      <button type="button" class="search" @click="load">검색</button>
     </div>
 
     <p v-if="soldOutCount > 0" class="banner danger">
@@ -83,7 +84,7 @@ async function load() {
   try {
     items.value = await fetchBranchInventory({ keyword: keyword.value || undefined })
   } catch (e) {
-    error.value = e.response?.data?.error?.message ?? '재고 정보를 불러오지 못했습니다'
+    error.value = e.response?.data?.message ?? '재고 정보를 불러오지 못했습니다'
   } finally {
     loading.value = false
   }
@@ -143,6 +144,8 @@ onMounted(load)
 }
 
 .toolbar {
+  display: flex;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
@@ -151,6 +154,14 @@ onMounted(load)
   padding: 0.5rem 0.75rem;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
+}
+
+.search {
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
 }
 
 .banner {

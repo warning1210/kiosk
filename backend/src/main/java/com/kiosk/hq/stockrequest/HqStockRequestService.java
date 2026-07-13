@@ -7,11 +7,7 @@ import com.kiosk.domain.stockrequest.StockRequestItem;
 import com.kiosk.domain.stockrequest.StockRequestItemRepository;
 import com.kiosk.domain.stockrequest.StockRequestRepository;
 import com.kiosk.domain.stockrequest.StockRequestStatus;
-import com.kiosk.global.exception.BusinessException;
-import com.kiosk.global.exception.ErrorCode;
 import com.kiosk.global.security.ActorGuard;
-import com.kiosk.hq.stockrequest.dto.ApproveItemRequest;
-import com.kiosk.hq.stockrequest.dto.ApproveRequest;
 import com.kiosk.hq.stockrequest.dto.RejectRequest;
 import com.kiosk.hq.stockrequest.dto.ShipRequest;
 import com.kiosk.hq.stockrequest.dto.StockRequestSummaryResponse;
@@ -22,8 +18,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional(readOnly = true)
@@ -41,8 +39,11 @@ public class HqStockRequestService {
     public Page<StockRequestResponse> list(Admin admin, StockRequestStatus status, Long branchId,
                                             LocalDateTime from, LocalDateTime to, String keyword, Pageable pageable) {
         ActorGuard.requireHqRole(admin);
-        Page<StockRequest> page = stockRequestRepository.findAll(
-                StockRequestSpecifications.filter(status, branchId, from, to, keyword), pageable);
+        String keywordPattern = keyword == null || keyword.isBlank()
+                ? null
+                : "%" + keyword.trim().toLowerCase() + "%";
+        Page<StockRequest> page = stockRequestRepository.searchForHq(
+                status, branchId, from, to, keywordPattern, pageable);
         return toResponsePage(page);
     }
 
@@ -57,20 +58,16 @@ public class HqStockRequestService {
     }
 
     @Transactional
-    public StockRequestResponse approve(Admin admin, Long stockRequestId, ApproveRequest request) {
+    public StockRequestResponse approve(Admin admin, Long stockRequestId) {
         ActorGuard.requireHqRole(admin);
         StockRequest existing = loadForUpdate(stockRequestId);
         if (existing.getRequestStatus() != StockRequestStatus.PENDING) {
-            throw new BusinessException(ErrorCode.INVALID_STATE_TRANSITION, "대기중인 신청만 승인할 수 있습니다");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "대기중인 신청만 승인할 수 있습니다");
         }
 
         List<StockRequestItem> items = stockRequestItemRepository.findByStockRequest_StockRequestId(stockRequestId);
-        Map<Long, Integer> overridesByFlavorId = request.itemOverrides() == null ? Map.of()
-                : request.itemOverrides().stream()
-                        .collect(Collectors.toMap(ApproveItemRequest::flavorId, ApproveItemRequest::approvedQuantity));
         for (StockRequestItem item : items) {
-            Integer override = overridesByFlavorId.get(item.getFlavor().getFlavorId());
-            item.setApprovedQuantity(override != null ? override : item.getRequestedQuantity());
+            item.setApprovedQuantity(item.getRequestedQuantity());
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -86,7 +83,7 @@ public class HqStockRequestService {
         ActorGuard.requireHqRole(admin);
         StockRequest existing = loadForUpdate(stockRequestId);
         if (existing.getRequestStatus() != StockRequestStatus.PENDING) {
-            throw new BusinessException(ErrorCode.INVALID_STATE_TRANSITION, "대기중인 신청만 반려할 수 있습니다");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "대기중인 신청만 반려할 수 있습니다");
         }
 
         existing.setRequestStatus(StockRequestStatus.REJECTED);
@@ -103,7 +100,7 @@ public class HqStockRequestService {
         ActorGuard.requireHqRole(admin);
         StockRequest existing = loadForUpdate(stockRequestId);
         if (existing.getRequestStatus() != StockRequestStatus.PREPARING) {
-            throw new BusinessException(ErrorCode.INVALID_STATE_TRANSITION, "배송 준비중인 신청만 배송 등록할 수 있습니다");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "배송 준비중인 신청만 배송 등록할 수 있습니다");
         }
 
         existing.setRequestStatus(StockRequestStatus.SHIPPING);
@@ -119,7 +116,7 @@ public class HqStockRequestService {
 
     private StockRequest loadForUpdate(Long stockRequestId) {
         return stockRequestRepository.findByIdForUpdate(stockRequestId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "신청 내역을 찾을 수 없습니다"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "신청 내역을 찾을 수 없습니다"));
     }
 
     private Page<StockRequestResponse> toResponsePage(Page<StockRequest> page) {

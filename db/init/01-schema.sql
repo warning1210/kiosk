@@ -107,7 +107,8 @@ CREATE TABLE `branch_inventory` (
   `is_kiosk_visible` tinyint NOT NULL DEFAULT 1,
   `is_branch_recommended` tinyint NOT NULL DEFAULT 0,
   `display_order` int NOT NULL DEFAULT 0,
-  `updated_at` datetime NOT NULL
+  `updated_at` datetime NOT NULL,
+  UNIQUE KEY `uq_branch_inventory_branch_flavor` (`branch_id`, `flavor_id`)
 );
 
 CREATE TABLE `customer` (
