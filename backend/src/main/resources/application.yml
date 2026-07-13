@@ -28,6 +28,10 @@ spring:
           preferred_boolean_jdbc_type: TINYINT
     show-sql: true
 
+firebase:
+  credentials:
+    path: ${FIREBASE_CREDENTIALS_PATH:}
+
 logging:
   level:
     org.hibernate.SQL: debug

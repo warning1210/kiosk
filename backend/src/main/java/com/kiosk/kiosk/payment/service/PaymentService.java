@@ -8,6 +8,7 @@ import com.kiosk.domain.payment.Payment;
 import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.payment.PaymentStatus;
+import com.kiosk.branch.inventory.service.BranchInventoryService;
 import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
 import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final BranchInventoryService branchInventoryService;
 
     @Transactional
     public PaymentQrResponse createQr(Long orderId) {
@@ -103,6 +105,7 @@ public class PaymentService {
             order.setEarnedPoints(earnedPoints);
         }
         orderRepository.save(order);
+        branchInventoryService.deductForOrder(order);
 
         return toStatusResponse(payment);
     }
