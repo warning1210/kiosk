@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.payment;
+package com.kiosk.kiosk.payment.service;
 
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.order.Order;
@@ -8,6 +8,8 @@ import com.kiosk.domain.payment.Payment;
 import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.payment.PaymentStatus;
+import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
+import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;

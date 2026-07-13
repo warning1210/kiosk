@@ -1,5 +1,9 @@
-package com.kiosk.kiosk.menu;
+package com.kiosk.kiosk.menu.controller;
 
+import com.kiosk.kiosk.menu.dto.CategoriResponse;
+import com.kiosk.kiosk.menu.dto.FlavorResponse;
+import com.kiosk.kiosk.menu.dto.ProductResponse;
+import com.kiosk.kiosk.menu.service.MenuService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,5 +25,10 @@ public class MenuController {
     @GetMapping("/flavors")
     public List<FlavorResponse> getFlavors() {
         return menuService.getFlavors();
+    }
+
+    @GetMapping("/categories")
+    public List<CategoriResponse> getCategories() {
+        return menuService.getCategories();
     }
 }

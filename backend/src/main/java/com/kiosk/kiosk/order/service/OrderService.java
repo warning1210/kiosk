@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.order;
+package com.kiosk.kiosk.order.service;
 
 import com.kiosk.domain.branch.Branch;
 import com.kiosk.domain.branch.BranchRepository;
@@ -17,6 +17,9 @@ import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.order.OrderStatus;
 import com.kiosk.domain.product.Product;
 import com.kiosk.domain.product.ProductRepository;
+import com.kiosk.kiosk.order.dto.OrderCheckoutRequest;
+import com.kiosk.kiosk.order.dto.OrderCheckoutResponse;
+import com.kiosk.kiosk.order.dto.OrderItemRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;

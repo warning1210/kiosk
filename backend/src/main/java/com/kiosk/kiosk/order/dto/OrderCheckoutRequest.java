@@ -1,4 +1,4 @@
-package com.kiosk.kiosk.order;
+package com.kiosk.kiosk.order.dto;
 
 import com.kiosk.domain.common.Language;
 import com.kiosk.domain.order.OrderType;

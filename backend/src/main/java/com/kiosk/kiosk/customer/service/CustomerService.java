@@ -1,6 +1,7 @@
-package com.kiosk.kiosk.customer;
+package com.kiosk.kiosk.customer.service;
 
 import com.kiosk.domain.customer.CustomerRepository;
+import com.kiosk.kiosk.customer.dto.CustomerResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
