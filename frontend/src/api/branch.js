@@ -19,10 +19,11 @@ export const fetchBranchOrders = async (branchId) => {
     return response.data;
 };
 
-// 3. 주문 상태 변경하기 (완료/취소)
-export const updateOrderStatus = async (branchId, orderId, status) => {
+// 3. 주문 상태 변경하기 (완료/취소, 취소 시 사유 포함)
+export const updateOrderStatus = async (branchId, orderId, status, cancelReason) => {
     const response = await api.patch(`/${branchId}/orders/${orderId}/status`, {
-        status: status
+        status: status,
+        cancelReason: cancelReason
     });
     return response.data;
 };
