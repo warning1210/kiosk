@@ -62,7 +62,12 @@ public class BranchOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
+        if (request.getStatus() == OrderStatus.CANCELLED) {
+            if (request.getCancelReason() == null || request.getCancelReason().isBlank()) {
+                throw new IllegalArgumentException("취소 사유를 입력해주세요.");
+            }
+            order.setCancellationReason(request.getCancelReason());
+        }
         order.setOrderStatus(request.getStatus());
-        // 취소 사유 저장 등의 추가 로직이 필요하면 여기에 작성
     }
 }

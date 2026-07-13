@@ -129,12 +129,17 @@ const fetchData = async () => {
 };
 
 const changeStatus = async (orderId, newStatus) => {
-  if (newStatus === 'CANCELLED' && !confirm('정말로 이 주문을 취소하시겠습니까?')) {
-    return;
+  // BR-021: 주문 취소는 사유를 직접 입력해야 진행된다
+  let cancelReason;
+  if (newStatus === 'CANCELLED') {
+    cancelReason = prompt('취소 사유를 입력해주세요.');
+    if (!cancelReason || !cancelReason.trim()) {
+      return;
+    }
   }
-  
+
   try {
-    await updateOrderStatus(branchId, orderId, newStatus);
+    await updateOrderStatus(branchId, orderId, newStatus, cancelReason);
     await fetchData(); // 상태 변경 후 데이터 새로고침
   } catch (error) {
     alert('상태 변경에 실패했습니다.');
