@@ -1,5 +1,7 @@
 <template>
   <section class="order">
+    <!-- CU-014: 홈버튼 - 클릭 시 초기 광고 화면으로 복귀 -->
+    <button type="button" class="home-button" @click="goHome">🏠 처음으로</button>
     <p>단계: {{ stepLabel }}</p>
 
     <!-- 1단계: 매장/포장 선택 (CU-002) - 팝업 형태 -->
@@ -168,6 +170,10 @@
           <p>휴대폰으로 QR코드를 스캔해서 결제를 완료해주세요.</p>
           <p>상태: {{ paymentStatusLabel }}</p>
           <p v-if="paymentStatus === 'PAID'">결제가 완료되었습니다. 감사합니다!</p>
+          <!-- CU-009-2: 포인트를 적립하지 않은 사용자에게 한 번 더 안내 -->
+          <p v-if="paymentStatus === 'PAID' && !cart.customerMobileNumber">
+            포인트를 적립하지 않으셨습니다. 다음 방문 시 휴대폰 번호를 입력하시면 적립 혜택을 받으실 수 있습니다.
+          </p>
           <!-- CU-009-1: 결제 실패 시 QR코드 재생성 -->
           <button v-else type="button" @click="regenerateQr">QR코드 재생성</button>
 
@@ -291,6 +297,14 @@ const canConfirmFlavor = computed(() => {
   }
   return true
 })
+
+// CU-014: 진행 중인 주문이 있으면 확인 후 초기 화면으로 복귀
+function goHome() {
+  if (cart.items.length > 0 && !confirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?')) return
+  stopPolling()
+  cart.clear()
+  router.push('/')
+}
 
 function selectOrderType(orderType) {
   cart.setOrderType(orderType)
@@ -518,6 +532,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.home-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
