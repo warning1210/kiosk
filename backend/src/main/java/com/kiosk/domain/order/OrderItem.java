@@ -59,11 +59,11 @@ public class OrderItem {
     @Builder.Default
     private ContainerType containerType = ContainerType.NONE;
 
-    @Column(name = "spoon_count", nullable = false)
+    @Column(name = "spoon_count", nullable = false, columnDefinition = "tinyint")
     @Builder.Default
     private Byte spoonCount = 0;
 
-    @Column(name = "dry_ice_minutes")
+    @Column(name = "dry_ice_minutes", columnDefinition = "tinyint")
     private Byte dryIceMinutes;
 
     @Column(name = "request_note", length = 500)
