@@ -50,10 +50,10 @@ public class OrderItemFlavor {
     @Column(name = "flavor_name_snapshot", length = 100, nullable = false)
     private String flavorNameSnapshot;
 
-    @Column(name = "selection_order", nullable = false)
+    @Column(name = "selection_order", nullable = false, columnDefinition = "tinyint")
     private Byte selectionOrder;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "quantity", nullable = false, columnDefinition = "tinyint")
     @Builder.Default
     private Byte quantity = 1;
 

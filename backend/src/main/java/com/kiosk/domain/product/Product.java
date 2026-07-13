@@ -58,7 +58,7 @@ public class Product {
     @Builder.Default
     private Boolean requiresFlavorSelection = false;
 
-    @Column(name = "selectable_flavor_count", nullable = false)
+    @Column(name = "selectable_flavor_count", nullable = false, columnDefinition = "tinyint")
     @Builder.Default
     private Byte selectableFlavorCount = 0;
 
