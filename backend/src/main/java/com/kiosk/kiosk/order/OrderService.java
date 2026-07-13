@@ -48,7 +48,10 @@ public class OrderService {
 
         Customer customer = null;
         if (request.customerMobileNumber() != null && !request.customerMobileNumber().isBlank()) {
-            customer = customerRepository.findByMobileNumber(request.customerMobileNumber()).orElse(null);
+            // 미등록 번호는 최하위 등급(FRIEND)·포인트 0으로 즉시 신규 가입시켜 이번 결제부터 적립 대상이 되게 함
+            customer = customerRepository.findByMobileNumber(request.customerMobileNumber())
+                    .orElseGet(() -> customerRepository.save(
+                            Customer.builder().mobileNumber(request.customerMobileNumber()).build()));
         }
 
         List<ResolvedItem> resolved = new ArrayList<>();

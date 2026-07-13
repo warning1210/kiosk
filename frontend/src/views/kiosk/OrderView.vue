@@ -135,7 +135,9 @@
       </label>
       <button type="button" @click="lookupCustomer">조회</button>
 
-      <p v-if="customerLookupDone && !customer">등록된 회원이 아닙니다. 포인트 없이 진행합니다.</p>
+      <p v-if="isNewMember">
+        신규 회원(FRIEND 등급)으로 시작합니다. 결제 완료 시 {{ estimatedEarnedPoints.toLocaleString() }}P가 적립됩니다.
+      </p>
       <div v-if="customer">
         <p>{{ customer.grade }} 등급 · 보유 포인트 {{ customer.pointBalance.toLocaleString() }}P</p>
         <p>
@@ -270,10 +272,16 @@ function canPickMoreFlavor() {
 
 // 등급별 적립률: Friend 3% / Family 5% / VIP 8%
 const EARN_RATE = { FRIEND: 0.03, FAMILY: 0.05, VIP: 0.08 }
+
+// 조회했는데 기존 회원이 아니면, 결제 시 FRIEND 등급으로 자동 가입되어 적립 대상이 된다 (OrderService.checkout 참고)
+const isNewMember = computed(() => customerLookupDone.value && !customer.value && mobileNumberInput.value.trim() !== '')
+
 const estimatedEarnedPoints = computed(() => {
   // 포인트를 사용한 결제건은 적립되지 않는다 (백엔드 PaymentService와 동일 규칙)
-  if (!customer.value || cart.usedPoints > 0) return 0
-  return Math.floor(cart.totalAmount * (EARN_RATE[customer.value.grade] ?? 0))
+  if (cart.usedPoints > 0) return 0
+  const grade = customer.value?.grade ?? (isNewMember.value ? 'FRIEND' : null)
+  if (!grade) return 0
+  return Math.floor(cart.totalAmount * (EARN_RATE[grade] ?? 0))
 })
 
 const canConfirmFlavor = computed(() => {
