@@ -62,7 +62,7 @@ public class Branch {
     @Builder.Default
     private Boolean isBusy = false;
 
-    @Column(name = "estimated_wait_minutes")
+    @Column(name = "estimated_wait_minutes", columnDefinition = "tinyint")
     private Integer estimatedWaitMinutes;
 
     @Column(name = "kiosk_code", length = 50)
