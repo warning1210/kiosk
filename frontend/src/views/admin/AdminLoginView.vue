@@ -11,12 +11,15 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const loginId = ref('')
 const password = ref('')
 
 function onSubmit() {
-  // TODO: call POST /api/admin/login
+  // 임시로 로그인 로직을 건너뛰고 1번 지점 대시보드로 바로 이동합니다.
+  router.push('/branch/1/dashboard')
 }
 </script>
 

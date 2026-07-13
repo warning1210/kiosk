@@ -21,6 +21,11 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+        # DB의 boolean 플래그 컬럼들이 전부 tinyint로 선언되어 있어서,
+        # Hibernate의 기본 Boolean->bit 매핑과 어긋나 스키마 검증이 계속 실패함.
+        # 이 옵션으로 Boolean 필드 전체를 tinyint 기준으로 매핑하도록 통일.
+        type:
+          preferred_boolean_jdbc_type: TINYINT
     show-sql: true
 
 logging:
