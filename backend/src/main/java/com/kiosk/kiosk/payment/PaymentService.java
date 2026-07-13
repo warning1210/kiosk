@@ -81,6 +81,10 @@ public class PaymentService {
 
         Customer customer = order.getCustomer();
         if (customer != null) {
+            // 체크아웃 이후 다른 주문 confirm으로 잔액이 줄었을 수 있어 차감 직전 재검증 (잔액 마이너스 방지)
+            if (order.getUsedPoints() > customer.getPointBalance()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "포인트 잔액이 부족합니다. 주문을 다시 시도해주세요.");
+            }
             // 포인트를 사용한 결제건은 적립 대상에서 제외 (사용과 적립 중복 방지)
             int earnedPoints;
             if (order.getUsedPoints() > 0) {
