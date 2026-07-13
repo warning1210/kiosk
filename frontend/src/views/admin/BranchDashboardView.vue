@@ -44,7 +44,6 @@
     <div class="orders-section">
       <div class="section-header-row">
         <h2 class="section-title">{{ showCompletedList ? '오늘 완료된 주문 목록' : '실시간 주문 현황' }}</h2>
-        <button v-if="showCompletedList" class="btn btn-cancel" @click="showCompletedList = false">돌아가기</button>
       </div>
       
       <div v-if="currentOrders.length === 0" class="empty-state">
