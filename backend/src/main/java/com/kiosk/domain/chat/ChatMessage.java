@@ -41,9 +41,12 @@ public class ChatMessage {
     @JoinColumn(name = "sender_admin_id", nullable = false)
     private Admin senderAdmin;
 
-    @Lob
-    @Column(name = "message_content", nullable = false, length = 65535)
-    private String messageContent;
+    @Column(
+    	    name = "message_content",
+    	    nullable = false,
+    	    columnDefinition = "TEXT"
+    	)
+    	private String messageContent;
 
     @Column(name = "read_at")
     private LocalDateTime readAt;

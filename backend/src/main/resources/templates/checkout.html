@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>결제하기</title>
+  <script src="https://js.tosspayments.com/v2/standard"></script>
+</head>
+<body>
+  <button id="pay-button">결제하기</button>
+
+  <script>
+    const clientKey = "test_ck_docs_Ovk5rk1EwkEbP0W43n07VZUWBN"; // 테스트 클라이언트 키
+    const customerKey = "customer_" + crypto.randomUUID(); // 실제로는 로그인 유저 식별자 사용
+
+    const tossPayments = TossPayments(clientKey);
+    const payment = tossPayments.payment({ customerKey });
+
+    document.getElementById("pay-button").addEventListener("click", async () => {
+      // orderId는 서버에서 미리 생성해 주문 정보와 함께 DB에 저장해두는 것을 권장
+      const orderId = "order_" + Date.now();
+
+      await payment.requestPayment({
+        method: "CARD", // 카드만 받으려면 CARD, 통합결제창은 method 생략
+        amount: {
+          currency: "KRW",
+          value: 15000, // 실제 주문 금액으로 교체
+        },
+        orderId: orderId,
+        orderName: "키오스크 주문 결제",
+        successUrl: window.location.origin + "/success.html",
+        failUrl: window.location.origin + "/fail.html",
+      });
+    });
+  </script>
+</body>
+</html>

@@ -39,8 +39,7 @@ public class Notice {
     @Column(name = "title", length = 150, nullable = false)
     private String title;
 
-    @Lob
-    @Column(name = "content", nullable = false, length = 65535)
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "image_url", length = 500)

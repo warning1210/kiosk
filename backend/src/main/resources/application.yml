@@ -1,25 +1,27 @@
 server:
   port: 8080
-
+ 
 spring:
   application:
     name: kiosk-backend
-
+ 
   datasource:
     # DB_HOST를 팀원 각자의 접속 대상(호스트를 공유하는 팀원의 IP 등)으로 오버라이드해서 사용
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:kiosk}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
     username: ${DB_USERNAME:kiosk}
-    password: ${DB_PASSWORD:kiosk1234}
+    password: ${DB_PASSWORD:kiosk6578}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
+ 
   jpa:
     hibernate:
-      # schema is created by db/init/01-schema.sql via docker-compose; keep Hibernate from altering it
-      ddl-auto: validate
+      # [수정] 최초 1회 실행 시 없던 테이블(registration_token)을 자동으로 만들어 주도록 설정합니다.
+      # 서버가 한 번 정상적으로 켜진 이후에는 다시 'validate'로 되돌려 놓으시면 됩니다!
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
+        # [안내] 앞서 로그에 떴던 HHH90000025 경고를 없애고 싶다면 아래 dialect 줄을 지우거나 주석(#) 처리하셔도 됩니다.
         dialect: org.hibernate.dialect.MySQLDialect
         # DB의 boolean 플래그 컬럼들이 전부 tinyint로 선언되어 있어서,
         # Hibernate의 기본 Boolean->bit 매핑과 어긋나 스키마 검증이 계속 실패함.
@@ -27,7 +29,14 @@ spring:
         type:
           preferred_boolean_jdbc_type: TINYINT
     show-sql: true
-
+ 
 logging:
   level:
     org.hibernate.SQL: debug
+ 
+toss:
+  secret-key: ${TOSS_SECRET_KEY:test_sk_LlDJaYngroawzQAvQJ9l3ezGdRpX}
+  client-key: ${TOSS_CLIENT_KEY:test_ck_Gv6LjeKD8aXOdnl1lpYkrwYxAdXy}
+  api-base-url: https://api.tosspayments.com
+  success-url: ${TOSS_SUCCESS_URL:http://localhost:5173/payment/success}
+  fail-url: ${TOSS_FAIL_URL:http://localhost:5173/payment/fail}

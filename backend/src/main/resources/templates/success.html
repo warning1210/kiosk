@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>결제 처리 중</title>
+</head>
+<body>
+  <p id="status">결제를 확인하고 있어요...</p>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const qrToken = params.get("qrToken");       // 우리가 successUrl에 직접 붙여둔 값
+    const paymentKey = params.get("paymentKey"); // 토스가 붙여준 값
+    const orderId = params.get("orderId");       // 토스가 붙여준 값 (qrToken과 동일해야 함)
+    const amount = Number(params.get("amount")); // 토스가 붙여준 값
+
+    (async () => {
+      try {
+        const response = await fetch("/api/payments/toss/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ qrToken, paymentKey, orderId, amount }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          document.getElementById("status").innerText =
+            "결제 승인 실패: " + (error.message || "다시 시도해주세요.");
+          return;
+        }
+
+        document.getElementById("status").innerText = "결제가 완료되었습니다! 키오스크 화면을 확인해주세요.";
+      } catch (e) {
+        document.getElementById("status").innerText = "오류가 발생했습니다.";
+      }
+    })();
+  </script>
+</body>
+</html>

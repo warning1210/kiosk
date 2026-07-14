@@ -53,8 +53,7 @@ public class Event {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Lob
-    @Column(name = "description", length = 65535)
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "discount_rate", precision = 5, scale = 2)
