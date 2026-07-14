@@ -1,10 +1,12 @@
 <template>
   <section>
+    <!-- 이 화면이 무엇을 보여 주는지 알려 주는 제목 영역 -->
     <header class="page-header">
       <h2>입고·신청 현황</h2>
       <p>신청한 재고의 배송 상태 · 배송 완료 시 재고에 자동 반영</p>
     </header>
 
+    <!-- 탭을 누르면 activeTab만 바뀌고, computed 목록이 즉시 다시 계산된다. -->
     <div class="tabs">
       <button
         v-for="tab in tabs"
@@ -17,16 +19,23 @@
       </button>
     </div>
 
+    <!-- 요청 중, 오류, 정상 목록은 동시에 보이지 않도록 v-if 계열로 분기한다. -->
     <p v-if="loading">불러오는 중...</p>
     <p v-else-if="error" class="banner danger">{{ error }}</p>
 
     <div v-else class="cards">
+      <!--
+        stockRequestId는 DB에서 정해진 신청의 고유 ID다.
+        목록 순서가 달라져도 같은 신청을 같은 DOM으로 추적할 수 있어 안정적인 key가 된다.
+      -->
       <article v-for="request in filteredRequests" :key="request.stockRequestId" class="card">
+        <!-- 여러 상품을 짧은 이름과 총수량으로 요약해서 카드의 핵심 정보를 보여 준다. -->
         <div class="summary">
-          <strong>{{ itemSummary(request) }}</strong>
-          <span>{{ formatDate(request.requestedAt) }} 신청 · {{ totalQuantity(request) }}개</span>
+          <strong>{{ summarizeStockRequestItems(request) }}</strong>
+          <span>{{ formatDate(request.requestedAt) }} 신청 · {{ calculateStockRequestQuantity(request) }}개</span>
         </div>
 
+        <!-- data-step 값을 CSS가 읽어서 현재 단계까지의 점 색상을 채운다. -->
         <ol class="timeline" :data-step="stepIndex(request.requestStatus)">
           <li>신청</li>
           <li>배송중</li>
@@ -35,13 +44,14 @@
 
         <p v-if="request.requestStatus === 'REJECTED'" class="rejection">반려: {{ request.rejectionReason }}</p>
 
+        <!-- 현재 업무 상태에서 허용되는 버튼만 보여 주어 잘못된 상태 변경을 예방한다. -->
         <div class="actions">
           <button
             v-if="request.requestStatus === 'PENDING'"
             type="button"
             class="ghost"
             :disabled="actingId === request.stockRequestId"
-            @click="onCancel(request)"
+            @click="cancelRequest(request)"
           >
             신청 취소
           </button>
@@ -50,7 +60,7 @@
             type="button"
             class="primary"
             :disabled="actingId === request.stockRequestId"
-            @click="onConfirmReceipt(request)"
+            @click="confirmRequestReceipt(request)"
           >
             배송완료 확인
           </button>
@@ -60,6 +70,7 @@
         </div>
       </article>
 
+      <!-- 필터 결과가 비어 있을 때 빈 화면 대신 이유를 알려 준다. -->
       <p v-if="filteredRequests.length === 0" class="empty">해당 상태의 신청 건이 없습니다</p>
     </div>
   </section>
@@ -68,7 +79,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { cancelStockRequest, confirmReceipt, fetchBranchStockRequests } from '../../api/branchStockRequest'
+import { calculateStockRequestQuantity, summarizeStockRequestItems } from '../../utils/stockRequestDisplay'
 
+// 화면 탭의 값과 서버 상태를 분리해 둔다.
+// REQUESTED 탭은 아직 지점에 도착하지 않은 PENDING과 PREPARING을 함께 보여 준다.
 const tabs = [
   { key: 'ALL', label: '전체' },
   { key: 'REQUESTED', label: '신청됨' },
@@ -76,13 +90,18 @@ const tabs = [
   { key: 'DELIVERED', label: '완료' }
 ]
 
+// 서버 원본 목록과 화면 제어 상태를 각각 ref로 관리한다.
 const requests = ref([])
 const loading = ref(true)
 const error = ref('')
 const activeTab = ref('ALL')
+
+// actingId에는 현재 상태 변경 요청 중인 신청 ID만 저장한다.
+// 목록 전체가 아니라 해당 카드의 버튼만 비활성화할 때 사용한다.
 const actingId = ref(null)
 
-async function load() {
+// 백엔드의 페이지 응답 중 실제 배열인 content를 화면 상태에 저장한다.
+async function loadStockRequests() {
   loading.value = true
   error.value = ''
   try {
@@ -95,6 +114,7 @@ async function load() {
   }
 }
 
+// 하나의 판별 함수를 필터링과 탭별 개수 계산에서 함께 사용해 기준 불일치를 막는다.
 function matchesTab(request, tabKey) {
   if (tabKey === 'ALL') return true
   if (tabKey === 'REQUESTED') return request.requestStatus === 'PENDING' || request.requestStatus === 'PREPARING'
@@ -103,40 +123,36 @@ function matchesTab(request, tabKey) {
   return false
 }
 
+// computed는 requests 또는 activeTab이 바뀔 때만 필터 결과를 다시 계산한다.
+// 서버를 다시 호출하지 않고 이미 받은 목록에서 탭 화면을 빠르게 전환한다.
 const filteredRequests = computed(() => requests.value.filter((r) => matchesTab(r, activeTab.value)))
 
+// 개수가 0이면 숫자를 숨겨 탭 이름만 표시한다.
 function countFor(tabKey) {
   const count = requests.value.filter((r) => matchesTab(r, tabKey)).length
   return count > 0 ? count : ''
 }
 
-function itemSummary(request) {
-  if (request.items.length === 0) return '-'
-  const first = request.items[0].flavorName
-  return request.items.length > 1 ? `${first} 외 ${request.items.length - 1}종` : first
-}
-
-function totalQuantity(request) {
-  return request.items.reduce((sum, item) => sum + (item.approvedQuantity ?? item.requestedQuantity), 0)
-}
-
+// 서버의 ISO 날짜 문자열을 카드에 필요한 월.일 형식으로 바꾼다.
 function formatDate(value) {
   if (!value) return '-'
   const date = new Date(value)
   return `${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
+// 업무 상태를 화면 타임라인의 0부터 시작하는 단계 번호로 변환한다.
 function stepIndex(status) {
   if (status === 'SHIPPING') return 1
   if (status === 'DELIVERED') return 2
   return 0
 }
 
-async function onCancel(request) {
+// 취소가 성공하면 서버 목록을 다시 받아 화면을 실제 서버 상태와 맞춘다.
+async function cancelRequest(request) {
   actingId.value = request.stockRequestId
   try {
     await cancelStockRequest(request.stockRequestId)
-    await load()
+    await loadStockRequests()
   } catch (e) {
     error.value = e.response?.data?.message ?? '신청을 취소하지 못했습니다'
   } finally {
@@ -144,11 +160,13 @@ async function onCancel(request) {
   }
 }
 
-async function onConfirmReceipt(request) {
+// 수령 확인은 백엔드에서 신청 완료와 지점 재고 반영을 함께 처리한다.
+// 성공 후 새 목록을 조회하므로 카드도 DELIVERED 상태로 갱신된다.
+async function confirmRequestReceipt(request) {
   actingId.value = request.stockRequestId
   try {
     await confirmReceipt(request.stockRequestId)
-    await load()
+    await loadStockRequests()
   } catch (e) {
     error.value = e.response?.data?.message ?? '수령 확인에 실패했습니다'
   } finally {
@@ -156,10 +174,12 @@ async function onConfirmReceipt(request) {
   }
 }
 
-onMounted(load)
+// 컴포넌트가 화면에 처음 붙은 직후 최초 목록을 한 번 조회한다.
+onMounted(loadStockRequests)
 </script>
 
 <style scoped>
+/* 페이지 제목과 설명 */
 .page-header h2 {
   margin: 0 0 0.25rem;
 }
@@ -170,6 +190,7 @@ onMounted(load)
   font-size: 0.8125rem;
 }
 
+/* 상태별 필터 탭 */
 .tabs {
   display: flex;
   gap: 0.5rem;
@@ -191,6 +212,7 @@ onMounted(load)
   color: #4f46e5;
 }
 
+/* 신청 카드는 화면 폭에 맞춰 열 수가 자동으로 달라지는 반응형 그리드다. */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -206,6 +228,7 @@ onMounted(load)
   gap: 0.75rem;
 }
 
+/* 카드의 상품 요약 정보 */
 .summary {
   display: flex;
   flex-direction: column;
@@ -216,6 +239,7 @@ onMounted(load)
   color: #9ca3af;
 }
 
+/* 타임라인을 세 단계로 나누고 data-step에 따라 현재 단계까지의 점을 강조한다. */
 .timeline {
   display: flex;
   list-style: none;
@@ -250,6 +274,7 @@ onMounted(load)
   background: #4f46e5;
 }
 
+/* 반려 사유와 상태별 실행 버튼 */
 .rejection {
   margin: 0;
   font-size: 0.75rem;
@@ -285,6 +310,7 @@ onMounted(load)
   cursor: default;
 }
 
+/* 필터 결과가 없을 때 그리드 전체 너비를 사용하는 안내 문구 */
 .empty {
   color: #9ca3af;
   grid-column: 1 / -1;
