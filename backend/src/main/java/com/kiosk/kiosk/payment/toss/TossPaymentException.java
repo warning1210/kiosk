@@ -16,6 +16,7 @@ public class TossPaymentException extends RuntimeException {
     public HttpStatus getHttpStatus() {
         return httpStatus;
     }
+    
  
     public String getTossErrorCode() {
         return tossErrorCode;

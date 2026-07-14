@@ -16,3 +16,4 @@ public class TossRestTemplateConfig {
         return new RestTemplate(factory);
     }
 }
+

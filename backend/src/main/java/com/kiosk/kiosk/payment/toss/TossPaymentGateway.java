@@ -35,6 +35,7 @@ public class TossPaymentGateway {
         this.tossProperties = tossProperties;
         this.objectMapper = objectMapper;
     }
+    
  
     /**
      * 결제 승인 API 호출. 성공하면 Payment 객체(JSON)를 그대로 반환한다.

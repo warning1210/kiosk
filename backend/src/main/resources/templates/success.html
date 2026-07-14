@@ -14,6 +14,7 @@
     const orderId = params.get("orderId");       // 토스가 붙여준 값 (qrToken과 동일해야 함)
     const amount = Number(params.get("amount")); // 토스가 붙여준 값
 
+    
     (async () => {
       try {
         const response = await fetch("/api/payments/toss/confirm", {

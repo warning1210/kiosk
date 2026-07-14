@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Configuration;
  *   success-url: ${TOSS_SUCCESS_URL:http://localhost:5173/payment/success}
  *   fail-url: ${TOSS_FAIL_URL:http://localhost:5173/payment/fail}
  */
+
 @Configuration
 @ConfigurationProperties(prefix = "toss")
 public class TossPaymentsProperties {
