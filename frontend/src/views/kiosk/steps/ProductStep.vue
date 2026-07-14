@@ -14,7 +14,7 @@
       </button>
     </nav>
 
-    <h2>{{ orderFlow.selectedCategory?.categoryName }} 메뉴 선택</h2>
+    <h2>{{ orderFlow.selectedCategory?.categoryName }} 메뉴 선택</h2>  
     <p v-if="orderFlow.loading">불러오는 중...</p>
     <p v-else-if="orderFlow.loadError">상품을 불러오지 못했습니다.</p>
     <ul v-else>
