@@ -10,6 +10,7 @@
     <FlavorStep v-else-if="orderFlow.step === 'flavor'" />
     <CartStep v-else-if="orderFlow.step === 'cart'" />
     <CustomerPaymentStep v-else-if="orderFlow.step === 'customer'" />
+    <ReceiptStep v-else-if="orderFlow.step === 'receipt'" />
   </section>
 </template>
 
@@ -24,6 +25,7 @@ import ContainerStep from './steps/ContainerStep.vue'
 import FlavorStep from './steps/FlavorStep.vue'
 import CartStep from './steps/CartStep.vue'
 import CustomerPaymentStep from './steps/CustomerPaymentStep.vue'
+import ReceiptStep from './steps/ReceiptStep.vue'
 
 const router = useRouter()
 const orderFlow = useOrderFlowStore()

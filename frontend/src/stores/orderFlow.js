@@ -14,7 +14,8 @@ const STEP_LABELS = {
   container: '용기 선택',
   flavor: '맛 선택',
   cart: '장바구니 확인',
-  customer: '포인트/결제'
+  customer: '포인트/결제',
+  receipt: '주문 완료'
 }
 
 const PAYMENT_STATUS_LABELS = {
@@ -54,7 +55,12 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     qrDataUrl: null,
     paymentStatus: null,
     checkoutPayload: null,
-    pollTimer: null
+    pollTimer: null,
+
+    // 결제 완료 후 영수증 화면에서 쓰는 값들
+    receipt: null,       // GET /orders/{id}/receipt 로 받아온 영수증 데이터
+    printing: false,     // 프린터 출력 요청 중인지
+    printMessage: ''     // 출력 결과 안내 문구
   }),
 
   getters: {
@@ -131,6 +137,9 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.qrDataUrl = null
       this.paymentStatus = null
       this.checkoutPayload = null
+      this.receipt = null
+      this.printing = false
+      this.printMessage = ''
 
       try {
         const [categoriesData, productsData, flavorsData] = await Promise.all([
@@ -256,6 +265,37 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       }
     },
 
+    // 결제 완료된 주문의 영수증 데이터를 백엔드에서 불러온다 (화면 표시용)
+    async loadReceipt() {
+      const { data } = await http.get(`/orders/${this.orderId}/receipt`)
+      this.receipt = data
+    },
+
+    // 강사님 프린터 서비스로 실제 영수증 출력을 요청한다.
+    // 백엔드가 대신 프린터 서버(:8888)로 요청을 보내고, 성공/오프라인 여부만 돌려준다.
+    async printReceipt() {
+      this.printing = true
+      this.printMessage = ''
+      try {
+        const { data } = await http.post(`/orders/${this.orderId}/print`)
+        this.printMessage = data.printed
+          ? '영수증이 출력되었습니다.'
+          : '프린터에 연결하지 못했습니다. 화면의 영수증을 확인해주세요.'
+      } catch (e) {
+        this.printMessage = '영수증 출력 요청 중 오류가 발생했습니다.'
+      } finally {
+        this.printing = false
+      }
+    },
+
+    // 영수증 확인 후 "완료" - 다음 손님을 위해 장바구니를 비우고 광고 화면으로 돌아간다
+    finishOrder() {
+      const cart = useCartStore()
+      this.stopPolling()
+      cart.clear()
+      router.push('/')
+    },
+
     async lookupCustomer() {
       const cart = useCartStore()
       this.customerLookupDone = false
@@ -301,11 +341,12 @@ export const useOrderFlowStore = defineStore('orderFlow', {
           this.paymentStatus = data.paymentStatus
           if (data.paymentStatus === 'PAID') {
             this.stopPolling()
-            // 결제 완료 화면을 잠시 보여준 뒤 다음 고객을 위해 광고 화면으로 복귀
-            setTimeout(() => {
-              cart.clear()
-              router.push('/')
-            }, 3000)
+            this.qrInfo = null // QR 팝업을 닫는다
+            // 영수증 데이터를 불러와 영수증 화면으로 이동하고, 프린터로도 자동 출력을 시도한다.
+            // (프린터가 없어도 화면 영수증은 그대로 보이고, 흐름은 계속 진행된다)
+            await this.loadReceipt()
+            this.step = 'receipt'
+            this.printReceipt()
           }
         } catch (e) {
           // 네트워크 일시 오류는 무시하고 다음 폴링에서 재시도

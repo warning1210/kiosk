@@ -31,3 +31,10 @@ spring:
 logging:
   level:
     org.hibernate.SQL: debug
+
+# 영수증 프린터 서비스 주소 (강사님 PC에서 도는 서비스)
+# 실습실 기본값은 강사님 PC(172.16.15.97:8888). 다른 환경에서는 환경변수 PRINTER_URL로 교체.
+#   집에서 테스트: PRINTER_URL=http://localhost:8888/receipt  (프린터 서비스를 로컬에 띄운 경우)
+#   프린터 없이 개발: 그냥 두면 됨 - 연결 실패해도 주문/결제는 정상, 영수증은 화면으로만 표시
+printer:
+  url: ${PRINTER_URL:http://172.16.15.97:8888/receipt}
