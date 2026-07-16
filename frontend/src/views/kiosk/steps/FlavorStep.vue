@@ -174,7 +174,7 @@ const emptySlotCount = computed(() => {
   max-width: 1024px;
   margin: 0 auto;
   padding-bottom: 233px;
-  background: #f1f1f1;
+  background: #fff;
   min-height: 100vh;
 }
 
@@ -353,8 +353,8 @@ const emptySlotCount = computed(() => {
   transform: translateX(-50%);
   width: 100%;
   max-width: 1024px;
-  background: #fafafa;
-  border-top: 1px solid #ddd;
+  background: #fff;
+  border-top: 1px solid #eee;
   padding: 0.75rem 1.5rem;
 }
 
