@@ -60,7 +60,9 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     // 결제 완료 후 영수증 화면에서 쓰는 값들
     receipt: null,       // GET /orders/{id}/receipt 로 받아온 영수증 데이터
     printing: false,     // 프린터 출력 요청 중인지
-    printMessage: ''     // 출력 결과 안내 문구
+    printMessage: '',    // 출력 결과 안내 문구
+
+    confirmDialog: null  // { message, resolve } - 앱 디자인 확인 팝업 (ConfirmModal)이 떠 있을 때만 값이 있음
   }),
 
   getters: {
@@ -266,12 +268,24 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.step = 'cart'
     },
 
-    removeFromCart(id) {
+    async removeFromCart(id) {
       const cart = useCartStore()
-      // CU-007-1: 삭제 전 재확인
-      if (confirm('이 메뉴를 삭제하시겠습니까?')) {
+      // CU-007-1: 삭제 전 재확인 - 브라우저 기본 confirm() 대신 앱 디자인의 팝업으로 확인받는다
+      if (await this.askConfirm('이 메뉴를 삭제하시겠습니까?')) {
         cart.removeItem(id)
       }
+    },
+
+    // 화면 디자인에 맞는 확인 팝업(ConfirmModal, OrderView.vue에 마운트됨)을 띄우고 결과를 기다린다
+    askConfirm(message) {
+      return new Promise((resolve) => {
+        this.confirmDialog = { message, resolve }
+      })
+    },
+
+    resolveConfirm(result) {
+      this.confirmDialog?.resolve(result)
+      this.confirmDialog = null
     },
 
     // 결제 완료된 주문의 영수증 데이터를 백엔드에서 불러온다 (화면 표시용)
@@ -335,16 +349,20 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     },
 
     // CU-014: 화면 우측/좌측 상단 X버튼 공통 동작.
-    // 매장/포장 선택 화면 이후인데 장바구니가 비어있으면(잃을 게 없으면) 매장/포장 선택으로만 가볍게 되돌리고,
-    // 장바구니에 뭔가 담겨있으면 확인 후 완전히 초기 화면(광고 화면)으로 나간다.
-    goHome() {
+    // 장바구니 삭제(+광고 화면 복귀)는 메인화면(상품 고르는 화면)에서 눌렀을 때만 일어난다.
+    // 그 외 화면(용기/맛선택, 장바구니, 결제 등)에서는 장바구니를 그대로 둔 채 메인화면으로만 되돌린다.
+    async goHome() {
       const cart = useCartStore()
       this.stopPolling()
-      if (this.step !== 'orderType' && cart.items.length === 0) {
-        this.step = 'orderType'
+      if (this.step === 'orderType') {
+        router.push('/')
         return
       }
-      if (cart.items.length > 0 && !confirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?')) return
+      if (this.step !== 'product') {
+        this.step = 'product'
+        return
+      }
+      if (cart.items.length > 0 && !(await this.askConfirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?'))) return
       cart.clear()
       router.push('/')
     },

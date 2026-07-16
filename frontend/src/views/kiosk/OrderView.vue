@@ -9,6 +9,17 @@
     <CartStep v-else-if="orderFlow.step === 'cart'" />
     <CustomerPaymentStep v-else-if="orderFlow.step === 'customer'" />
     <ReceiptStep v-else-if="orderFlow.step === 'receipt'" />
+
+    <!-- 어느 화면에서든 뜰 수 있는 삭제/이탈 확인 팝업 - 브라우저 기본 confirm() 대신 앱 디자인으로 통일 -->
+    <div v-if="orderFlow.confirmDialog" class="modal-backdrop">
+      <div class="modal">
+        <p class="confirm-message">{{ orderFlow.confirmDialog.message }}</p>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-cancel" @click="orderFlow.resolveConfirm(false)">취소</button>
+          <button type="button" class="confirm-ok" @click="orderFlow.resolveConfirm(true)">확인</button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -33,3 +44,56 @@ onUnmounted(() => {
   orderFlow.stopPolling()
 })
 </script>
+
+<style scoped>
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.modal {
+  width: min(480px, 90vw);
+  background: #fff;
+  border-radius: 26px;
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.confirm-message {
+  margin: 0 0 32px;
+  font-size: 20px;
+  color: #000;
+  line-height: 1.4;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.confirm-cancel,
+.confirm-ok {
+  flex: 1;
+  height: 64px;
+  border-radius: 99px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.confirm-cancel {
+  border: 1px solid #b9b9b9;
+  background: #fff;
+  color: #f20c93;
+}
+
+.confirm-ok {
+  border: none;
+  background: #f20c93;
+  color: #fff;
+}
+</style>
