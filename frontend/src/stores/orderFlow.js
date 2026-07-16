@@ -371,6 +371,13 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         return
       }
       if (this.step !== 'product') {
+        // 결제 QR을 띄운 채로 나가면 폴링이 멈춰서 결제가 완료돼도 감지를 못 하고 장바구니가 영영 안 비워진다 -
+        // 진행 중이던 결제 시도 자체를 폐기해서, 나중에 '다음단계(결제하기)'를 다시 누르면 새 QR/주문으로 시작하게 한다.
+        this.qrInfo = null
+        this.qrDataUrl = null
+        this.orderId = null
+        this.checkoutPayload = null
+        this.paymentStatus = null
         this.step = 'product'
         return
       }
