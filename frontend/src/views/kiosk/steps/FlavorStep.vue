@@ -1,9 +1,9 @@
 <template>
   <!-- 5단계: 맛 선택 (CU-006) -->
   <div class="page">
-    <!-- 상품정보/플레이버 탭 -->
+    <!-- 상품정보/플레이버 탭: 컵/콘을 고르거나(용기 선택 화면을 거친) 테이크아웃 대용량 상품(숟가락/드라이아이스)만 '상품정보'로 되돌아갈 수 있다 -->
     <nav class="tab-bar">
-      <button type="button" class="tab" @click="orderFlow.step = 'product'">상품정보</button>
+      <button v-if="showProductInfoTab" type="button" class="tab" @click="orderFlow.step = 'container'">상품정보</button>
       <button type="button" class="tab active">플레이버</button>
     </nav>
 
@@ -13,42 +13,49 @@
         <span class="progress-hint">같은 맛을 여러 번 선택할 수 있어요</span>
       </p>
 
-      <ul class="flavor-grid">
-        <li v-for="flavor in orderFlow.flavors" :key="flavor.flavorId">
-          <button
-            type="button"
-            class="flavor-card"
-            :class="{ selected: orderFlow.flavorSelectedCount(flavor.flavorId) > 0 }"
-            :disabled="!orderFlow.canPickMoreFlavor()"
-            @click="orderFlow.toggleFlavor(flavor.flavorId)"
-          >
-            <span class="flavor-thumb">
-              <img v-if="flavor.imageUrl" :src="flavor.imageUrl" :alt="flavor.flavorName" />
-              <span v-else class="flavor-thumb--empty" />
-              <span v-if="orderFlow.flavorSelectedCount(flavor.flavorId) > 0" class="flavor-count-badge">
-                {{ orderFlow.flavorSelectedCount(flavor.flavorId) }}
-              </span>
-            </span>
-            <span class="flavor-name">{{ flavor.flavorName }}</span>
-          </button>
-        </li>
-      </ul>
-    </div>
+      <div
+        class="flavor-viewport"
+        @pointerdown="onSwipeStart"
+        @pointermove="onSwipeMove"
+        @pointerup="onSwipeEnd"
+        @pointercancel="onSwipeEnd"
+      >
+        <div class="flavor-track" :style="{ transform: `translateX(-${currentPage * 100}%)` }">
+          <ul v-for="(page, pageIndex) in flavorPages" :key="pageIndex" class="flavor-grid">
+            <li v-for="flavor in page" :key="flavor.flavorId">
+              <button
+                type="button"
+                class="flavor-card"
+                :class="{ selected: orderFlow.flavorSelectedCount(flavor.flavorId) > 0 }"
+                :disabled="!orderFlow.canPickMoreFlavor() && orderFlow.flavorSelectedCount(flavor.flavorId) === 0"
+                @click="onFlavorClick(flavor.flavorId)"
+              >
+                <span class="flavor-thumb">
+                  <img v-if="flavor.imageUrl" :src="flavor.imageUrl" :alt="flavor.flavorName" />
+                  <span v-else class="flavor-thumb--empty" />
+                  <span v-if="orderFlow.flavorSelectedCount(flavor.flavorId) > 0" class="flavor-count-badge">
+                    {{ orderFlow.flavorSelectedCount(flavor.flavorId) }}
+                  </span>
+                </span>
+                <span class="flavor-name">{{ flavor.flavorName }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
 
-    <div v-if="orderFlow.selectedProduct.isLarge" class="large-options">
-      <label>
-        숟가락 개수
-        <input v-model.number="orderFlow.spoonCount" type="number" min="0" />
-      </label>
-      <label>
-        드라이아이스 시간(분)
-        <select v-model.number="orderFlow.dryIceMinutes">
-          <option :value="null">사용 안함</option>
-          <option :value="10">10분</option>
-          <option :value="20">20분</option>
-          <option :value="30">30분</option>
-        </select>
-      </label>
+      <!-- 페이지 인디케이터 -->
+      <div v-if="totalPages > 1" class="page-dots">
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          type="button"
+          class="page-dot"
+          :class="{ active: currentPage === page - 1 }"
+          :aria-label="`${page}페이지`"
+          @click="currentPage = page - 1"
+        ></button>
+      </div>
     </div>
 
     <!-- 담은 맛을 화면 하단에 실시간 표시 -->
@@ -81,14 +88,72 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
-import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios.svg'
+import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.svg'
+
+const FLAVORS_PER_PAGE = 12 // 4열 x 3행
+const SWIPE_THRESHOLD = 40 // px
 
 const orderFlow = useOrderFlowStore()
 
+// 이전 단계(상품정보)가 실제로 존재하는 상품만 탭을 보여준다:
+// 컵/콘 선택이 있었던 상품, 또는 테이크아웃 대용량 상품(숟가락/드라이아이스)
+const showProductInfoTab = computed(() => {
+  const product = orderFlow.selectedProduct
+  return product ? orderFlow.needsContainerStep(product) : false
+})
+
 function flavorImage(flavorId) {
   return orderFlow.flavors.find((f) => f.flavorId === flavorId)?.imageUrl ?? null
+}
+
+const currentPage = ref(0)
+const flavorPages = computed(() => {
+  const pages = []
+  for (let i = 0; i < orderFlow.flavors.length; i += FLAVORS_PER_PAGE) {
+    pages.push(orderFlow.flavors.slice(i, i + FLAVORS_PER_PAGE))
+  }
+  return pages.length ? pages : [[]]
+})
+const totalPages = computed(() => flavorPages.value.length)
+
+// 마우스 드래그(PC)/터치 스와이프로 페이지 전환 - Pointer Events라 둘 다 같은 핸들러로 처리됨
+let swipeStartX = null
+const isDragging = ref(false)
+
+function onSwipeStart(e) {
+  swipeStartX = e.clientX
+}
+
+function onSwipeMove(e) {
+  if (swipeStartX === null) return
+  // 카드 클릭(탭)이 스와이프로 오인되지 않도록, 실제로 좀 움직였을 때만 드래그 중으로 취급
+  isDragging.value = Math.abs(e.clientX - swipeStartX) > 10
+}
+
+function onSwipeEnd(e) {
+  if (swipeStartX === null) return
+  const delta = e.clientX - swipeStartX
+  swipeStartX = null
+  if (Math.abs(delta) < SWIPE_THRESHOLD) {
+    isDragging.value = false
+    return
+  }
+  if (delta < 0 && currentPage.value < totalPages.value - 1) currentPage.value += 1
+  if (delta > 0 && currentPage.value > 0) currentPage.value -= 1
+  // 드래그로 넘긴 직후 발생하는 click까지 막고 나서 풀어준다
+  requestAnimationFrame(() => { isDragging.value = false })
+}
+
+function onFlavorClick(flavorId) {
+  if (isDragging.value) return
+  // 다 채운 상태에서 이미 담은 맛을 다시 누르면, 새로 추가하는 대신 1개 취소한다
+  if (!orderFlow.canPickMoreFlavor() && orderFlow.flavorSelectedCount(flavorId) > 0) {
+    orderFlow.removeOneFlavor(flavorId)
+    return
+  }
+  orderFlow.toggleFlavor(flavorId)
 }
 
 const emptySlotCount = computed(() => {
@@ -143,13 +208,48 @@ const emptySlotCount = computed(() => {
   color: #989898;
 }
 
+.flavor-viewport {
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+}
+
+.flavor-track {
+  display: flex;
+  transition: transform 0.35s ease;
+}
+
 .flavor-grid {
+  flex: 0 0 100%;
+  min-width: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.page-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.page-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: #d9d9d9;
+  padding: 0;
+  cursor: pointer;
+}
+
+.page-dot.active {
+  background: #f20c93;
 }
 
 .flavor-card {
@@ -216,13 +316,6 @@ const emptySlotCount = computed(() => {
   font-size: 17px;
   color: #000;
   text-align: center;
-}
-
-.large-options {
-  display: flex;
-  gap: 24px;
-  padding: 16px;
-  background: #fff;
 }
 
 .flavor-summary-bar {

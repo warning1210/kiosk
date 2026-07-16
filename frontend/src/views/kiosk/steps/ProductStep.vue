@@ -14,7 +14,7 @@
           <span class="notif-circle" v-html="notifCircleSvg"></span>
           <img :src="bell" class="bell-icon" alt="" />
         </button>
-        <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="goHome">
+        <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
           <span v-html="closeXSvg"></span>
         </button>
       </div>
@@ -34,30 +34,55 @@
       </button>
     </nav>
 
-    <!-- 상품 그리드 -->
+    <!-- 상품 그리드: 맛 선택 화면과 동일하게 페이지 단위로 좌우 스와이프 -->
     <p v-if="orderFlow.loading" class="status-text">불러오는 중...</p>
     <p v-else-if="orderFlow.loadError" class="status-text">상품을 불러오지 못했습니다.</p>
-    <div v-else class="product-grid">
-      <button
-        v-for="product in orderFlow.visibleProducts"
-        :key="product.productId"
-        type="button"
-        class="product-card"
-        @click="orderFlow.selectProduct(product)"
+    <template v-else>
+      <div
+        class="product-viewport"
+        @pointerdown="onSwipeStart"
+        @pointermove="onSwipeMove"
+        @pointerup="onSwipeEnd"
+        @pointercancel="onSwipeEnd"
       >
-        <img v-if="productImage(product.productName)" :src="productImage(product.productName)" :alt="product.productName" class="product-image" />
-        <div v-else class="product-image product-image--placeholder" />
-        <p class="product-name">{{ product.productName }}</p>
-        <p class="product-price">₩{{ product.basePrice.toLocaleString() }}</p>
-      </button>
-    </div>
+        <div class="product-track" :style="{ transform: `translateX(-${currentPage * 100}%)` }">
+          <div v-for="(page, pageIndex) in productPages" :key="pageIndex" class="product-grid">
+            <button
+              v-for="product in page"
+              :key="product.productId"
+              type="button"
+              class="product-card"
+              @click="onProductClick(product)"
+            >
+              <img v-if="productImage(product.productName)" :src="productImage(product.productName)" :alt="product.productName" class="product-image" />
+              <div v-else class="product-image product-image--placeholder" />
+              <p class="product-name">{{ product.productName }}</p>
+              <p class="product-price">₩{{ product.basePrice.toLocaleString() }}</p>
+            </button>
+          </div>
+        </div>
+      </div>
 
-    <!-- 하단 바: 장바구니 / 결제 -->
-    <footer class="bottom-bar">
+      <!-- 페이지 인디케이터 -->
+      <div v-if="totalProductPages > 1" class="page-dots">
+        <button
+          v-for="page in totalProductPages"
+          :key="page"
+          type="button"
+          class="page-dot"
+          :class="{ active: currentPage === page - 1 }"
+          :aria-label="`${page}페이지`"
+          @click="currentPage = page - 1"
+        ></button>
+      </div>
+    </template>
+
+    <!-- 하단 바: 장바구니 / 결제 - 담긴 상품이 있을 때만 노출 -->
+    <footer v-if="cart.items.length" class="bottom-bar">
       <button type="button" class="cart-btn" aria-label="장바구니" @click="goToCart">
         <span v-html="cartSvg"></span>
       </button>
-      <button type="button" class="checkout-btn" :disabled="!cart.items.length" @click="goToCart">
+      <button type="button" class="checkout-btn" @click="goToCheckout">
         <span>결제하기</span>
         <img :src="arrowForwardIos" alt="" class="checkout-arrow" />
       </button>
@@ -66,7 +91,7 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { computed, ref, watch } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
 
@@ -78,17 +103,8 @@ import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios.svg'
 import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
 import cartRaw from '../../../assets/kiosk/icons/cart.svg?raw'
 import notifCircleRaw from '../../../assets/kiosk/icons/notif-circle.svg?raw'
+import { productImage } from '../../../data/productImages'
 
-import singleRegular from '../../../assets/kiosk/products/single-regular.png'
-import singleKing from '../../../assets/kiosk/products/single-king.png'
-import doubleJunior from '../../../assets/kiosk/products/double-junior.png'
-import doubleRegular from '../../../assets/kiosk/products/double-regular.png'
-import pint from '../../../assets/kiosk/products/pint.png'
-import quart from '../../../assets/kiosk/products/quart.png'
-import family from '../../../assets/kiosk/products/family.png'
-import halfGallon from '../../../assets/kiosk/products/half-gallon.png'
-
-const router = useRouter()
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 
@@ -96,33 +112,64 @@ const closeXSvg = closeXRaw
 const cartSvg = cartRaw
 const notifCircleSvg = notifCircleRaw
 
-// Figma 목업의 컵/콘 아이콘을 실제 상품명(seed 데이터 기준)에 매칭
-const PRODUCT_IMAGES = {
-  싱글레귤러: singleRegular,
-  싱글킹: singleKing,
-  더블주니어: doubleJunior,
-  더블레귤러: doubleRegular,
-  파인트: pint,
-  쿼터: quart,
-  패밀리: family,
-  하프갤런: halfGallon
-}
-
-function productImage(productName) {
-  return PRODUCT_IMAGES[productName] ?? null
-}
-
 function goToCart() {
   if (!cart.items.length) return
   orderFlow.step = 'cart'
 }
 
-// CU-014: 홈버튼과 동일하게, 진행 중인 주문이 있으면 확인 후 초기 화면으로 복귀
-function goHome() {
-  if (cart.items.length > 0 && !confirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?')) return
-  orderFlow.stopPolling()
-  cart.clear()
-  router.push('/')
+function goToCheckout() {
+  if (!cart.items.length) return
+  orderFlow.step = 'customer'
+}
+
+// 상품 그리드도 맛 선택과 동일한 방식으로 페이지 단위 좌우 스와이프
+const PRODUCTS_PER_PAGE = 8 // 4열 x 2행
+const SWIPE_THRESHOLD = 40 // px
+
+const currentPage = ref(0)
+const productPages = computed(() => {
+  const pages = []
+  const items = orderFlow.visibleProducts
+  for (let i = 0; i < items.length; i += PRODUCTS_PER_PAGE) {
+    pages.push(items.slice(i, i + PRODUCTS_PER_PAGE))
+  }
+  return pages.length ? pages : [[]]
+})
+const totalProductPages = computed(() => productPages.value.length)
+
+// 카테고리를 바꾸면 이전 카테고리에서 보던 페이지 위치가 아니라 첫 페이지부터 보여준다
+watch(() => orderFlow.selectedCategory, () => {
+  currentPage.value = 0
+})
+
+let swipeStartX = null
+const isDragging = ref(false)
+
+function onSwipeStart(e) {
+  swipeStartX = e.clientX
+}
+
+function onSwipeMove(e) {
+  if (swipeStartX === null) return
+  isDragging.value = Math.abs(e.clientX - swipeStartX) > 10
+}
+
+function onSwipeEnd(e) {
+  if (swipeStartX === null) return
+  const delta = e.clientX - swipeStartX
+  swipeStartX = null
+  if (Math.abs(delta) < SWIPE_THRESHOLD) {
+    isDragging.value = false
+    return
+  }
+  if (delta < 0 && currentPage.value < totalProductPages.value - 1) currentPage.value += 1
+  if (delta > 0 && currentPage.value > 0) currentPage.value -= 1
+  requestAnimationFrame(() => { isDragging.value = false })
+}
+
+function onProductClick(product) {
+  if (isDragging.value) return
+  orderFlow.selectProduct(product)
 }
 </script>
 
