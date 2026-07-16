@@ -2,6 +2,9 @@
   <!-- 1단계: 매장/포장 선택 (CU-002) - 팝업 형태 -->
   <div class="modal-backdrop">
     <div class="modal">
+      <button type="button" class="close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+        <span v-html="closeXSvg"></span>
+      </button>
       <img class="logo" :src="logo" alt="배스킨라빈스" />
       <h2>주문 방법을<br />선택해주세요</h2>
       <p class="subtitle">Please select your order method.</p>
@@ -31,7 +34,9 @@ import { useOrderFlowStore } from '../../../stores/orderFlow'
 import logo from '../../../assets/kiosk/logo.png'
 import takeoutBag from '../../../assets/kiosk/icons/takeout-bag.png'
 import dineinCup from '../../../assets/kiosk/icons/dinein-cup.png'
+import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
 
+const closeXSvg = closeXRaw
 const orderFlow = useOrderFlowStore()
 </script>
 
@@ -46,6 +51,7 @@ const orderFlow = useOrderFlowStore()
 }
 
 .modal {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -54,6 +60,25 @@ const orderFlow = useOrderFlowStore()
   background: #fff;
   border-radius: 26px;
   text-align: center;
+}
+
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.close-btn :deep(svg) {
+  width: 44px;
+  height: 44px;
 }
 
 .logo {

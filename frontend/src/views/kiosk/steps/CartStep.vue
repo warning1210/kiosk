@@ -78,7 +78,6 @@ import editPencilRaw from '../../../assets/kiosk/icons/edit-pencil.svg?raw'
 import deleteXRaw from '../../../assets/kiosk/icons/delete-x.svg?raw'
 import stepPillRaw from '../../../assets/kiosk/icons/step-pill.svg?raw'
 
-const router = useRouter()
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 
@@ -97,14 +96,6 @@ function itemDetail(item) {
   if (item.spoonCount) parts.push(`숟가락 ${item.spoonCount}개`)
   if (item.dryIceMinutes) parts.push(`드라이아이스 ${item.dryIceMinutes}분`)
   return parts.join(' · ')
-}
-
-// CU-014: 홈버튼과 동일하게, 진행 중인 주문이 있으면 확인 후 초기 화면으로 복귀
-function goHome() {
-  if (cart.items.length > 0 && !confirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?')) return
-  orderFlow.stopPolling()
-  cart.clear()
-  router.push('/')
 }
 </script>
 

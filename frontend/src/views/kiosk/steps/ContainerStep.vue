@@ -1,6 +1,10 @@
 <template>
   <!-- 4단계: 상품정보 (컵/콘 둘 다 가능한 상품 → 컵/콘 선택, 테이크아웃 대용량 상품 → 숟가락/드라이아이스 선택) -->
   <div class="page">
+    <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+      <span v-html="closeXSvg"></span>
+    </button>
+
     <nav class="tab-bar">
       <button type="button" class="tab active">상품정보</button>
       <button type="button" class="tab" @click="orderFlow.proceedPastContainer">플레이버</button>
@@ -92,7 +96,9 @@ import { productImage } from '../../../data/productImages'
 import containerCup from '../../../assets/kiosk/icons/container-cup.png'
 import containerCone from '../../../assets/kiosk/icons/container-cone.png'
 import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.svg'
+import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
 
+const closeXSvg = closeXRaw
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 
@@ -113,6 +119,26 @@ const DRY_ICE_CHOICES = [
   padding-bottom: 233px;
   background: #fff;
   min-height: 100vh;
+}
+
+.close-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  width: 53px;
+  height: 53px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.close-btn :deep(svg) {
+  width: 55px;
+  height: 55px;
 }
 
 .tab-bar {

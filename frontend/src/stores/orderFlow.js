@@ -66,8 +66,11 @@ export const useOrderFlowStore = defineStore('orderFlow', {
   getters: {
     stepLabel: (state) => STEP_LABELS[state.step],
 
-    // 사이즈(레귤러/대용량) 구분 없이, 선택된 카테고리의 상품을 전부 한 화면에 보여준다.
-    visibleProducts: (state) => state.products.filter((p) => p.categoryId === state.selectedCategory?.categoryId),
+    // 사이즈(레귤러/대용량) 구분 없이, 선택된 카테고리의 상품을 가격 낮은 순으로 전부 한 화면에 보여준다.
+    visibleProducts: (state) =>
+      state.products
+        .filter((p) => p.categoryId === state.selectedCategory?.categoryId)
+        .sort((a, b) => a.basePrice - b.basePrice),
 
     // 담은 맛을 {flavorId, flavorName, count} 형태로 집계 (대용량은 같은 맛 중복 선택 가능)
     selectedFlavorSummary: (state) => {

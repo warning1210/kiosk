@@ -1,6 +1,10 @@
 <template>
   <!-- 5단계: 맛 선택 (CU-006) -->
   <div class="page">
+    <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+      <span v-html="closeXSvg"></span>
+    </button>
+
     <!-- 상품정보/플레이버 탭: 컵/콘을 고르거나(용기 선택 화면을 거친) 테이크아웃 대용량 상품(숟가락/드라이아이스)만 '상품정보'로 되돌아갈 수 있다 -->
     <nav class="tab-bar">
       <button v-if="showProductInfoTab" type="button" class="tab" @click="orderFlow.step = 'container'">상품정보</button>
@@ -91,6 +95,9 @@
 import { computed, ref } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.svg'
+import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
+
+const closeXSvg = closeXRaw
 
 const FLAVORS_PER_PAGE = 12 // 4열 x 3행
 const SWIPE_THRESHOLD = 40 // px
@@ -169,6 +176,26 @@ const emptySlotCount = computed(() => {
   padding-bottom: 233px;
   background: #f1f1f1;
   min-height: 100vh;
+}
+
+.close-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  width: 53px;
+  height: 53px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.close-btn :deep(svg) {
+  width: 55px;
+  height: 55px;
 }
 
 .tab-bar {

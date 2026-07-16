@@ -123,7 +123,7 @@ function goToCheckout() {
 }
 
 // 상품 그리드도 맛 선택과 동일한 방식으로 페이지 단위 좌우 스와이프
-const PRODUCTS_PER_PAGE = 8 // 4열 x 2행
+const PRODUCTS_PER_PAGE = 16 // 4열 x 4행
 const SWIPE_THRESHOLD = 40 // px
 
 const currentPage = ref(0)
@@ -299,9 +299,44 @@ function onProductClick(product) {
   color: #666;
 }
 
+.product-viewport {
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+}
+
+.product-track {
+  display: flex;
+  transition: transform 0.35s ease;
+}
+
 .product-grid {
+  flex: 0 0 100%;
+  min-width: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+}
+
+.page-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.page-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: #d9d9d9;
+  padding: 0;
+  cursor: pointer;
+}
+
+.page-dot.active {
+  background: #f20c93;
 }
 
 .product-card {
