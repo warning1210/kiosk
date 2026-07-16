@@ -275,7 +275,7 @@ function clearPhone() {
 // 키오스크 화면(주문 상태 폴링)이 통째로 날아가 버리므로, 반드시 별도 창으로 열어야 한다.
 function openPaymentPopup() {
   const url = `${window.location.origin}/pay/${orderFlow.qrInfo.qrToken}`
-  window.open(url, 'kioskPaymentTest', 'width=480,height=800')
+  window.open(url, 'kioskPaymentTest', 'width=720,height=800')
 }
 
 // QR 유효 시간(백엔드 PaymentService.QR_VALID_MINUTES=5분) 실시간 카운트다운
