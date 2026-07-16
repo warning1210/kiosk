@@ -81,6 +81,7 @@
     <footer v-if="cart.items.length" class="bottom-bar">
       <button type="button" class="cart-btn" aria-label="장바구니" @click="goToCart">
         <span v-html="cartSvg"></span>
+        <span class="cart-count-badge">{{ cart.totalCount }}</span>
       </button>
       <button type="button" class="checkout-btn" @click="goToCheckout">
         <span>결제하기</span>
@@ -179,6 +180,7 @@ function onProductClick(product) {
   margin: 0 auto;
   padding-bottom: 194px;
   background: #fff;
+  min-height: 100vh;
 }
 
 .top-bar {
@@ -391,6 +393,7 @@ function onProductClick(product) {
 }
 
 .cart-btn {
+  position: relative;
   width: 202px;
   height: 101px;
   border: none;
@@ -402,6 +405,23 @@ function onProductClick(product) {
 .cart-btn :deep(svg) {
   width: 100%;
   height: 100%;
+}
+
+.cart-count-badge {
+  position: absolute;
+  top: 14px;
+  right: 70px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f20c93;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .checkout-btn {

@@ -8,18 +8,26 @@
       </button>
     </header>
 
+    <!-- 결제 QR을 한 번 만든 뒤에도 포인트를 다시 조정하고 싶을 수 있어서, 탭을 자유롭게 오갈 수 있게 함
+         (STEP02는 QR이 실제로 있어야 볼 내용이 있으므로, qrInfo가 생기기 전까진 비활성) -->
     <nav class="tab-bar">
-      <button type="button" class="tab" :class="{ active: !orderFlow.qrInfo }" disabled>
-        <span class="tab-badge" :class="{ 'tab-badge--active': !orderFlow.qrInfo }">STEP01</span>
+      <button type="button" class="tab" :class="{ active: activeTab === 'points' }" @click="activeTab = 'points'">
+        <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'points' }">STEP01</span>
         <span>포인트/할인</span>
       </button>
-      <button type="button" class="tab" :class="{ active: orderFlow.qrInfo }" disabled>
-        <span class="tab-badge" :class="{ 'tab-badge--active': orderFlow.qrInfo }">STEP02</span>
+      <button
+        type="button"
+        class="tab"
+        :class="{ active: activeTab === 'payment' }"
+        :disabled="!orderFlow.qrInfo"
+        @click="activeTab = 'payment'"
+      >
+        <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'payment' }">STEP02</span>
         <span>쿠폰/결제</span>
       </button>
     </nav>
 
-    <div v-if="!orderFlow.qrInfo" class="content">
+    <div v-if="activeTab === 'points'" class="content">
       <p class="section-title">해피포인트 회원이신가요?</p>
 
       <div class="point-options">
@@ -131,19 +139,19 @@
       </div>
     </footer>
 
-    <div v-if="!orderFlow.qrInfo" class="bottom-bar">
+    <div v-if="activeTab === 'points'" class="bottom-bar">
       <button type="button" class="prev-btn" @click="orderFlow.step = 'cart'">
         <img :src="arrowForwardIos" alt="" class="prev-arrow" />
         <span>이전</span>
       </button>
-      <button type="button" class="confirm-btn" :disabled="orderFlow.checkoutInProgress" @click="orderFlow.startPayment">
+      <button type="button" class="confirm-btn" :disabled="orderFlow.checkoutInProgress" @click="goToPayment">
         다음단계(결제하기)
       </button>
     </div>
     <p v-if="orderFlow.checkoutError" class="checkout-error">{{ orderFlow.checkoutError }}</p>
 
     <!-- CU-009: STEP02 - 결제하기를 누르면 팝업이 아니라 이 화면(쿠폰/결제 탭) 안에서 그대로 진행된다 -->
-    <div v-if="orderFlow.qrInfo" class="content step2-content">
+    <div v-if="activeTab === 'payment'" class="content step2-content">
       <h3 class="modal-title">QR 결제</h3>
       <p class="modal-subtitle">휴대폰으로 QR코드를 스캔해주세요.</p>
       <div class="qr-frame">
@@ -205,6 +213,26 @@ const closeXSvg = closeXRaw
 
 const canUsePoints = computed(() => (orderFlow.customer?.pointBalance ?? 0) >= 100)
 
+// STEP01/STEP02 탭 - QR을 만든 뒤에도 포인트를 다시 조정하러 STEP01로 자유롭게 돌아갈 수 있게 별도 상태로 관리
+const activeTab = ref('points') // 'points' | 'payment'
+
+function goToPayment() {
+  // QR이 이미 있으면(포인트만 다시 보러 왔던 경우) 재요청하지 않고 탭만 이동
+  if (orderFlow.qrInfo) {
+    activeTab.value = 'payment'
+    return
+  }
+  orderFlow.startPayment()
+}
+
+// QR이 새로 생기면 결제 탭으로, 취소/만료 등으로 QR이 사라지면 포인트 탭으로 자동 이동
+watch(
+  () => orderFlow.qrInfo,
+  (qrInfo) => {
+    activeTab.value = qrInfo ? 'payment' : 'points'
+  }
+)
+
 const PHONE_DIGITS = 11 // 010-1234-5678
 
 // 적립하기/사용하기 카드 선택 상태, 그리고 번호 입력 팝업 상태
@@ -212,9 +240,12 @@ const pointsMode = ref(null) // 'earn' | 'use' | null
 const showKeypad = ref(false)
 const phoneStage = ref('phone') // 'phone' -> 확인(조회) -> 'use'면 'points'로 전환
 
+const PHONE_PREFIX = '010'
+
 function openPointFlow(mode) {
   pointsMode.value = mode
   phoneStage.value = 'phone'
+  orderFlow.mobileNumberInput = PHONE_PREFIX
   showKeypad.value = true
 }
 
@@ -231,6 +262,7 @@ function appendPhoneDigit(digit) {
 }
 
 function backspacePhone() {
+  if (orderFlow.mobileNumberInput.length <= PHONE_PREFIX.length) return
   orderFlow.mobileNumberInput = orderFlow.mobileNumberInput.slice(0, -1)
 }
 
@@ -245,7 +277,7 @@ async function confirmPhoneEntry() {
 }
 
 function clearPhone() {
-  orderFlow.mobileNumberInput = ''
+  orderFlow.mobileNumberInput = PHONE_PREFIX
 }
 
 // 임시: QR을 휴대폰으로 스캔하기 어려운 개발 환경(localhost)에서 결제 페이지를 팝업으로 바로 테스트하기 위한 상태
