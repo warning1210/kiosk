@@ -175,7 +175,6 @@ const emptySlotCount = computed(() => {
   margin: 0 auto;
   padding-bottom: 233px;
   background: #fff;
-  min-height: 100vh;
 }
 
 .close-btn {
@@ -282,11 +281,13 @@ const emptySlotCount = computed(() => {
 
 .flavor-card {
   width: 100%;
+  height: 125px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 8px;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
   border: 2px solid transparent;
   border-radius: 16px;
   background: #fff;
@@ -304,8 +305,8 @@ const emptySlotCount = computed(() => {
 
 .flavor-thumb {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,9 +342,13 @@ const emptySlotCount = computed(() => {
 }
 
 .flavor-name {
-  font-size: 17px;
+  font-size: 14px;
   color: #000;
   text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .flavor-summary-bar {
