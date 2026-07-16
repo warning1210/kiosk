@@ -1,6 +1,6 @@
 <template>
   <!-- 7단계: 포인트/할인 선택 (CU-008) -->
-  <div class="page">
+  <div class="page" :class="{ 'page--no-actions': activeTab !== 'points' }">
     <header class="top-bar">
       <img class="logo" :src="logo" alt="배스킨라빈스" />
       <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
@@ -125,7 +125,7 @@
       </div>
     </div>
 
-    <footer class="summary-bar">
+    <footer class="summary-bar" :class="{ 'summary-bar--no-actions': activeTab !== 'points' }">
       <div class="summary-final">
         <span>최종 결제금액</span>
         <span>₩ {{ cart.totalAmount.toLocaleString() }}</span>
@@ -157,7 +157,7 @@
       <div class="qr-frame">
         <img :src="orderFlow.qrDataUrl" alt="결제 QR코드" width="280" height="280" />
       </div>
-      <button type="button" class="test-open-pay" @click="showCheckoutPopup = true">
+      <button type="button" class="test-open-pay" @click="openPaymentPopup">
         (임시 테스트용) 결제 페이지 열기
       </button>
 
@@ -184,15 +184,6 @@
       </details>
     </div>
 
-    <!-- 임시 테스트용: 실제 QR 스캔 없이 결제 화면을 팝업으로 바로 확인 -->
-    <div v-if="showCheckoutPopup" class="modal-backdrop">
-      <div class="modal">
-        <button type="button" class="modal-close" aria-label="닫기" @click="showCheckoutPopup = false">
-          <span v-html="closeXSvg"></span>
-        </button>
-        <CheckoutView :qr-token="orderFlow.qrInfo.qrToken" />
-      </div>
-    </div>
   </div>
 </template>
 
@@ -200,7 +191,6 @@
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
-import CheckoutView from '../CheckoutView.vue'
 
 import logo from '../../../assets/kiosk/logo.png'
 import clockIcon from '../../../assets/kiosk/icons/clock.png'
@@ -280,8 +270,13 @@ function clearPhone() {
   orderFlow.mobileNumberInput = PHONE_PREFIX
 }
 
-// 임시: QR을 휴대폰으로 스캔하기 어려운 개발 환경(localhost)에서 결제 페이지를 팝업으로 바로 테스트하기 위한 상태
-const showCheckoutPopup = ref(false)
+// 임시 테스트용: 휴대폰으로 QR을 스캔하는 대신, 같은 PC에서 결제 페이지를 별도 창(새 탭)으로 띄운다.
+// CustomerPaymentStep 안에 인라인 모달로 띄우면 토스 결제 후 successUrl로 "이 탭 자체"가 리다이렉트되어
+// 키오스크 화면(주문 상태 폴링)이 통째로 날아가 버리므로, 반드시 별도 창으로 열어야 한다.
+function openPaymentPopup() {
+  const url = `${window.location.origin}/pay/${orderFlow.qrInfo.qrToken}`
+  window.open(url, 'kioskPaymentTest', 'width=480,height=800')
+}
 
 // QR 유효 시간(백엔드 PaymentService.QR_VALID_MINUTES=5분) 실시간 카운트다운
 const now = ref(Date.now())
@@ -290,7 +285,6 @@ watch(
   () => orderFlow.qrInfo,
   (qrInfo) => {
     if (timerId) clearInterval(timerId)
-    if (!qrInfo) showCheckoutPopup.value = false
     if (qrInfo) {
       now.value = Date.now()
       timerId = setInterval(() => {
@@ -321,6 +315,11 @@ const remainingTimeLabel = computed(() => {
   padding-bottom: 433px;
   background: #fff;
   min-height: 100vh;
+}
+
+/* STEP02(QR결제) 탭은 .bottom-bar가 없으니 그만큼(233px) 여백을 덜 잡는다 */
+.page--no-actions {
+  padding-bottom: 200px;
 }
 
 .top-bar {
@@ -538,6 +537,11 @@ const remainingTimeLabel = computed(() => {
   background: #f6f6f6;
   padding: 0;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* STEP02(QR결제) 탭은 .bottom-bar가 렌더링되지 않으므로, 그 자리(233px)를 비워두지 않고 화면 맨 아래에 붙인다 */
+.summary-bar--no-actions {
+  bottom: 0;
 }
 
 .summary-final {
