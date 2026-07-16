@@ -1,6 +1,14 @@
 package com.kiosk.kiosk.payment.dto;
 
 import com.kiosk.domain.payment.PaymentStatus;
+import java.time.LocalDateTime;
 
-public record PaymentStatusResponse(Long orderId, PaymentStatus paymentStatus, Integer requestedAmount) {
+public record PaymentStatusResponse(
+        Long orderId,
+        PaymentStatus paymentStatus,
+        Integer requestedAmount,
+        Integer paidAmount,
+        String approvalNumber,
+        LocalDateTime paidAt
+) {
 }

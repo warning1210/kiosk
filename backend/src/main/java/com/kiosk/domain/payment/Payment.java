@@ -68,4 +68,7 @@ public class Payment {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    @Column(name = "payment_key", length = 200)
+    private String paymentKey;
 }
