@@ -2,6 +2,7 @@ package com.kiosk.branch.order.dto;
 
 import com.kiosk.domain.order.OrderType;
 import com.kiosk.domain.order.OrderStatus;
+import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -15,4 +16,5 @@ public class BranchOrderListResponse {
     private OrderType orderType;
     private String menuSummary;
     private OrderStatus status;
+    private LocalDateTime createdAt;
 }

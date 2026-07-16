@@ -36,22 +36,22 @@ public class BranchApplication {
     @Column(name = "branch_application_id")
     private Long branchApplicationId;
 
-    @Column(name = "branch_name", length = 100, nullable = false)
+    @Column(name = "branch_name", length = 100)
     private String branchName;
 
-    @Column(name = "manager_name", length = 50, nullable = false)
+    @Column(name = "manager_name", length = 50)
     private String managerName;
 
-    @Column(name = "phone", length = 20, nullable = false)
+    @Column(name = "phone", length = 20)
     private String phone;
 
     @Column(name = "email")
     private String email;
 
-    @Column(name = "address", length = 255, nullable = false)
+    @Column(name = "address", length = 255)
     private String address;
 
-    @Column(name = "business_number", length = 20, nullable = false)
+    @Column(name = "business_number", length = 20)
     private String businessNumber;
 
     @Column(name = "invite_token", unique = true)

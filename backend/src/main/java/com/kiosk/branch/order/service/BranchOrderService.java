@@ -53,14 +53,18 @@ public class BranchOrderService {
                     .orderType(order.getOrderType())
                     .menuSummary(menuSummary)
                     .status(order.getOrderStatus())
+                    .createdAt(order.getCreatedAt())
                     .build();
         }).collect(Collectors.toList());
     }
 
     @Transactional
-    public void updateOrderStatus(Long orderId, OrderStatusUpdateRequest request) {
+    public void updateOrderStatus(Long branchId, Long orderId, OrderStatusUpdateRequest request) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+        if (!order.getBranch().getBranchId().equals(branchId)) {
+            throw new IllegalArgumentException("다른 지점의 주문은 변경할 수 없습니다.");
+        }
 
         if (request.getStatus() == OrderStatus.CANCELLED) {
             if (request.getCancelReason() == null || request.getCancelReason().isBlank()) {

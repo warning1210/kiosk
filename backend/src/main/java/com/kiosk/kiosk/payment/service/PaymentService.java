@@ -1,5 +1,6 @@
 package com.kiosk.kiosk.payment.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.order.Order;
 import com.kiosk.domain.order.OrderRepository;
@@ -9,8 +10,12 @@ import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.payment.PaymentStatus;
 import com.kiosk.branch.inventory.service.BranchInventoryService;
+import com.kiosk.kiosk.payment.dto.PaymentCheckoutResponse;
 import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
 import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
+import com.kiosk.kiosk.payment.dto.TossConfirmRequest;
+import com.kiosk.kiosk.payment.toss.TossPaymentGateway;
+import com.kiosk.kiosk.payment.toss.TossPaymentsProperties;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +33,8 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final BranchInventoryService branchInventoryService;
+    private final TossPaymentGateway tossPaymentGateway;
+    private final TossPaymentsProperties tossProperties;
 
     @Transactional
     public PaymentQrResponse createQr(Long orderId) {
@@ -67,6 +74,9 @@ public class PaymentService {
     @Transactional
     public PaymentStatusResponse confirm(String qrToken) {
         Payment payment = findByToken(qrToken);
+        if (payment.getPaymentStatus() == PaymentStatus.PAID) {
+            return toStatusResponse(payment);
+        }
 
         if (payment.getQrExpiresAt().isBefore(LocalDateTime.now())) {
             payment.setPaymentStatus(PaymentStatus.EXPIRED);
@@ -74,10 +84,67 @@ public class PaymentService {
             throw new ResponseStatusException(HttpStatus.GONE, "QR 유효시간이 지났습니다. 다시 생성해주세요.");
         }
 
-        payment.setPaymentStatus(PaymentStatus.PAID);
         payment.setPaidAmount(payment.getRequestedAmount());
-        payment.setPaidAt(LocalDateTime.now());
         payment.setApprovalNumber("SIM-" + System.currentTimeMillis());
+        markPaidAndComplete(payment);
+
+        return toStatusResponse(payment);
+    }
+
+    // 결제 페이지(토스 SDK 초기화용) - QR 생성 시 이미 만들어진 Payment 행을 그대로 사용한다.
+    @Transactional(readOnly = true)
+    public PaymentCheckoutResponse getCheckoutInfo(String qrToken) {
+        Payment payment = findByToken(qrToken);
+        if (payment.getQrExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.GONE, "QR 유효시간이 지났습니다. 다시 생성해주세요.");
+        }
+
+        return new PaymentCheckoutResponse(
+                qrToken,
+                "키오스크 주문 #" + payment.getOrder().getOrderId(),
+                payment.getRequestedAmount(),
+                tossProperties.getClientKey(),
+                tossProperties.getSuccessUrl() + "?qrToken=" + qrToken,
+                tossProperties.getFailUrl() + "?qrToken=" + qrToken
+        );
+    }
+
+    // 토스페이먼츠 successUrl에서 프론트가 호출하는 실제 결제 승인
+    @Transactional
+    public PaymentStatusResponse confirmWithToss(TossConfirmRequest request) {
+        Payment payment = findByToken(request.qrToken());
+        if (payment.getPaymentStatus() == PaymentStatus.PAID) {
+            return toStatusResponse(payment);
+        }
+
+        if (payment.getQrExpiresAt().isBefore(LocalDateTime.now())) {
+            payment.setPaymentStatus(PaymentStatus.EXPIRED);
+            paymentRepository.save(payment);
+            throw new ResponseStatusException(HttpStatus.GONE, "QR 유효시간이 지났습니다. 다시 생성해주세요.");
+        }
+        // qrToken을 토스 orderId로 그대로 사용했으므로 반드시 일치해야 함 (위변조 방지)
+        if (!request.qrToken().equals(request.orderId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "결제 요청 정보가 일치하지 않습니다.");
+        }
+        // 클라이언트가 보낸 금액과 서버가 들고 있던 실제 결제 금액이 같은지 검증 (금액 조작 방지)
+        if (!payment.getRequestedAmount().equals(request.amount())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "결제 금액이 일치하지 않습니다.");
+        }
+
+        JsonNode tossPayment = tossPaymentGateway.confirm(request.paymentKey(), request.orderId(), request.amount());
+
+        payment.setPaidAmount(request.amount());
+        payment.setPaymentKey(request.paymentKey());
+        payment.setApprovalNumber(resolveApprovalNumber(tossPayment, request.paymentKey()));
+        markPaidAndComplete(payment);
+
+        return toStatusResponse(payment);
+    }
+
+    // 결제 확정 공통 처리: 상태 전환 + 포인트 적립/차감 + 재고 차감
+    private void markPaidAndComplete(Payment payment) {
+        payment.setPaymentStatus(PaymentStatus.PAID);
+        payment.setPaidAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
         Order order = payment.getOrder();
@@ -106,8 +173,16 @@ public class PaymentService {
         }
         orderRepository.save(order);
         branchInventoryService.deductForOrder(order);
+    }
 
-        return toStatusResponse(payment);
+    private String resolveApprovalNumber(JsonNode tossPayment, String paymentKey) {
+        if (tossPayment != null && tossPayment.hasNonNull("card")) {
+            String approveNo = tossPayment.path("card").path("approveNo").asText(null);
+            if (approveNo != null && !approveNo.isBlank()) {
+                return approveNo;
+            }
+        }
+        return paymentKey;
     }
 
     private Payment findByToken(String qrToken) {
@@ -116,6 +191,13 @@ public class PaymentService {
     }
 
     private PaymentStatusResponse toStatusResponse(Payment payment) {
-        return new PaymentStatusResponse(payment.getOrder().getOrderId(), payment.getPaymentStatus(), payment.getRequestedAmount());
+        return new PaymentStatusResponse(
+                payment.getOrder().getOrderId(),
+                payment.getPaymentStatus(),
+                payment.getRequestedAmount(),
+                payment.getPaidAmount(),
+                payment.getApprovalNumber(),
+                payment.getPaidAt()
+        );
     }
 }

@@ -1,8 +1,10 @@
 package com.kiosk.kiosk.payment.controller;
 
+import com.kiosk.kiosk.payment.dto.PaymentCheckoutResponse;
 import com.kiosk.kiosk.payment.dto.PaymentQrRequest;
 import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
 import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
+import com.kiosk.kiosk.payment.dto.TossConfirmRequest;
 import com.kiosk.kiosk.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,5 +34,15 @@ public class PaymentController {
     @PostMapping("/{qrToken}/confirm")
     public PaymentStatusResponse confirm(@PathVariable String qrToken) {
         return paymentService.confirm(qrToken);
+    }
+
+    @GetMapping("/{qrToken}/checkout")
+    public PaymentCheckoutResponse getCheckoutInfo(@PathVariable String qrToken) {
+        return paymentService.getCheckoutInfo(qrToken);
+    }
+
+    @PostMapping("/toss/confirm")
+    public PaymentStatusResponse confirmWithToss(@RequestBody TossConfirmRequest request) {
+        return paymentService.confirmWithToss(request);
     }
 }

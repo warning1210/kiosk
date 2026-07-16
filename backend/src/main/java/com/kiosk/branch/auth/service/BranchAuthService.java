@@ -4,7 +4,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
 import com.kiosk.branch.auth.dto.ApplicationResponse;
-import com.kiosk.branch.auth.dto.ApplyRequest;
 import com.kiosk.branch.auth.dto.FirebaseSessionRequest;
 import com.kiosk.branch.auth.dto.JoinRequest;
 import com.kiosk.branch.auth.dto.LoginIdentityResponse;
@@ -15,8 +14,8 @@ import com.kiosk.domain.admin.AdminRepository;
 import com.kiosk.domain.admin.AdminRole;
 import com.kiosk.domain.branch.Branch;
 import com.kiosk.domain.branch.BranchRepository;
+import com.kiosk.domain.branch.KioskStatus;
 import com.kiosk.domain.branch.OperationStatus;
-import com.kiosk.domain.branchapplication.ApprovalStatus;
 import com.kiosk.domain.branchapplication.BranchApplication;
 import com.kiosk.domain.branchapplication.BranchApplicationRepository;
 import java.time.LocalDateTime;
@@ -27,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 // 지점 회원가입/로그인 - 실제 비밀번호 검증은 Firebase Auth에 위임하고,
 // Admin.passwordHash에는 "FIREBASE$"+uid만 표시용으로 저장한다(우리 쪽에서 별도 해시 비교 안 함).
+// 본점은 이메일로 가입 초대 URL만 발급하고(BranchApplicationService.issueInvite),
+// 지점명/주소/지점장 정보/로그인 계정은 전부 지점이 join()할 때 직접 입력한다 (BR-018/HQ-017).
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -35,56 +36,6 @@ public class BranchAuthService {
     private final BranchApplicationRepository applicationRepository;
     private final BranchRepository branchRepository;
     private final AdminRepository adminRepository;
-
-    public ApplicationResponse apply(ApplyRequest request) {
-        if (request.loginId() == null || request.loginId().trim().length() < 4) {
-            throw new IllegalArgumentException("아이디는 4자 이상 입력하세요.");
-        }
-        if (request.password() == null || request.password().length() < 8) {
-            throw new IllegalArgumentException("비밀번호는 8자 이상 입력하세요.");
-        }
-        if (adminRepository.existsByLoginId(request.loginId().trim())) {
-            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
-        }
-        if (adminRepository.findByEmail(request.email()).isPresent()) {
-            throw new IllegalArgumentException("이미 신청되었거나 사용 중인 이메일입니다.");
-        }
-
-        UserRecord firebaseUser;
-        try {
-            firebaseUser = FirebaseAuth.getInstance().createUser(new UserRecord.CreateRequest()
-                    .setEmail(request.email())
-                    .setPassword(request.password())
-                    .setDisplayName(request.managerName())
-                    .setEmailVerified(true)
-                    .setDisabled(true));
-        } catch (Exception e) {
-            throw new IllegalArgumentException("계정 신청 정보를 등록할 수 없습니다: " + e.getMessage());
-        }
-
-        adminRepository.save(Admin.builder()
-                .loginId(request.loginId().trim())
-                .passwordHash("FIREBASE$" + firebaseUser.getUid())
-                .name(request.managerName())
-                .phone(request.phone())
-                .email(request.email())
-                .role(AdminRole.BRANCH_MANAGER)
-                .accountStatus(AccountStatus.PENDING)
-                .build());
-
-        BranchApplication saved = applicationRepository.save(BranchApplication.builder()
-                .branchName(request.branchName())
-                .managerName(request.managerName())
-                .phone(request.phone())
-                .email(request.email())
-                .address(request.address())
-                .businessNumber(request.businessNumber())
-                .approvalStatus(ApprovalStatus.PENDING)
-                .appliedAt(LocalDateTime.now())
-                .build());
-
-        return toResponse(saved, null);
-    }
 
     @Transactional(readOnly = true)
     public ApplicationResponse invite(String token) {
@@ -96,35 +47,54 @@ public class BranchAuthService {
         if (adminRepository.existsByLoginId(request.loginId())) {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
         }
-        Branch branch = application.getApprovedBranch();
 
         UserRecord firebaseUser;
         try {
             firebaseUser = FirebaseAuth.getInstance().createUser(new UserRecord.CreateRequest()
                     .setEmail(application.getEmail())
                     .setPassword(request.password())
-                    .setDisplayName(application.getManagerName())
+                    .setDisplayName(request.managerName())
                     .setEmailVerified(true));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Firebase 계정을 만들 수 없습니다: " + e.getMessage());
+        }
+
+        Branch branch = branchRepository.save(Branch.builder()
+                .branchName(request.branchName())
+                .address(request.address())
+                .phone(request.phone())
+                .email(application.getEmail())
+                .managerName(request.managerName())
+                .operationStatus(OperationStatus.ACTIVE)
+                .kioskStatus(KioskStatus.ACTIVE)
+                .build());
+
+        try {
             FirebaseAuth.getInstance().setCustomUserClaims(firebaseUser.getUid(),
                     Map.of("role", "BRANCH_MANAGER", "branchId", branch.getBranchId()));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Firebase 계정을 만들 수 없습니다: " + e.getMessage());
+            throw new IllegalArgumentException("Firebase 권한 설정에 실패했습니다: " + e.getMessage());
         }
 
         Admin admin = adminRepository.save(Admin.builder()
                 .branch(branch)
                 .loginId(request.loginId())
                 .passwordHash("FIREBASE$" + firebaseUser.getUid())
-                .name(application.getManagerName())
-                .phone(application.getPhone())
+                .name(request.managerName())
+                .phone(request.phone())
                 .email(application.getEmail())
                 .role(AdminRole.BRANCH_MANAGER)
                 .accountStatus(AccountStatus.ACTIVE)
                 .build());
 
-        branch.setOperationStatus(OperationStatus.ACTIVE);
-        branchRepository.save(branch);
+        application.setManagerName(request.managerName());
+        application.setBranchName(request.branchName());
+        application.setPhone(request.phone());
+        application.setAddress(request.address());
+        application.setBusinessNumber(request.businessNumber());
+        application.setApprovedBranch(branch);
         application.setInviteToken(null);
+        application.setProcessedAt(LocalDateTime.now());
         applicationRepository.save(application);
 
         return new LoginResponse(admin.getAdminId(), branch.getBranchId(), branch.getBranchName(), admin.getName());

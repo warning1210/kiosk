@@ -37,12 +37,12 @@ CREATE TABLE `admin` (
 
 CREATE TABLE `branch_application` (
   `branch_application_id` bigint PRIMARY KEY NOT NULL AUTO_INCREMENT,
-  `branch_name` varchar(100) NOT NULL,
-  `manager_name` varchar(50) NOT NULL,
-  `phone` varchar(20) NOT NULL,
+  `branch_name` varchar(100),
+  `manager_name` varchar(50),
+  `phone` varchar(20),
   `email` varchar(255),
-  `address` varchar(255) NOT NULL,
-  `business_number` varchar(20) NOT NULL,
+  `address` varchar(255),
+  `business_number` varchar(20),
   `invite_token` varchar(255) UNIQUE COMMENT '본점이 발급하는 지점 가입 URL 토큰',
   `invite_expires_at` datetime,
   `issued_by_admin_id` bigint COMMENT '가입 URL을 발급한 본점 관리자',
@@ -152,7 +152,8 @@ CREATE TABLE `payment` (
   `paid_amount` int NOT NULL DEFAULT 0,
   `approval_number` varchar(100),
   `failure_reason` varchar(500),
-  `paid_at` datetime
+  `paid_at` datetime,
+  `payment_key` varchar(200) COMMENT '토스페이먼츠가 발급하는 결제 키'
 );
 
 CREATE TABLE `order_item` (

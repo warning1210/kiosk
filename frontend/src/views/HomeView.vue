@@ -4,6 +4,7 @@
     <h1>Kiosk</h1>
     <p>아이스크림 프랜차이즈 키오스크 시스템</p>
     <p>화면을 터치하여 시작하세요 / Touch to start</p>
+    <button type="button" class="branch-switch" @click.stop="goBranchLogin">지점관리자로 전환</button>
   </main>
 </template>
 
@@ -19,6 +20,10 @@ function startOrder() {
   cart.clear()
   router.push('/kiosk/order')
 }
+
+function goBranchLogin() {
+  router.push('/branch/login')
+}
 </script>
 
 <style scoped>
@@ -29,6 +34,17 @@ function startOrder() {
   justify-content: center;
   min-height: 100vh;
   gap: 1rem;
+  cursor: pointer;
+}
+
+.branch-switch {
+  margin-top: 1.5rem;
+  padding: 0.5rem 1rem;
+  color: #666;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 </style>
