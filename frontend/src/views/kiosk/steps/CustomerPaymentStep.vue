@@ -3,6 +3,9 @@
   <div class="page">
     <header class="top-bar">
       <img class="logo" :src="logo" alt="배스킨라빈스" />
+      <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+        <span v-html="closeXSvg"></span>
+      </button>
     </header>
 
     <nav class="tab-bar">
@@ -292,7 +295,24 @@ const remainingTimeLabel = computed(() => {
   height: 114px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 27px;
+}
+
+.icon-btn {
+  width: 53px;
+  height: 53px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.close-btn :deep(svg) {
+  width: 55px;
+  height: 55px;
 }
 
 .logo {
