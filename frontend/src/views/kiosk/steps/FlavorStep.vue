@@ -252,6 +252,7 @@ const emptySlotCount = computed(() => {
   min-width: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   gap: 8px;
   list-style: none;
   margin: 0;
