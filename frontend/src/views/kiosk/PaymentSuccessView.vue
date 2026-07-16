@@ -18,6 +18,7 @@
         <dd>{{ formattedPaidAt }}</dd>
       </dl>
       <p class="hint">키오스크 화면을 확인해주세요.</p>
+      <button type="button" class="close-btn" @click="closeWindow">닫기</button>
     </template>
 
     <p v-else class="error">{{ errorMessage }}</p>
@@ -57,6 +58,11 @@ onMounted(async () => {
     errorMessage.value = e.response?.data?.message || '결제 승인에 실패했습니다.'
   }
 })
+
+// 새 창(팝업)으로 열렸을 때만 스스로 닫을 수 있으므로, 실패하면 그냥 둔다(사용자가 직접 닫음)
+function closeWindow() {
+  window.close()
+}
 </script>
 
 <style scoped>
@@ -81,6 +87,14 @@ onMounted(async () => {
 .hint {
   color: #888;
   font-size: 0.9rem;
+}
+.close-btn {
+  margin-top: 24px;
+  padding: 12px 32px;
+  border: 1px solid #b9b9b9;
+  border-radius: 40px;
+  background: #fff;
+  cursor: pointer;
 }
 .error {
   color: #d33;
