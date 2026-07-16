@@ -404,7 +404,7 @@ const remainingTimeLabel = computed(() => {
 .new-member-hint,
 .customer-hint {
   margin: 8px 0 0;
-  font-size: 14px;
+  font-size: 28px;
   color: #f20c93;
   text-align: center;
 }
@@ -741,7 +741,7 @@ const remainingTimeLabel = computed(() => {
 
 .paid-message {
   margin: 8px 0 0;
-  font-size: 14px;
+  font-size: 28px;
   color: #f20c93;
 }
 

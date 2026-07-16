@@ -62,7 +62,8 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     printing: false,     // 프린터 출력 요청 중인지
     printMessage: '',    // 출력 결과 안내 문구
 
-    confirmDialog: null  // { message, resolve } - 앱 디자인 확인 팝업 (ConfirmModal)이 떠 있을 때만 값이 있음
+    confirmDialog: null,  // { message, resolve } - 앱 디자인 확인 팝업 (ConfirmModal)이 떠 있을 때만 값이 있음
+    subscribedToCart: false
   }),
 
   getters: {
@@ -118,6 +119,16 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     async init() {
       const cart = useCartStore()
       this.stopPolling()
+
+      if (!this.subscribedToCart) {
+        cart.$subscribe((mutation, state) => {
+          if (this.qrInfo) {
+            console.log('[장바구니 변경 감지] 생성된 결제 QR을 초기화합니다.')
+            this.closeQrModal()
+          }
+        })
+        this.subscribedToCart = true
+      }
 
       this.step = cart.orderType ? 'product' : 'orderType'
       this.categories = []
@@ -190,7 +201,8 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     // 맛 선택보다 먼저 '상품정보' 화면을 거쳐야 한다 - 신규 선택/기존 항목 수정 모두 동일한 순서를 따른다
     needsContainerStep(product) {
       if (product.containerPolicy === 'CUP_OR_CONE') return true
-      return product.isLarge && useCartStore().orderType === 'TAKEOUT'
+      const isHandpackProduct = ['파인트', '쿼터', '패밀리', '하프갤런'].includes(product.productName)
+      return isHandpackProduct && useCartStore().orderType === 'TAKEOUT'
     },
 
     selectProduct(product) {
@@ -384,6 +396,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
           if (data.paymentStatus === 'PAID') {
             this.stopPolling()
             this.qrInfo = null // QR 팝업을 닫는다
+            cart.clear() // 결제 성공 즉시 장바구니(쿠키) 초기화
             // 영수증 데이터를 불러와 영수증 화면으로 이동하고, 프린터로도 자동 출력을 시도한다.
             // (프린터가 없어도 화면 영수증은 그대로 보이고, 흐름은 계속 진행된다)
             await this.loadReceipt()
