@@ -181,12 +181,18 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.dryIceMinutes = null
     },
 
+    // 컵/콘 선택(용기 둘 다 가능한 상품) 또는 테이크아웃 대용량 상품(숟가락/드라이아이스)은
+    // 맛 선택보다 먼저 '상품정보' 화면을 거쳐야 한다 - 신규 선택/기존 항목 수정 모두 동일한 순서를 따른다
+    needsContainerStep(product) {
+      if (product.containerPolicy === 'CUP_OR_CONE') return true
+      return product.isLarge && useCartStore().orderType === 'TAKEOUT'
+    },
+
     selectProduct(product) {
       this.editingItemId = null
       this.resetFlavorStepState(product)
 
-      if (product.containerPolicy === 'CUP_OR_CONE') {
-        // 컵/콘 둘 다 가능한 상품만 용기 선택 화면을 보여주고, 컵만 되는 상품(파인트/패밀리/하프갤런 등)은 건너뜀
+      if (this.needsContainerStep(product)) {
         this.step = 'container'
         return
       }
@@ -213,7 +219,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = item.containerType
       this.spoonCount = item.spoonCount
       this.dryIceMinutes = item.dryIceMinutes
-      this.step = 'flavor'
+      this.step = this.needsContainerStep(product) ? 'container' : 'flavor'
     },
 
     toggleFlavor(flavorId) {
@@ -323,6 +329,21 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       const cart = useCartStore()
       if (!this.customer) return
       cart.setUsedPoints(Math.min(this.customer.pointBalance, cart.amountBeforeDiscount))
+    },
+
+    // CU-014: 화면 우측/좌측 상단 X버튼 공통 동작.
+    // 매장/포장 선택 화면 이후인데 장바구니가 비어있으면(잃을 게 없으면) 매장/포장 선택으로만 가볍게 되돌리고,
+    // 장바구니에 뭔가 담겨있으면 확인 후 완전히 초기 화면(광고 화면)으로 나간다.
+    goHome() {
+      const cart = useCartStore()
+      this.stopPolling()
+      if (this.step !== 'orderType' && cart.items.length === 0) {
+        this.step = 'orderType'
+        return
+      }
+      if (cart.items.length > 0 && !confirm('진행 중인 주문을 취소하고 처음 화면으로 돌아가시겠습니까?')) return
+      cart.clear()
+      router.push('/')
     },
 
     stopPolling() {
