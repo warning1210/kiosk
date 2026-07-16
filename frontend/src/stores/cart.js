@@ -72,7 +72,7 @@ export const useCartStore = defineStore('cart', {
 
     // item: { productId, productName, unitPrice, quantity, containerType, spoonCount, dryIceMinutes, flavors }
     addItem(item) {
-      this.items.push({
+      const newItem = {
         id: crypto.randomUUID(),
         quantity: 1,
         containerType: 'NONE',
@@ -80,8 +80,11 @@ export const useCartStore = defineStore('cart', {
         dryIceMinutes: null,
         flavors: [],
         ...item
-      })
+      }
+      this.items.push(newItem)
       persist(this)
+      console.log('[주문 내역] 상품 담김:', newItem)
+      console.log('[주문 내역] 전체 장바구니:', this.items)
     },
 
     updateItem(id, changes) {
@@ -89,6 +92,8 @@ export const useCartStore = defineStore('cart', {
       if (index === -1) return
       this.items[index] = { ...this.items[index], ...changes }
       persist(this)
+      console.log('[주문 내역] 상품 수정됨:', this.items[index])
+      console.log('[주문 내역] 전체 장바구니:', this.items)
     },
 
     removeItem(id) {
