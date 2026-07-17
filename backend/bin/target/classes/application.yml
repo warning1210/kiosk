@@ -30,7 +30,7 @@ spring:
 
 firebase:
   credentials:
-    path: ${FIREBASE_CREDENTIALS_PATH:}
+    path: C:\Users\seoil\Downloads\firebase.json
 
 logging:
   level:

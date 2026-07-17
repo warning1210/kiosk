@@ -17,4 +17,5 @@ public class BranchOrderListResponse {
     private String menuSummary;
     private OrderStatus status;
     private LocalDateTime createdAt;
+    private Integer finalAmount;
 }
