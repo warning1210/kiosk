@@ -115,7 +115,7 @@ public class BranchAuthService {
         try {
             token = FirebaseAuth.getInstance().verifyIdToken(request.idToken(), true);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Firebase 로그인 토큰이 유효하지 않습니다.");
+            throw new IllegalArgumentException("Firebase 로그인 토큰이 유효하지 않습니다. 원인: " + e.getMessage());
         }
         Admin admin = adminRepository.findByEmail(token.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("승인된 지점 계정이 아닙니다."));
