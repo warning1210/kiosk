@@ -487,14 +487,17 @@ export const useOrderFlowStore = defineStore('orderFlow', {
           customerMobileNumber: cart.customerMobileNumber,
           usedPoints: cart.usedPoints,
           language: 'ko',
-          items: cart.items.map((item) => ({
-            productId: item.productId,
-            containerType: item.containerType,
-            spoonCount: item.spoonCount,
-            dryIceMinutes: item.dryIceMinutes,
-            flavorIds: item.flavors.map((f) => f.flavorId),
-            monthlyFlavorUpgrade: Boolean(item.monthlyFlavorUpgrade)
-          }))
+          // 백엔드 요청에는 quantity가 없으므로 장바구니 수량만큼 주문 항목을 펼친다.
+          items: cart.items.flatMap((item) =>
+            Array.from({ length: item.quantity }, () => ({
+              productId: item.productId,
+              containerType: item.containerType,
+              spoonCount: item.spoonCount,
+              dryIceMinutes: item.dryIceMinutes,
+              flavorIds: item.flavors.map((f) => f.flavorId),
+              monthlyFlavorUpgrade: Boolean(item.monthlyFlavorUpgrade)
+            }))
+          )
         }
         const { data } = await http.post('/orders/checkout', this.checkoutPayload)
         this.orderId = data.orderId

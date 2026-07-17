@@ -56,6 +56,21 @@ function persist(state) {
   }
 }
 
+function itemSignature(item) {
+  const flavorIds = (item.flavors ?? [])
+    .map((flavor) => flavor.flavorId)
+    .sort((a, b) => Number(a) - Number(b))
+  return JSON.stringify({
+    productId: item.productId,
+    unitPrice: item.unitPrice,
+    containerType: item.containerType ?? 'NONE',
+    spoonCount: item.spoonCount ?? 0,
+    dryIceMinutes: item.dryIceMinutes ?? null,
+    monthlyFlavorUpgrade: Boolean(item.monthlyFlavorUpgrade),
+    flavorIds
+  })
+}
+
 export const useCartStore = defineStore('cart', {
   state: () => loadFromCookie(),
 
@@ -94,7 +109,12 @@ export const useCartStore = defineStore('cart', {
         flavors: [],
         ...item
       }
-      this.items.push(newItem)
+      const existingItem = this.items.find((cartItem) => itemSignature(cartItem) === itemSignature(newItem))
+      if (existingItem) {
+        existingItem.quantity += newItem.quantity
+      } else {
+        this.items.push(newItem)
+      }
       persist(this)
       console.log('[주문 내역] 상품 담김:', newItem)
       console.log('[주문 내역] 전체 장바구니:', this.items)
@@ -103,7 +123,16 @@ export const useCartStore = defineStore('cart', {
     updateItem(id, changes) {
       const index = this.items.findIndex((item) => item.id === id)
       if (index === -1) return
-      this.items[index] = { ...this.items[index], ...changes }
+      const updatedItem = { ...this.items[index], ...changes }
+      const duplicateIndex = this.items.findIndex((item, itemIndex) =>
+        itemIndex !== index && itemSignature(item) === itemSignature(updatedItem)
+      )
+      if (duplicateIndex !== -1) {
+        this.items[duplicateIndex].quantity += updatedItem.quantity
+        this.items.splice(index, 1)
+      } else {
+        this.items[index] = updatedItem
+      }
       persist(this)
       console.log('[주문 내역] 상품 수정됨:', this.items[index])
       console.log('[주문 내역] 전체 장바구니:', this.items)
@@ -111,6 +140,13 @@ export const useCartStore = defineStore('cart', {
 
     removeItem(id) {
       this.items = this.items.filter((item) => item.id !== id)
+      persist(this)
+    },
+
+    adjustQuantity(id, delta) {
+      const item = this.items.find((cartItem) => cartItem.id === id)
+      if (!item) return
+      item.quantity = Math.max(1, item.quantity + delta)
       persist(this)
     },
 
