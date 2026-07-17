@@ -32,7 +32,7 @@
                 class="flavor-card"
                 :class="{ selected: orderFlow.flavorSelectedCount(flavor.flavorId) > 0 }"
                 :disabled="!orderFlow.canPickMoreFlavor() && orderFlow.flavorSelectedCount(flavor.flavorId) === 0"
-                @click="onFlavorClick(flavor.flavorId)"
+                @click="onFlavorClick(flavor)"
               >
                 <span class="flavor-thumb">
                   <img v-if="flavor.imageUrl" :src="flavor.imageUrl" :alt="flavor.flavorName" />
@@ -63,6 +63,23 @@
       </div>
     </div>
 
+    <!-- EX 프로젝트처럼 같은 맛 선택 화면에서 선택한 맛 설명을 요약바 바로 위에 표시 -->
+    <aside
+      v-if="selectedDescriptionTitle"
+      class="flavor-description"
+      :class="{
+        'without-summary': !orderFlow.selectedFlavorSummary.length,
+        'without-image': !selectedDescriptionFlavor?.imageUrl
+      }"
+    >
+      <img v-if="selectedDescriptionFlavor?.imageUrl" :src="selectedDescriptionFlavor.imageUrl" :alt="selectedDescriptionTitle" />
+      <div>
+        <strong>{{ selectedDescriptionTitle }}</strong>
+        <p>{{ selectedDescription || '부드럽고 달콤한 배스킨라빈스 메뉴입니다.' }}</p>
+        <small v-if="selectedDescriptionFlavor?.allergyInfo">알레르기 성분 · {{ selectedDescriptionFlavor.allergyInfo }}</small>
+      </div>
+    </aside>
+
     <!-- 담은 맛을 화면 하단에 실시간 표시 -->
     <footer v-if="orderFlow.selectedFlavorSummary.length" class="flavor-summary-bar">
       <p class="summary-label">선택한 맛</p>
@@ -86,7 +103,7 @@
         <span>이전</span>
       </button>
       <button type="button" class="confirm-btn" :disabled="!orderFlow.canConfirmFlavor" @click="orderFlow.confirmAddToCart">
-        {{ orderFlow.editingItemId ? '수정 완료' : '플레이버(맛) 선택' }}
+        {{ orderFlow.editingItemId ? '수정 완료' : orderFlow.selectedProduct.requiresFlavorSelection ? '플레이버(맛) 선택' : '장바구니 담기' }}
       </button>
     </div>
   </div>
@@ -104,6 +121,17 @@ const FLAVORS_PER_PAGE = 12 // 4열 x 3행
 const SWIPE_THRESHOLD = 40 // px
 
 const orderFlow = useOrderFlowStore()
+const focusedFlavor = ref(null)
+const selectedDescriptionFlavor = computed(() => focusedFlavor.value)
+const selectedDescription = computed(() => {
+  if (!orderFlow.selectedProduct?.requiresFlavorSelection) return orderFlow.selectedProduct?.description?.trim() ?? ''
+  return selectedDescriptionFlavor.value?.description?.trim() ?? ''
+})
+const selectedDescriptionTitle = computed(() =>
+  orderFlow.selectedProduct?.requiresFlavorSelection
+    ? selectedDescriptionFlavor.value?.flavorName ?? ''
+    : orderFlow.selectedProduct?.productName ?? ''
+)
 
 // 이전 단계(상품정보)가 실제로 존재하는 상품만 탭을 보여준다:
 // 컵/콘 선택이 있었던 상품, 또는 테이크아웃 대용량 상품(숟가락/드라이아이스)
@@ -154,8 +182,10 @@ function onSwipeEnd(e) {
   requestAnimationFrame(() => { isDragging.value = false })
 }
 
-async function onFlavorClick(flavorId) {
+async function onFlavorClick(flavor) {
   if (isDragging.value) return
+  focusedFlavor.value = flavor
+  const flavorId = flavor.flavorId
   if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.productName === '싱글레귤러') {
     const canSelect = await orderFlow.offerMonthlyFlavorUpgrade()
     if (!canSelect) return
@@ -376,6 +406,33 @@ const emptySlotCount = computed(() => {
   border-top: 1px solid #eee;
   padding: 0.75rem 1.5rem;
 }
+
+.flavor-description {
+  position: fixed;
+  bottom: 370px;
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% - 32px);
+  max-width: 992px;
+  padding: 12px 18px;
+  transform: translateX(-50%);
+  border: 1px solid #f0b8d5;
+  border-radius: 12px;
+  background: #fff5fa;
+  box-shadow: 0 8px 22px rgb(94 50 69 / 10%);
+}
+
+.flavor-description.without-summary { bottom: 249px; }
+.flavor-description.without-image { grid-template-columns: minmax(0, 1fr); }
+.flavor-description img { width: 64px; height: 64px; object-fit: contain; }
+.flavor-description div { min-width: 0; }
+.flavor-description strong { display: block; overflow: hidden; color: #f20c93; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.flavor-description p { overflow: hidden; margin: 5px 0; color: #5f5057; font-size: 14px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.flavor-description small { color: #9a7e8a; font-size: 12px; }
 
 .summary-label {
   margin: 0 0 8px;

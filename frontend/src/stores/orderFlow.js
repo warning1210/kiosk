@@ -255,7 +255,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
 
     proceedPastContainer() {
       if (!this.selectedProduct.requiresFlavorSelection && !this.selectedProduct.isLarge) {
-        // 추가 옵션이 전혀 없는 상품(예: 아메리카노)은 바로 장바구니에 담고 확인 단계로 이동
+        // 추가 옵션이 전혀 없는 상품은 바로 장바구니에 담고 확인 단계로 이동한다.
         this.addCurrentSelectionToCart()
         this.step = 'cart'
         return
