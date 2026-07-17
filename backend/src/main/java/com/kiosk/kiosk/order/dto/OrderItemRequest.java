@@ -8,6 +8,7 @@ public record OrderItemRequest(
         ContainerType containerType,
         Integer spoonCount,
         Integer dryIceMinutes,
-        List<Long> flavorIds
+        List<Long> flavorIds,
+        Boolean monthlyFlavorUpgrade
 ) {
 }

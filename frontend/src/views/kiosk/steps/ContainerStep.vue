@@ -16,7 +16,7 @@
           <img :src="containerCup" alt="" class="preview-img preview-img--cup" />
           <img :src="containerCone" alt="" class="preview-img preview-img--cone" />
         </div>
-        <img v-else-if="productImage(orderFlow.selectedProduct.productName)" :src="productImage(orderFlow.selectedProduct.productName)" alt="" class="preview-single" />
+        <img v-else-if="orderFlow.selectedProduct.imageUrl || productImage(orderFlow.selectedProduct.productName)" :src="orderFlow.selectedProduct.imageUrl || productImage(orderFlow.selectedProduct.productName)" alt="" class="preview-single" />
         <div class="product-text">
           <p class="product-name">
             {{ orderFlow.selectedProduct.productName }}<br />
@@ -47,6 +47,15 @@
         >
           <img :src="containerCone" alt="" class="option-img" />
           <span class="option-label">콘</span>
+        </button>
+        <button
+          type="button"
+          class="option-card"
+          :class="{ selected: orderFlow.containerType === 'WAFFLE_CONE' }"
+          @click="orderFlow.containerType = 'WAFFLE_CONE'"
+        >
+          <img :src="containerWaffleCone" alt="와플콘" class="option-img" />
+          <span class="option-label">와플콘(+500원)</span>
         </button>
       </div>
 
@@ -95,6 +104,7 @@ import { useCartStore } from '../../../stores/cart'
 import { productImage } from '../../../data/productImages'
 import containerCup from '../../../assets/kiosk/icons/container-cup.png'
 import containerCone from '../../../assets/kiosk/icons/container-cone.png'
+import containerWaffleCone from '../../../assets/kiosk/icons/container-waffle-cone.png'
 import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.svg'
 import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
 
@@ -240,6 +250,7 @@ const DRY_ICE_CHOICES = [
   display: flex;
   gap: 24px;
   margin-top: 32px;
+  flex-wrap: wrap;
 }
 
 .option-card {

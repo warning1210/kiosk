@@ -164,7 +164,7 @@ CREATE TABLE `order_item` (
   `unit_price_snapshot` int NOT NULL COMMENT '스냅샷',
   `quantity` int NOT NULL,
   `item_total` int NOT NULL,
-  `container_type` ENUM ('CUP', 'CONE', 'NONE') NOT NULL DEFAULT 'NONE' COMMENT 'CUP / CONE / NONE',
+  `container_type` ENUM ('CUP', 'CONE', 'WAFFLE_CONE', 'NONE') NOT NULL DEFAULT 'NONE' COMMENT 'CUP / CONE / WAFFLE_CONE / NONE',
   `spoon_count` tinyint NOT NULL DEFAULT 0,
   `dry_ice_minutes` tinyint,
   `request_note` varchar(500),

@@ -15,8 +15,8 @@
       <div class="modal">
         <p class="confirm-message">{{ orderFlow.confirmDialog.message }}</p>
         <div class="confirm-actions">
-          <button type="button" class="confirm-cancel" @click="orderFlow.resolveConfirm(false)">취소</button>
-          <button type="button" class="confirm-ok" @click="orderFlow.resolveConfirm(true)">확인</button>
+          <button v-if="!orderFlow.confirmDialog.noticeOnly" type="button" class="confirm-cancel" @click="orderFlow.resolveConfirm(false)">{{ orderFlow.confirmDialog.cancelLabel ?? '취소' }}</button>
+          <button type="button" class="confirm-ok" @click="orderFlow.resolveConfirm(true)">{{ orderFlow.confirmDialog.confirmLabel ?? '확인' }}</button>
         </div>
       </div>
     </div>
@@ -69,6 +69,7 @@ onUnmounted(() => {
   font-size: 20px;
   color: #000;
   line-height: 1.4;
+  white-space: pre-line;
 }
 
 .confirm-actions {

@@ -8,6 +8,12 @@ import router from '../router'
 // 등급별 적립률: Friend 3% / Family 5% / VIP 8%
 const EARN_RATE = { FRIEND: 0.03, FAMILY: 0.05, VIP: 0.08 }
 
+const MONTHLY_FLAVOR_NAMES = ['쵸파의 코튼캔디 크런치', '우디의 후르츠 어드벤처']
+
+function isMonthlyFlavor(flavor) {
+  return MONTHLY_FLAVOR_NAMES.includes(flavor?.flavorName)
+}
+
 const STEP_LABELS = {
   orderType: '매장/포장 선택',
   product: '상품 선택',
@@ -43,6 +49,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     containerType: 'NONE',
     spoonCount: 0,
     dryIceMinutes: null,
+    monthlyFlavorUpgrade: false,
 
     mobileNumberInput: '',
     customer: null,
@@ -91,7 +98,11 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     canConfirmFlavor: (state) => {
       if (!state.selectedProduct) return false
       if (state.selectedProduct.requiresFlavorSelection) {
-        return state.selectedFlavorIds.length === state.selectedProduct.selectableFlavorCount
+        const correctCount = state.selectedFlavorIds.length === state.selectedProduct.selectableFlavorCount
+        const includesMonthlyFlavor = state.selectedFlavorIds.some((flavorId) =>
+          isMonthlyFlavor(state.flavors.find((flavor) => flavor.flavorId === flavorId))
+        )
+        return correctCount && (!state.monthlyFlavorUpgrade || includesMonthlyFlavor)
       }
       return true
     },
@@ -143,6 +154,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = 'NONE'
       this.spoonCount = 0
       this.dryIceMinutes = null
+      this.monthlyFlavorUpgrade = false
       this.mobileNumberInput = ''
       this.customer = null
       this.customerLookupDone = false
@@ -165,7 +177,12 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         ])
         this.categories = categoriesData
         this.products = productsData
-        this.flavors = flavorsData
+        // 현재 이달의 맛 2종을 실제 DB id와 무관하게 항상 첫 카드로 노출한다.
+        this.flavors = [...flavorsData].sort((a, b) => {
+          const aOrder = MONTHLY_FLAVOR_NAMES.indexOf(a.flavorName)
+          const bOrder = MONTHLY_FLAVOR_NAMES.indexOf(b.flavorName)
+          return (aOrder === -1 ? 999 : aOrder) - (bOrder === -1 ? 999 : bOrder)
+        })
         this.selectedCategory = categoriesData[0] ?? null
       } catch (e) {
         this.loadError = true
@@ -176,6 +193,10 @@ export const useOrderFlowStore = defineStore('orderFlow', {
 
     flavorSelectedCount(flavorId) {
       return this.selectedFlavorIds.filter((id) => id === flavorId).length
+    },
+
+    isMonthlyFlavorId(flavorId) {
+      return isMonthlyFlavor(this.flavors.find((flavor) => flavor.flavorId === flavorId))
     },
 
     canPickMoreFlavor() {
@@ -195,6 +216,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = product.containerPolicy === 'NONE' ? 'NONE' : 'CUP'
       this.spoonCount = 0
       this.dryIceMinutes = null
+      this.monthlyFlavorUpgrade = false
     },
 
     // 컵/콘 선택(용기 둘 다 가능한 상품) 또는 테이크아웃 대용량 상품(숟가락/드라이아이스)은
@@ -214,6 +236,21 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         return
       }
       this.proceedPastContainer()
+    },
+
+    async offerMonthlyFlavorUpgrade() {
+      if (this.selectedProduct?.productName !== '싱글레귤러' || this.monthlyFlavorUpgrade) return false
+      const accepted = await this.askConfirm(
+        '이달의 맛 선택 시 500원 추가하면 더블주니어로 사이즈업!\n더블주니어로 사이즈업 하시겠어요?',
+        { cancelLabel: '아니요', confirmLabel: '네' }
+      )
+      // 아니요를 선택해도 이달의 맛은 기존 싱글레귤러로 정상 선택한다.
+      if (!accepted) return true
+      const doubleJunior = this.products.find((product) => product.productName === '더블주니어')
+      if (!doubleJunior) return false
+      this.selectedProduct = { ...doubleJunior, basePrice: this.selectedProduct.basePrice + 500 }
+      this.monthlyFlavorUpgrade = true
+      return true
     },
 
     proceedPastContainer() {
@@ -236,6 +273,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = item.containerType
       this.spoonCount = item.spoonCount
       this.dryIceMinutes = item.dryIceMinutes
+      this.monthlyFlavorUpgrade = Boolean(item.monthlyFlavorUpgrade)
       this.step = this.needsContainerStep(product) ? 'container' : 'flavor'
     },
 
@@ -261,7 +299,9 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       const payload = {
         productId: this.selectedProduct.productId,
         productName: this.selectedProduct.productName,
-        unitPrice: this.selectedProduct.basePrice,
+        imageUrl: this.selectedProduct.imageUrl,
+        unitPrice: this.selectedProduct.basePrice + (this.containerType === 'WAFFLE_CONE' ? 500 : 0),
+        monthlyFlavorUpgrade: this.monthlyFlavorUpgrade,
         containerType: this.containerType,
         spoonCount: this.spoonCount,
         dryIceMinutes: this.dryIceMinutes,
@@ -289,9 +329,21 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     },
 
     // 화면 디자인에 맞는 확인 팝업(ConfirmModal, OrderView.vue에 마운트됨)을 띄우고 결과를 기다린다
-    askConfirm(message) {
+    askConfirm(message, options = {}) {
       return new Promise((resolve) => {
-        this.confirmDialog = { message, resolve }
+        this.confirmDialog = {
+          message,
+          resolve,
+          noticeOnly: false,
+          cancelLabel: options.cancelLabel ?? '취소',
+          confirmLabel: options.confirmLabel ?? '확인'
+        }
+      })
+    },
+
+    showNotice(message) {
+      return new Promise((resolve) => {
+        this.confirmDialog = { message, resolve, noticeOnly: true }
       })
     },
 
@@ -440,7 +492,8 @@ export const useOrderFlowStore = defineStore('orderFlow', {
             containerType: item.containerType,
             spoonCount: item.spoonCount,
             dryIceMinutes: item.dryIceMinutes,
-            flavorIds: item.flavors.map((f) => f.flavorId)
+            flavorIds: item.flavors.map((f) => f.flavorId),
+            monthlyFlavorUpgrade: Boolean(item.monthlyFlavorUpgrade)
           }))
         }
         const { data } = await http.post('/orders/checkout', this.checkoutPayload)
