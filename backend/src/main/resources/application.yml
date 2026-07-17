@@ -28,6 +28,13 @@ spring:
           preferred_boolean_jdbc_type: TINYINT
     show-sql: true
 
+<<<<<<< Updated upstream
+=======
+firebase:
+  credentials:
+    path: "E:/VS_Code/project2_1조/kiosk/backend/src/main/resources/firebase-key.json"
+
+>>>>>>> Stashed changes
 logging:
   level:
     org.hibernate.SQL: debug
