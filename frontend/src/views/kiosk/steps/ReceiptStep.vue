@@ -18,7 +18,7 @@
         </div>
         <!-- 옵션(용기/스푼/드라이아이스)과 맛을 상품 아래에 작게 표시 -->
         <p v-if="item.containerType !== 'NONE'" class="option">
-          용기: {{ item.containerType === 'CUP' ? '컵' : '콘' }}
+          용기: {{ item.containerType === 'CUP' ? '컵' : item.containerType === 'WAFFLE_CONE' ? '와플콘' : '콘' }}
         </p>
         <p v-if="item.flavors.length" class="option">
           맛: {{ item.flavors.map((f) => f.quantity > 1 ? `${f.flavorName} x${f.quantity}` : f.flavorName).join(', ') }}

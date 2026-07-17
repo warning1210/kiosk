@@ -24,7 +24,7 @@
 
     <ul class="cart-list">
       <li v-for="item in cart.items" :key="item.id" class="cart-row">
-        <img v-if="productImage(item.productName)" :src="productImage(item.productName)" :alt="item.productName" class="cart-thumb" />
+        <img v-if="item.imageUrl || productImage(item.productName)" :src="item.imageUrl || productImage(item.productName)" :alt="item.productName" class="cart-thumb" />
         <div v-else class="cart-thumb cart-thumb--placeholder" />
         <div class="cart-item-text">
           <p class="cart-item-name">{{ item.productName }}</p>
@@ -87,7 +87,7 @@ const editPencilSvg = editPencilRaw
 const deleteXSvg = deleteXRaw
 const stepPillSvg = stepPillRaw
 
-const CONTAINER_LABELS = { CUP: '컵', CONE: '콘' }
+const CONTAINER_LABELS = { CUP: '컵', CONE: '콘', WAFFLE_CONE: '와플콘(+500원)' }
 
 function itemDetail(item) {
   const parts = []

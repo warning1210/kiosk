@@ -42,6 +42,7 @@
                   </span>
                 </span>
                 <span class="flavor-name">{{ flavor.flavorName }}</span>
+                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">이달의 맛</span>
               </button>
             </li>
           </ul>
@@ -153,8 +154,12 @@ function onSwipeEnd(e) {
   requestAnimationFrame(() => { isDragging.value = false })
 }
 
-function onFlavorClick(flavorId) {
+async function onFlavorClick(flavorId) {
   if (isDragging.value) return
+  if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.productName === '싱글레귤러') {
+    const canSelect = await orderFlow.offerMonthlyFlavorUpgrade()
+    if (!canSelect) return
+  }
   // 다 채운 상태에서 이미 담은 맛을 다시 누르면, 새로 추가하는 대신 1개 취소한다
   if (!orderFlow.canPickMoreFlavor() && orderFlow.flavorSelectedCount(flavorId) > 0) {
     orderFlow.removeOneFlavor(flavorId)
@@ -281,7 +286,7 @@ const emptySlotCount = computed(() => {
 
 .flavor-card {
   width: 100%;
-  height: 125px;
+  min-height: 155px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -346,9 +351,18 @@ const emptySlotCount = computed(() => {
   color: #000;
   text-align: center;
   width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-height: 34px;
+  padding: 0 2px;
+  line-height: 1.2;
+  white-space: normal;
+  overflow: visible;
+  word-break: keep-all;
+}
+
+.monthly-badge {
+  color: #f20c93;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .flavor-summary-bar {

@@ -62,7 +62,12 @@ public class OrderService {
         for (OrderItemRequest itemRequest : request.items()) {
             Product product = productRepository.findById(itemRequest.productId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."));
-            int itemTotal = product.getBasePrice();
+            int itemTotal = Boolean.TRUE.equals(itemRequest.monthlyFlavorUpgrade())
+                    ? resolveMonthlyFlavorUpgradePrice(product, itemRequest)
+                    : product.getBasePrice();
+            if (itemRequest.containerType() == ContainerType.WAFFLE_CONE) {
+                itemTotal += 500;
+            }
             amountBeforeDiscount += itemTotal;
             resolved.add(new ResolvedItem(product, itemRequest, itemTotal));
         }
@@ -92,7 +97,7 @@ public class OrderService {
                     .order(order)
                     .product(item.product())
                     .productNameSnapshot(item.product().getProductName())
-                    .unitPriceSnapshot(item.product().getBasePrice())
+                    .unitPriceSnapshot(item.itemTotal())
                     .quantity(1)
                     .itemTotal(item.itemTotal())
                     .containerType(item.request().containerType() != null ? item.request().containerType() : ContainerType.NONE)
@@ -118,5 +123,24 @@ public class OrderService {
         }
 
         return new OrderCheckoutResponse(order.getOrderId(), order.getOrderNumber(), amountBeforeDiscount, usedPoints, finalAmount);
+    }
+
+    private int resolveMonthlyFlavorUpgradePrice(Product product, OrderItemRequest request) {
+        boolean includesMonthlyFlavor = request.flavorIds() != null && request.flavorIds().stream()
+                .map(flavorId -> flavorRepository.findById(flavorId).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .map(Flavor::getFlavorName)
+                .anyMatch(name -> "쵸파의 코튼캔디 크런치".equals(name) || "우디의 후르츠 어드벤처".equals(name));
+        if (!"더블주니어".equals(product.getProductName())
+                || request.flavorIds() == null
+                || request.flavorIds().size() != 2
+                || !includesMonthlyFlavor) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이달의 맛을 포함한 더블주니어만 사이즈업할 수 있습니다.");
+        }
+        Product singleRegular = productRepository.findAll().stream()
+                .filter(candidate -> "싱글레귤러".equals(candidate.getProductName()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "싱글레귤러 상품을 찾을 수 없습니다."));
+        return singleRegular.getBasePrice() + 500;
     }
 }
