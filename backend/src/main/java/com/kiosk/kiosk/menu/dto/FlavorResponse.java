@@ -6,6 +6,7 @@ public record FlavorResponse(
         Long flavorId,
         String flavorName,
         String imageUrl,
+        String description,
         String allergyInfo
 ) {
 
@@ -14,6 +15,7 @@ public record FlavorResponse(
                 flavor.getFlavorId(),
                 flavor.getFlavorName(),
                 flavor.getImageUrl(),
+                flavor.getDescription(),
                 flavor.getAllergyInfo()
         );
     }

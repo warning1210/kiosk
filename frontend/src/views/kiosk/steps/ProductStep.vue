@@ -52,6 +52,7 @@
               :key="product.productId"
               type="button"
               class="product-card"
+              :class="{ selected: focusedProduct?.productId === product.productId }"
               @click="onProductClick(product)"
             >
               <img v-if="product.imageUrl || productImage(product.productName)" :src="product.imageUrl || productImage(product.productName)" :alt="product.productName" class="product-image" />
@@ -76,6 +77,14 @@
         ></button>
       </div>
     </template>
+
+    <aside v-if="focusedProduct" class="product-description" :class="{ 'has-cart': cart.items.length }">
+      <div>
+        <strong>{{ focusedProduct.productName }}</strong>
+        <p>{{ focusedProduct.description || '달콤하고 맛있는 배스킨라빈스 메뉴입니다.' }}</p>
+      </div>
+      <button type="button" @click="addFocusedProduct">장바구니 담기</button>
+    </aside>
 
     <!-- 하단 바: 장바구니 / 결제 - 담긴 상품이 있을 때만 노출 -->
     <footer v-if="cart.items.length" class="bottom-bar">
@@ -108,6 +117,7 @@ import { productImage } from '../../../data/productImages'
 
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
+const focusedProduct = ref(null)
 
 const closeXSvg = closeXRaw
 const cartSvg = cartRaw
@@ -141,6 +151,7 @@ const totalProductPages = computed(() => productPages.value.length)
 // 카테고리를 바꾸면 이전 카테고리에서 보던 페이지 위치가 아니라 첫 페이지부터 보여준다
 watch(() => orderFlow.selectedCategory, () => {
   currentPage.value = 0
+  focusedProduct.value = null
 })
 
 let swipeStartX = null
@@ -170,7 +181,18 @@ function onSwipeEnd(e) {
 
 function onProductClick(product) {
   if (isDragging.value) return
+  if (!product.requiresFlavorSelection && !orderFlow.needsContainerStep(product)) {
+    focusedProduct.value = product
+    return
+  }
   orderFlow.selectProduct(product)
+}
+
+function addFocusedProduct() {
+  if (!focusedProduct.value) return
+  orderFlow.editingItemId = null
+  orderFlow.resetFlavorStepState(focusedProduct.value)
+  orderFlow.addCurrentSelectionToCart()
 }
 </script>
 
@@ -352,6 +374,12 @@ function onProductClick(product) {
   padding: 0;
 }
 
+.product-card.selected {
+  border: 2px solid #f20c93;
+  border-radius: 16px;
+  background: #fff7fb;
+}
+
 .product-image {
   width: 110px;
   height: 97px;
@@ -375,6 +403,31 @@ function onProductClick(product) {
   font-size: 17px;
   color: #f20c93;
 }
+
+.product-description {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: calc(100% - 32px);
+  max-width: 992px;
+  padding: 14px 18px;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  border: 1px solid #f0b8d5;
+  border-radius: 12px;
+  background: #fff5fa;
+  box-shadow: 0 8px 22px rgb(94 50 69 / 10%);
+}
+
+.product-description.has-cart { bottom: 210px; }
+.product-description div { min-width: 0; flex: 1; }
+.product-description strong { display: block; overflow: hidden; color: #f20c93; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.product-description p { overflow: hidden; margin: 5px 0 0; color: #5f5057; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.product-description button { flex: 0 0 auto; padding: 13px 24px; border: 0; border-radius: 999px; color: #fff; background: #f20c93; font-size: 17px; font-weight: 700; cursor: pointer; }
 
 .bottom-bar {
   position: fixed;
