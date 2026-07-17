@@ -54,7 +54,7 @@
               class="product-card"
               @click="onProductClick(product)"
             >
-              <img v-if="productImage(product.productName)" :src="productImage(product.productName)" :alt="product.productName" class="product-image" />
+              <img v-if="product.imageUrl || productImage(product.productName)" :src="product.imageUrl || productImage(product.productName)" :alt="product.productName" class="product-image" />
               <div v-else class="product-image product-image--placeholder" />
               <p class="product-name">{{ product.productName }}</p>
               <p class="product-price">₩{{ product.basePrice.toLocaleString() }}</p>
