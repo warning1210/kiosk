@@ -41,7 +41,7 @@ logging:
 #   집에서 테스트: PRINTER_URL=http://localhost:8888/receipt  (프린터 서비스를 로컬에 띄운 경우)
 #   프린터 없이 개발: 그냥 두면 됨 - 연결 실패해도 주문/결제는 정상, 영수증은 화면으로만 표시
 printer:
-  url: ${PRINTER_URL:http://172.16.15.97:8888/receipt}
+  url: ${PRINTER_URL:http://172.16.15.97:7777/receipt}
 
 # 토스페이먼츠 - 기본값은 테스트 키라 실제 결제망을 타지 않음.
 # 실 서비스로 전환할 땐 코드 안 고치고 아래 환경변수만 라이브 키로 교체.
@@ -49,5 +49,5 @@ toss:
   secret-key: ${TOSS_SECRET_KEY:test_sk_LlDJaYngroawzQAvQJ9l3ezGdRpX}
   client-key: ${TOSS_CLIENT_KEY:test_ck_Gv6LjeKD8aXOdnl1lpYkrwYxAdXy}
   api-base-url: https://api.tosspayments.com
-  success-url: ${TOSS_SUCCESS_URL:http://garment-bonded-citation.ngrok-free.dev/payment/success}
-  fail-url: ${TOSS_FAIL_URL:http://garment-bonded-citation.ngrok-free.dev/payment/fail}
+  success-url: ${TOSS_SUCCESS_URL:http://172.16.15.68:5173/payment/success}
+  fail-url: ${TOSS_FAIL_URL:http://172.16.15.68:5173/payment/fail}

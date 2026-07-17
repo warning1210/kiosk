@@ -51,7 +51,7 @@
           </thead>
           <tbody>
             <tr v-for="o in sorted" :key="o.orderId">
-              <td><b>#{{ o.waitingNumber }}</b></td>
+              <td><b>#{{ String(o.waitingNumber).padStart(3, '0') }}</b></td>
               <td>
                 <span class="elapsed" :class="o.elapsedMinutes > 15 ? 'danger' : o.elapsedMinutes > 8 ? 'warn' : 'safe'">
                   {{ o.elapsedMinutes }}분
