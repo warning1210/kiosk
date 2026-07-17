@@ -63,4 +63,16 @@ INSERT INTO product (product_id, category_id, product_name, base_price, image_ur
 INSERT INTO product (product_id, category_id, product_name, base_price, image_url, description, requires_flavor_selection, selectable_flavor_count, container_policy, is_large, is_new, sale_status, is_visible, created_at, updated_at) VALUES (300052, (SELECT category_id FROM category WHERE category_name='커피' ORDER BY category_id LIMIT 1), '아포가토', 4500, 'https://www.baskinrobbins.co.kr/upload/product/main/e4ca5dda6c272461a3bdba3baf7700ea.png', '진한 에스프레소와 달콤한 아이스크림의 부드럽고 강렬한 만남', 0, 0, 'NONE', 0, 0, 'ON_SALE', 1, NOW(), NOW()) ON DUPLICATE KEY UPDATE category_id=VALUES(category_id), product_name=VALUES(product_name), base_price=VALUES(base_price), image_url=VALUES(image_url), description=VALUES(description), sale_status='ON_SALE', is_visible=1, updated_at=NOW();
 INSERT INTO product (product_id, category_id, product_name, base_price, image_url, description, requires_flavor_selection, selectable_flavor_count, container_policy, is_large, is_new, sale_status, is_visible, created_at, updated_at) VALUES (300009, (SELECT category_id FROM category WHERE category_name='커피' ORDER BY category_id LIMIT 1), '카푸치노 블라스트 (오리지널, 모카)', 5400, 'https://www.baskinrobbins.co.kr/upload/product/main/a6127ef32f1654ed7848aa9328bec74d.png', '배스킨라빈스의 대표 음료! Café Bris 커피의 깊은 맛과 달콤한 바닐라 아이스크림이 블랜디드된 블라스트를 즐겨보세요.', 0, 0, 'NONE', 0, 0, 'ON_SALE', 1, NOW(), NOW()) ON DUPLICATE KEY UPDATE category_id=VALUES(category_id), product_name=VALUES(product_name), base_price=VALUES(base_price), image_url=VALUES(image_url), description=VALUES(description), sale_status='ON_SALE', is_visible=1, updated_at=NOW();
 
+-- Keep the oldest product row visible when a prior import already created the same menu.
+UPDATE product duplicate
+JOIN product keeper
+  ON keeper.category_id = duplicate.category_id
+ AND REPLACE(TRIM(keeper.product_name), ' ', '') = REPLACE(TRIM(duplicate.product_name), ' ', '')
+ AND keeper.product_id < duplicate.product_id
+JOIN category c ON c.category_id = duplicate.category_id
+SET duplicate.is_visible = 0,
+    duplicate.sale_status = 'DISCONTINUED',
+    duplicate.updated_at = NOW()
+WHERE c.category_name = '아이스크림 케이크';
+
 

@@ -30,7 +30,22 @@
           <p class="cart-item-name">{{ item.productName }}</p>
           <p class="cart-item-detail">{{ itemDetail(item) }}</p>
         </div>
-        <span class="cart-item-qty">{{ item.quantity }}</span>
+        <div class="quantity-control" aria-label="수량 변경">
+          <button
+            type="button"
+            class="quantity-btn"
+            :disabled="item.quantity <= 1"
+            :aria-label="`${item.productName} 수량 줄이기`"
+            @click="cart.adjustQuantity(item.id, -1)"
+          >−</button>
+          <span class="cart-item-qty">{{ item.quantity }}</span>
+          <button
+            type="button"
+            class="quantity-btn"
+            :aria-label="`${item.productName} 수량 늘리기`"
+            @click="cart.adjustQuantity(item.id, 1)"
+          >+</button>
+        </div>
         <button type="button" class="row-icon-btn" aria-label="수정" @click="orderFlow.editItem(item)">
           <span v-html="editPencilSvg"></span>
         </button>
@@ -53,7 +68,7 @@
       </div>
 
       <div class="pay-methods">
-        <button type="button" class="pay-method pay-method--cash" disabled title="현재는 카드/QR 결제만 지원해요">
+        <button type="button" class="pay-method pay-method--cash" @click="showCashPaymentNotice">
           <span>현금</span>
         </button>
         <button type="button" class="pay-method pay-method--card" @click="orderFlow.step = 'customer'">
@@ -88,6 +103,11 @@ const deleteXSvg = deleteXRaw
 const stepPillSvg = stepPillRaw
 
 const CONTAINER_LABELS = { CUP: '컵', CONE: '콘', WAFFLE_CONE: '와플콘(+500원)' }
+
+async function showCashPaymentNotice() {
+  await orderFlow.showNotice('현금으로 결제하시면 카운터에서 결제를 도와드리겠습니다.')
+  orderFlow.finishOrder()
+}
 
 function itemDetail(item) {
   const parts = []
@@ -238,10 +258,35 @@ function itemDetail(item) {
 }
 
 .cart-item-qty {
-  width: 60px;
+  min-width: 28px;
   text-align: center;
   font-size: 25px;
   color: #000;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.quantity-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #f20c93;
+  border-radius: 50%;
+  background: #fff;
+  color: #f20c93;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.quantity-btn:disabled {
+  border-color: #d9d9d9;
+  color: #b9b9b9;
+  cursor: not-allowed;
 }
 
 .row-icon-btn {
@@ -316,11 +361,6 @@ function itemDetail(item) {
   border: 1px solid #f20c93;
   background: #fff;
   color: #f20c93;
-}
-
-.pay-method--cash:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .pay-method--card {
