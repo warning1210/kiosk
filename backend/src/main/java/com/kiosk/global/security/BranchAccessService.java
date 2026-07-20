@@ -20,17 +20,20 @@ public class BranchAccessService {
     private final AdminRepository adminRepository;
 
     public Long requireBranchId(String authorization) {
+        return requireAdmin(authorization).getBranch().getBranchId();
+    }
+
+    public Admin requireAdmin(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
         }
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(authorization.substring(7));
-            Admin admin = adminRepository.findByEmail(token.getEmail())
+            return adminRepository.findByEmail(token.getEmail())
                     .filter(a -> a.getRole() == AdminRole.BRANCH_MANAGER)
                     .filter(a -> a.getAccountStatus() == AccountStatus.ACTIVE)
                     .filter(a -> a.getBranch() != null)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "사용할 수 없는 지점 계정입니다."));
-            return admin.getBranch().getBranchId();
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
