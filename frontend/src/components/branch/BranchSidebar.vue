@@ -6,7 +6,7 @@
       <RouterLink :class="{ active: active === 'dashboard' }" to="/branch/dashboard"><i>▦</i>대시보드</RouterLink>
       <RouterLink :class="{ active: active === 'orders' }" to="/branch/orders"><i>▤</i>주문 관리<b v-if="newOrders">{{ newOrders }}</b></RouterLink>
       <RouterLink :class="{ active: active === 'inventory' }" to="/branch/inventory"><i>▣</i>재고 현황</RouterLink>
-      <a href="#"><i>♧</i>입고 신청 현황</a><a href="#"><i>□</i>이벤트 관리</a><RouterLink :class="{ active: active === 'sales' }" to="/branch/sales"><i>⌁</i>판매 통계</RouterLink>
+      <a href="#"><i>♧</i>입고 신청 현황</a><a href="#"><i>□</i>이벤트 관리</a><RouterLink :class="{ active: active === 'sales' }" to="/branch/sales"><i>⌁</i>판매 통계</RouterLink><RouterLink :class="{ active: active === 'chat' }" to="/branch/chat"><i>✉</i>본점 채팅</RouterLink>
     </nav>
     <nav class="settings"><a href="#"><i>⚙</i>매장 설정</a></nav>
     <button class="logout-btn" type="button" :disabled="loggingOut" @click="logout">

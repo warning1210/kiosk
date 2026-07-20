@@ -9,6 +9,7 @@ public record OrderCheckoutRequest(
         OrderType orderType,
         String customerMobileNumber,
         Integer usedPoints,
+        String couponCode,
         Language language,
         List<OrderItemRequest> items
 ) {

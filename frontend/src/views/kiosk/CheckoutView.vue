@@ -72,6 +72,11 @@ async function requestPayment() {
       orderName: checkoutInfo.value.orderName,
       successUrl: checkoutInfo.value.successUrl,
       failUrl: checkoutInfo.value.failUrl,
+      // 토스페이 자체창(DIRECT)을 열어, 앱으로 바로 못 넘어가는 환경(PC 등)에서는 QR을 띄워 폰 토스 앱으로 스캔·승인하게 한다
+      card: {
+        flowMode: 'DIRECT',
+        easyPay: '토스페이',
+      },
     })
   } catch (e) {
     errorMessage.value = '결제창을 여는 중 오류가 발생했습니다.'
