@@ -9,7 +9,7 @@
         <AdminStatCard icon="🎫" label="전체 발급" :value="`${coupons.length}개`" />
         <AdminStatCard icon="✓" label="사용 완료" :value="`${usedCount}개`" tone="green" />
         <AdminStatCard icon="📈" label="사용률" :value="usageRate" tone="blue" />
-        <AdminStatCard icon="⚠" label="만료 예정" :value="`${expiredCount}개`" tone="orange" />
+        <AdminStatCard icon="⚠" label="만료 예정" :value="`${expiringSoonCount}개`" :delta="`${EXPIRING_SOON_DAYS}일 이내`" tone="orange" />
       </div>
 
       <section class="invite-card">
@@ -142,8 +142,14 @@ async function issueCoupon() {
   }
 }
 
+const EXPIRING_SOON_DAYS = 7
+
 const usedCount = computed(() => coupons.value.filter(c => c.couponStatus === 'USED').length)
-const expiredCount = computed(() => coupons.value.filter(c => c.couponStatus === 'EXPIRED').length)
+const expiringSoonCount = computed(() => {
+  const now = Date.now()
+  const soon = now + EXPIRING_SOON_DAYS * 86400000
+  return coupons.value.filter(c => c.couponStatus === 'AVAILABLE' && new Date(c.expiresAt).getTime() <= soon).length
+})
 const usageRate = computed(() => coupons.value.length ? `${Math.round(usedCount.value / coupons.value.length * 100)}%` : '0%')
 
 function tabCount(value) {
