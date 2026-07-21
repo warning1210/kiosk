@@ -9,10 +9,10 @@ import { getKioskBranchId } from '../utils/kioskSession'
 // 등급별 적립률: Friend 3% / Family 5% / VIP 8%
 const EARN_RATE = { FRIEND: 0.03, FAMILY: 0.05, VIP: 0.08 }
 
-const MONTHLY_FLAVOR_NAMES = ['쵸파의 코튼캔디 크런치', '우디의 후르츠 어드벤처']
-
+// "이달의 맛"은 더 이상 이름으로 하드코딩하지 않는다 - 본점이 MONTHLY_FLAVOR 이벤트로 직접 지정한
+// 맛인지를 백엔드가 판단해서 내려주는 flavor.isMonthly 값을 그대로 따른다.
 function isMonthlyFlavor(flavor) {
-  return MONTHLY_FLAVOR_NAMES.includes(flavor?.flavorName)
+  return flavor?.isMonthly === true
 }
 
 // 담긴 맛 중 할인이 걸린 맛이 있으면 가장 큰 할인 하나만 적용한다 (백엔드 KioskFlavorDiscountService와 동일 규칙).
@@ -251,17 +251,21 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.proceedPastContainer()
     },
 
+    // 본점이 SIZE_UP 이벤트로 지정한 사이즈업 대상 상품일 때만 제안한다 (하드코딩된 상품명 없음 -
+    // ProductResponse.sizeUpToProductId/sizeUpAdditionalPayment는 진행 중인 이벤트가 있을 때만 채워짐).
     async offerMonthlyFlavorUpgrade() {
-      if (this.selectedProduct?.productName !== '싱글레귤러' || this.monthlyFlavorUpgrade) return false
+      const sizeUpToId = this.selectedProduct?.sizeUpToProductId
+      if (!sizeUpToId || this.monthlyFlavorUpgrade) return false
+      const toProduct = this.products.find((product) => product.productId === sizeUpToId)
+      if (!toProduct) return false
+      const additionalPayment = this.selectedProduct.sizeUpAdditionalPayment ?? 0
       const accepted = await this.askConfirm(
-        '이달의 맛 선택 시 500원 추가하면 더블주니어로 사이즈업!\n더블주니어로 사이즈업 하시겠어요?',
+        `이달의 맛 선택 시 ${additionalPayment.toLocaleString()}원 추가하면 ${toProduct.productName}로 사이즈업!\n${toProduct.productName}로 사이즈업 하시겠어요?`,
         { cancelLabel: '아니요', confirmLabel: '네' }
       )
-      // 아니요를 선택해도 이달의 맛은 기존 싱글레귤러로 정상 선택한다.
+      // 아니요를 선택해도 이달의 맛은 기존 상품으로 정상 선택한다.
       if (!accepted) return true
-      const doubleJunior = this.products.find((product) => product.productName === '더블주니어')
-      if (!doubleJunior) return false
-      this.selectedProduct = { ...doubleJunior, basePrice: this.selectedProduct.basePrice + 500 }
+      this.selectedProduct = { ...toProduct, basePrice: this.selectedProduct.basePrice + additionalPayment }
       this.monthlyFlavorUpgrade = true
       return true
     },

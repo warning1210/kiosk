@@ -170,23 +170,21 @@ public class OrderService {
                                 discountAmount, finalAmount);
         }
 
+        // itemRequest.productId()는 이미 사이즈업 "후" 상품(예: 더블주니어)이다 - 프론트가 맛 선택 전에
+        // selectedProduct를 미리 바꿔두기 때문. 그 상품을 향한 진행 중인 SIZE_UP 이벤트를 찾아 실제 가격을 계산한다.
         private int resolveMonthlyFlavorUpgradePrice(Product product, OrderItemRequest request) {
+                Event sizeUpEvent = kioskFlavorDiscountService.activeSizeUpEventTo(product.getProductId())
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "진행 중인 사이즈업 이벤트가 없습니다."));
+
                 boolean includesMonthlyFlavor = request.flavorIds() != null && request.flavorIds().stream()
-                                .map(flavorId -> flavorRepository.findById(flavorId).orElse(null))
-                                .filter(java.util.Objects::nonNull)
-                                .map(Flavor::getFlavorName)
-                                .anyMatch(name -> "쵸파의 코튼캔디 크런치".equals(name) || "우디의 후르츠 어드벤처".equals(name));
-                if (!"더블주니어".equals(product.getProductName())
-                                || request.flavorIds() == null
-                                || request.flavorIds().size() != 2
+                                .anyMatch(kioskFlavorDiscountService::isMonthlyFlavor);
+                if (request.flavorIds() == null
+                                || product.getSelectableFlavorCount() == null
+                                || product.getSelectableFlavorCount().intValue() != request.flavorIds().size()
                                 || !includesMonthlyFlavor) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이달의 맛을 포함한 더블주니어만 사이즈업할 수 있습니다.");
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이달의 맛을 포함해야 사이즈업할 수 있습니다.");
                 }
-                Product singleRegular = productRepository.findAll().stream()
-                                .filter(candidate -> "싱글레귤러".equals(candidate.getProductName()))
-                                .findFirst()
-                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                                                "싱글레귤러 상품을 찾을 수 없습니다."));
-                return singleRegular.getBasePrice() + 500;
+                return sizeUpEvent.getSizeUpFromProduct().getBasePrice() + sizeUpEvent.getAdditionalPayment();
         }
 }

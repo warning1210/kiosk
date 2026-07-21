@@ -20,7 +20,7 @@
             <option value="" disabled>이벤트 유형</option>
             <option v-for="type in eventTypes" :key="type" :value="type">{{ eventTypeLabel(type) }}</option>
           </select>
-          <template v-if="form.eventType === 'FLAVOR_DISCOUNT'">
+          <template v-if="form.eventType === 'MONTHLY_FLAVOR' || form.eventType === 'FLAVOR_DISCOUNT'">
             <select v-model="form.benefitType">
               <option value="DISCOUNT_AMOUNT">정액 할인(원)</option>
               <option value="DISCOUNT_RATE">정률 할인(%)</option>
@@ -36,13 +36,29 @@
               type="number" min="1" required placeholder="할인 금액(원)"
             >
           </template>
+          <select v-if="form.eventType === 'MONTHLY_FLAVOR'" v-model="form.flavorId" required>
+            <option value="" disabled>할인 맛 선택</option>
+            <option v-for="flavor in flavors" :key="flavor.flavorId" :value="flavor.flavorId">{{ flavor.flavorName }}</option>
+          </select>
+          <template v-if="form.eventType === 'SIZE_UP'">
+            <select v-model="form.sizeUpFromProductId" required>
+              <option value="" disabled>사이즈업 전 상품</option>
+              <option v-for="product in products" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
+            </select>
+            <select v-model="form.sizeUpToProductId" required>
+              <option value="" disabled>사이즈업 후 상품</option>
+              <option v-for="product in products" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
+            </select>
+            <input v-model.number="form.additionalPayment" type="number" min="0" required placeholder="추가 금액(원)">
+          </template>
           <input v-model="form.startAt" type="date" required>
           <input v-model="form.endAt" type="date" required>
           <textarea v-model.trim="form.description" placeholder="설명 (지점 공지사항에 그대로 노출됩니다)" rows="2"></textarea>
           <button :disabled="creating" type="submit">{{ creating ? '생성 중' : '이벤트 생성' }}</button>
         </form>
-        <p v-if="form.eventType === 'COUPON'" class="hint">쿠폰 발급 자체는 <RouterLink to="/admin/coupons">쿠폰 발송</RouterLink> 탭에서 진행하세요. 여기서는 캠페인 이름/기간만 등록합니다.</p>
+        <p v-if="form.eventType === 'MONTHLY_FLAVOR'" class="hint">본점이 지정한 맛에 전 지점 자동으로 할인이 적용됩니다 (지점이 따로 고를 필요 없음).</p>
         <p v-if="form.eventType === 'FLAVOR_DISCOUNT'" class="hint">실제로 어느 맛에 할인을 붙일지는 각 지점이 지점의 "이벤트 관리" 화면에서 선택합니다.</p>
+        <p v-if="form.eventType === 'SIZE_UP'" class="hint">전 지점에 자동 적용됩니다. "사이즈업 후 상품" 선택 화면에서 이달의 맛을 고르면 추가 금액만 결제합니다.</p>
         <p v-if="formError" class="alert">{{ formError }}</p>
       </section>
 
@@ -69,9 +85,14 @@
               <td><strong>{{ event.eventName }}</strong><small>{{ event.description || '설명 없음' }}</small></td>
               <td><span class="tag">{{ eventTypeLabel(event.eventType) }}</span></td>
               <td>{{ discountLabel(event) }}</td>
-              <td>{{ formatDate(event.startAt) }} ~ {{ formatEndDate(event.endAt) }}</td>
-              <td><span :class="['status', bucketOf(event)]">{{ bucketLabel(event) }}</span></td>
-              <td><button class="detail" type="button">상세보기</button></td>
+              <td>{{ formatDate(event.startAt) }} ~ {{ formatEndDate(event) }}</td>
+              <td><span :class="['status', statusClass(event)]">{{ statusLabel(event) }}</span></td>
+              <td>
+                <button
+                  v-if="event.status === 'ACTIVE' || event.status === 'SCHEDULED'"
+                  class="detail" type="button" @click="endEarly(event)"
+                >조기 종료</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -93,17 +114,22 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
 import AdminStatCard from '../../components/admin/AdminStatCard.vue'
 import AdminPagination from '../../components/admin/AdminPagination.vue'
 
-// 이벤트는 크게 2가지뿐: 본점이 쿠폰을 배부하는 것(COUPON) / 특정 상품(맛)에 할인을 붙이는 것(FLAVOR_DISCOUNT).
-// 후자는 할인 값(율 또는 금액)만 본점이 정하고, 실제로 어느 맛에 붙일지는 지점이 고른다(event_branch_flavor).
-const eventTypes = ['COUPON', 'FLAVOR_DISCOUNT']
+// 이벤트는 크게 3가지: 본점이 할인 맛을 직접 지정해 전 지점에 자동 적용하는 것(MONTHLY_FLAVOR) /
+// 본점은 할인값만 정하고 어느 맛에 붙일지는 지점이 고르는 것(FLAVOR_DISCOUNT) /
+// 본점이 상품 사이즈업(상품A->상품B, 추가금액)을 지정해 전 지점에 자동 적용하는 것(SIZE_UP).
+const eventTypes = ['MONTHLY_FLAVOR', 'FLAVOR_DISCOUNT', 'SIZE_UP']
 
 const events = ref([])
+const flavors = ref([])
+const products = ref([])
 const loading = ref(true)
 const creating = ref(false)
 const formError = ref('')
 const form = reactive({
   eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
-  discountRate: null, discountAmount: null, startAt: '', endAt: '', description: ''
+  discountRate: null, discountAmount: null, flavorId: '',
+  sizeUpFromProductId: '', sizeUpToProductId: '', additionalPayment: null,
+  startAt: '', endAt: '', description: ''
 })
 const keyword = ref('')
 const filter = ref('all')
@@ -115,7 +141,11 @@ const tabs = [
   { label: '예정', value: 'scheduled' }, { label: '종료', value: 'ended' }
 ]
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadFlavors()
+  loadProducts()
+})
 
 async function load() {
   loading.value = true
@@ -125,6 +155,22 @@ async function load() {
     formError.value = e.response?.data?.message || '이벤트 목록을 불러오지 못했습니다.'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadFlavors() {
+  try {
+    flavors.value = (await http.get('/hq/flavors')).data
+  } catch {
+    flavors.value = []
+  }
+}
+
+async function loadProducts() {
+  try {
+    products.value = (await http.get('/hq/products')).data
+  } catch {
+    products.value = []
   }
 }
 
@@ -146,18 +192,34 @@ async function createEvent() {
   try {
     const { data } = await http.post('/hq/events', {
       ...form,
+      flavorId: form.flavorId || null,
+      sizeUpFromProductId: form.sizeUpFromProductId || null,
+      sizeUpToProductId: form.sizeUpToProductId || null,
       startAt: toStartOfDay(form.startAt),
       endAt: toExclusiveEndOfDay(form.endAt)
     })
     events.value.unshift(data)
     Object.assign(form, {
       eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
-      discountRate: null, discountAmount: null, startAt: '', endAt: '', description: ''
+      discountRate: null, discountAmount: null, flavorId: '',
+      sizeUpFromProductId: '', sizeUpToProductId: '', additionalPayment: null,
+      startAt: '', endAt: '', description: ''
     })
   } catch (e) {
     formError.value = e.response?.data?.message || '이벤트를 만들지 못했습니다.'
   } finally {
     creating.value = false
+  }
+}
+
+async function endEarly(event) {
+  if (!window.confirm(`"${event.eventName}" 이벤트를 지금 종료할까요?\nFLAVOR_DISCOUNT 이벤트는 즉시 할인이 중단됩니다.`)) return
+  try {
+    const { data } = await http.patch(`/hq/events/${event.eventId}/end`)
+    const index = events.value.findIndex(e => e.eventId === event.eventId)
+    if (index !== -1) events.value[index] = data
+  } catch (e) {
+    formError.value = e.response?.data?.message || '이벤트를 종료하지 못했습니다.'
   }
 }
 
@@ -170,6 +232,13 @@ function bucketOf(event) {
 }
 function bucketLabel(event) {
   return { live: '진행중', scheduled: '예정', ended: '종료' }[bucketOf(event)]
+}
+// 예정 기간을 다 채우고 끝난 것(ENDED)과 본점이 중간에 끊은 것(CANCELLED)을 구분해서 보여준다
+function statusLabel(event) {
+  return event.status === 'CANCELLED' ? '조기종료' : bucketLabel(event)
+}
+function statusClass(event) {
+  return event.status === 'CANCELLED' ? 'cancelled' : bucketOf(event)
 }
 
 const liveCount = computed(() => events.value.filter(e => bucketOf(e) === 'live').length)
@@ -190,18 +259,25 @@ const pageEnd = computed(() => Math.min(page.value * pageSize, filteredEvents.va
 const pagedEvents = computed(() => filteredEvents.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
 function eventTypeLabel(type) {
-  return { COUPON: '쿠폰 배부', FLAVOR_DISCOUNT: '상품(맛) 할인' }[type] || type
+  return { MONTHLY_FLAVOR: '이달의 맛(본점 지정)', FLAVOR_DISCOUNT: '상품(맛) 할인(지점 선택)', SIZE_UP: '사이즈업' }[type] || type
 }
 function discountLabel(event) {
-  if (event.eventType !== 'FLAVOR_DISCOUNT') return '-'
-  return event.benefitType === 'DISCOUNT_RATE' ? `${event.discountRate}%` : `₩${(event.discountAmount ?? 0).toLocaleString()}`
+  if (event.eventType === 'SIZE_UP') {
+    return `+₩${(event.additionalPayment ?? 0).toLocaleString()} (${event.sizeUpFromProductName} → ${event.sizeUpToProductName})`
+  }
+  const value = event.benefitType === 'DISCOUNT_RATE' ? `${event.discountRate}%` : `₩${(event.discountAmount ?? 0).toLocaleString()}`
+  return event.eventType === 'MONTHLY_FLAVOR' ? `${value} (${event.flavorName})` : value
 }
 function formatDate(value) {
   return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))
 }
-// endAt은 "종료일 다음날 자정"으로 저장돼 있어서, 화면엔 관리자가 실제로 고른 종료일(하루 전)로 보여준다
-function formatEndDate(value) {
-  const date = new Date(value)
+// endAt은 보통 "종료일 다음날 자정"으로 저장돼 있어서, 화면엔 관리자가 실제로 고른 종료일(하루 전)로 보여준다.
+// 조기종료(CANCELLED)는 자정이 아니라 실제로 끊긴 시각 그대로이므로, 하루를 빼지 않고 시:분까지 보여준다.
+function formatEndDate(event) {
+  if (event.status === 'CANCELLED') {
+    return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.endAt))
+  }
+  const date = new Date(event.endAt)
   date.setDate(date.getDate() - 1)
   return formatDate(date)
 }
@@ -228,7 +304,7 @@ th{padding:12px 16px;color:#8c95a2;text-align:left;font-weight:800;border-bottom
 td{padding:14px 16px;border-bottom:1px solid #f1f3f7;vertical-align:middle}
 td strong{display:block;font-size:12px}td small{display:block;margin-top:3px;color:#98a1ae;font-size:9px}
 .tag{padding:5px 8px;color:#5d62e8;background:#f0f1ff;border-radius:6px;font-size:9px;font-weight:800}
-.status{padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800}.status.live{color:#0b9654;background:#e2f8ec}.status.scheduled{color:#d57d00;background:#fff3d6}.status.ended{color:#697487;background:#eef0f3}
+.status{padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800}.status.live{color:#0b9654;background:#e2f8ec}.status.scheduled{color:#d57d00;background:#fff3d6}.status.ended{color:#697487;background:#eef0f3}.status.cancelled{color:#b52c48;background:#fff0f3}
 .detail{padding:7px 10px;color:#5960e9;border:1px solid #d9deea;background:#fff;border-radius:7px;font-size:9px;font-weight:800;cursor:pointer}
 .empty{padding:50px;color:#929ba7;text-align:center;font-size:11px}
 .pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 22px;border-top:1px solid #e9edf2}

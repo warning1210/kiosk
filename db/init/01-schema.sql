@@ -233,12 +233,13 @@ CREATE TABLE `inventory_transaction` (
 CREATE TABLE `event` (
   `event_id` bigint PRIMARY KEY NOT NULL AUTO_INCREMENT,
   `event_name` varchar(100) NOT NULL,
-  `event_type` ENUM ('COUPON', 'FLAVOR_DISCOUNT') NOT NULL COMMENT 'COUPON=본점 쿠폰 배부, FLAVOR_DISCOUNT=특정 상품(맛) 할인 - 어느 맛에 붙일지는 지점이 선택(event_branch_flavor)',
-  `benefit_type` ENUM ('COUPON', 'DISCOUNT_RATE', 'DISCOUNT_AMOUNT') NOT NULL DEFAULT 'COUPON',
+  `event_type` ENUM ('MONTHLY_FLAVOR', 'FLAVOR_DISCOUNT', 'SIZE_UP') NOT NULL COMMENT 'MONTHLY_FLAVOR=본점이 할인 맛을 직접 지정(전 지점 자동 적용), FLAVOR_DISCOUNT=할인값만 본점이 정하고 어느 맛에 붙일지는 지점이 선택(event_branch_flavor), SIZE_UP=본점이 상품 사이즈업을 지정(전 지점 자동 적용)',
+  `benefit_type` ENUM ('DISCOUNT_RATE', 'DISCOUNT_AMOUNT', 'SIZE_UP') NOT NULL DEFAULT 'DISCOUNT_AMOUNT',
   `image_url` varchar(500),
   `description` text,
   `discount_rate` decimal(5,2),
   `discount_amount` int,
+  `flavor_id` bigint COMMENT 'MONTHLY_FLAVOR 전용 - 본점이 직접 지정한 할인 맛',
   `size_up_from_product_id` bigint COMMENT '사이즈업 전 제품',
   `size_up_to_product_id` bigint COMMENT '사이즈업 후 제품',
   `additional_payment` int,
@@ -406,6 +407,7 @@ ALTER TABLE `inventory_transaction` ADD FOREIGN KEY (`flavor_id`) REFERENCES `fl
 ALTER TABLE `inventory_transaction` ADD FOREIGN KEY (`order_id`) REFERENCES `order` (`order_id`);
 ALTER TABLE `inventory_transaction` ADD FOREIGN KEY (`stock_request_id`) REFERENCES `stock_request` (`stock_request_id`);
 ALTER TABLE `inventory_transaction` ADD FOREIGN KEY (`processed_admin_id`) REFERENCES `admin` (`admin_id`);
+ALTER TABLE `event` ADD FOREIGN KEY (`flavor_id`) REFERENCES `flavor` (`flavor_id`);
 ALTER TABLE `event` ADD FOREIGN KEY (`size_up_from_product_id`) REFERENCES `product` (`product_id`);
 ALTER TABLE `event` ADD FOREIGN KEY (`size_up_to_product_id`) REFERENCES `product` (`product_id`);
 ALTER TABLE `event` ADD FOREIGN KEY (`creator_admin_id`) REFERENCES `admin` (`admin_id`);

@@ -33,18 +33,18 @@ public class MenuService {
                 .toList();
     }
 
+    // 상품에 진행 중인 SIZE_UP 이벤트(이 상품 -> 다른 상품)가 있으면 사이즈업 정보를 같이 실어 보낸다.
     public List<ProductResponse> getProducts() {
         return productRepository.findByIsVisibleTrueAndSaleStatusOrderByProductNameAsc(SaleStatus.ON_SALE).stream()
-                .map(ProductResponse::from)
+                .map(product -> ProductResponse.from(product,
+                        kioskFlavorDiscountService.activeSizeUpEventFrom(product.getProductId()).orElse(null)))
                 .toList();
     }
 
-    // branchId가 있으면 그 지점이 선택한 "상품(맛) 할인" 이벤트 정보를 같이 실어 보내고,
-    // 할인이 붙은 맛을 화면 목록 맨 앞에 오도록 정렬한다(그 안에서는 기존처럼 이름순 유지).
+    // 본점이 직접 지정한 이달의 맛(MONTHLY_FLAVOR, 전 지점 자동 적용) + 지점이 선택한 맛 할인(FLAVOR_DISCOUNT)을
+    // 같이 실어 보내고, 할인이 붙은 맛을 화면 목록 맨 앞에 오도록 정렬한다(그 안에서는 기존처럼 이름순 유지).
     public List<FlavorResponse> getFlavors(Long branchId) {
-        Map<Long, Event> activeDiscounts = branchId == null
-                ? Map.of()
-                : kioskFlavorDiscountService.activeDiscountsByFlavor(branchId);
+        Map<Long, Event> activeDiscounts = kioskFlavorDiscountService.activeDiscountsByFlavor(branchId);
 
         List<Flavor> flavors = flavorRepository.findByIsVisibleTrueAndSaleStatusOrderByFlavorNameAsc(SaleStatus.ON_SALE);
         return flavors.stream()
