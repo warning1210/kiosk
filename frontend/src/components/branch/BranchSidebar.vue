@@ -16,17 +16,31 @@
   </aside>
 </template>
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'vue-router'
 import { firebaseAuth } from '../../firebase'
+import http from '../../api/branch'
 defineProps({ active: String, newOrders: { type: Number, default: 0 } })
 const router=useRouter()
 const loggingOut=ref(false)
+let presenceTimer
 const session=JSON.parse(localStorage.getItem('branch-session')||'{}')
 if(!session.branchName)session.branchName='지점'
 if(!session.managerName)session.managerName='지점장'
 const managerInitial=computed(()=>session.managerName.slice(0,1))
+onMounted(()=>{
+  sendPresence()
+  // 화면을 조작하지 않고 열어 둔 경우에도 실제 온라인 상태가 유지되도록 신호를 보낸다.
+  presenceTimer=setInterval(sendPresence,5000)
+})
+onBeforeUnmount(()=>clearInterval(presenceTimer))
+async function sendPresence(){
+  try{await http.post('/presence/heartbeat')}catch(error){
+    // 상태 신호 실패만으로 지점 관리 화면의 사용을 막지 않는다.
+    console.error(error)
+  }
+}
 async function logout(){
   if(loggingOut.value)return
   loggingOut.value=true

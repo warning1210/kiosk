@@ -31,7 +31,8 @@
         </div>
         <label>아이디<input v-model.trim="loginId" required minlength="4" autocomplete="username" placeholder="영문·숫자 4자 이상"></label>
         <div class="two">
-          <label>비밀번호<input v-model="password" required minlength="8" type="password" autocomplete="new-password" placeholder="8자 이상"></label>
+          <!-- 기존 Firebase 계정이 있는 이메일은 현재 비밀번호를 입력하고, 신규 계정은 새 비밀번호를 입력한다. -->
+          <label>비밀번호<input v-model="password" required minlength="8" type="password" autocomplete="current-password" placeholder="기존 계정은 현재 비밀번호, 신규는 8자 이상"></label>
           <label>비밀번호 확인<input v-model="passwordConfirm" required minlength="8" type="password" autocomplete="new-password" placeholder="비밀번호 다시 입력"></label>
         </div>
 

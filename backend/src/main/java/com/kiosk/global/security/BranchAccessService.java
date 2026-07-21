@@ -6,9 +6,12 @@ import com.kiosk.domain.admin.AccountStatus;
 import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.admin.AdminRepository;
 import com.kiosk.domain.admin.AdminRole;
+import com.kiosk.domain.branch.BranchRepository;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 // Authorization: Bearer <Firebase ID 토큰> 헤더에서 로그인한 지점 관리자의 branchId를 알아낸다.
@@ -19,11 +22,15 @@ public class BranchAccessService {
 
     private final AdminRepository adminRepository;
     private final AdminTokenService adminTokenService;
+    // 인증된 지점 요청이 들어올 때마다 마지막 접속 시각을 저장한다.
+    private final BranchRepository branchRepository;
 
+    @Transactional
     public Long requireBranchId(String authorization) {
         return requireAdmin(authorization).getBranch().getBranchId();
     }
 
+    @Transactional
     public Admin requireAdmin(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
@@ -32,7 +39,11 @@ public class BranchAccessService {
         // AdminTokenService가 발급한 폴백 토큰인지 먼저 검사한다 - 형식이 다른 Firebase JWT는
         // 여기서 항상 null이 나와 안전하게 아래 Firebase 검증으로 넘어간다.
         Long fallbackAdminId = adminTokenService.verify(token);
-        return fallbackAdminId != null ? requireAdminById(fallbackAdminId) : requireAdminViaFirebase(token);
+        Admin admin = fallbackAdminId != null ? requireAdminById(fallbackAdminId) : requireAdminViaFirebase(token);
+        // 단순 계정 상태가 아니라 실제 요청 시각으로 매장의 온라인 여부를 판별할 수 있게 한다.
+        admin.getBranch().setKioskLastAccessAt(LocalDateTime.now());
+        branchRepository.save(admin.getBranch());
+        return admin;
     }
 
     private Admin requireAdminById(Long adminId) {

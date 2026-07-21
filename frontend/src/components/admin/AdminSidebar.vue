@@ -12,7 +12,7 @@
       <RouterLink :class="{ active: active === 'events' }" to="/admin/events"><i>□</i>이벤트 관리</RouterLink>
       <RouterLink :class="{ active: active === 'products' }" to="/admin/products"><i>◇</i>상품 관리</RouterLink>
       <RouterLink :class="{ active: active === 'coupons' }" to="/admin/coupons"><i>▧</i>쿠폰 발송</RouterLink>
-      <RouterLink :class="{ active: active === 'chat' }" to="/admin/chat"><i>✉</i>채팅 상담</RouterLink>
+      <RouterLink :class="{ active: active === 'chat' }" to="/admin/chat"><i>✉</i>채팅 상담<b v-if="unreadCount">{{ unreadCount }}</b></RouterLink>
       <RouterLink :class="{ active: active === 'notices' }" to="/admin/notices"><i>▨</i>공지사항</RouterLink>
       <RouterLink :class="{ active: active === 'accounts' }" to="/admin/accounts"><i>◉</i>계정 관리</RouterLink>
       <RouterLink :class="{ active: active === 'settings' }" to="/admin/settings"><i>⚙</i>시스템 설정</RouterLink>
@@ -23,13 +23,32 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import http from '../../api/hq'
 defineProps({ active: String })
 const router = useRouter()
 const session = JSON.parse(localStorage.getItem('hq-session') || '{}')
 if (!session.name) session.name = '본점 관리자'
 const nameInitial = computed(() => session.name.slice(0, 1))
+// 모든 상담방의 미확인 지점 메시지를 합쳐 메뉴 옆 숫자 배지로 보여준다.
+const unreadCount = ref(0)
+let unreadTimer
+onMounted(() => {
+  loadUnreadCount()
+  // 새 메시지를 새로고침 없이 확인할 수 있도록 3초마다 숫자를 갱신한다.
+  unreadTimer = setInterval(loadUnreadCount, 3000)
+})
+onBeforeUnmount(() => clearInterval(unreadTimer))
+async function loadUnreadCount() {
+  try {
+    const { data } = await http.get('/hq/chat/rooms')
+    unreadCount.value = data.reduce((total, room) => total + Number(room.unreadCount || 0), 0)
+  } catch (error) {
+    // 배지 조회 실패만으로 다른 관리 화면의 사용을 막지 않는다.
+    console.error(error)
+  }
+}
 function logout() {
   localStorage.removeItem('hq-session')
   router.replace('/branch/login')
@@ -37,4 +56,5 @@ function logout() {
 </script>
 <style scoped>
 .sidebar{position:fixed;inset:0 auto 0 0;z-index:10;display:flex;flex-direction:column;width:238px;overflow-y:auto;border-right:1px solid #dfe4ed;background:#fff}.brand{position:sticky;top:0;display:flex;align-items:center;gap:10px;height:82px;padding:0 20px;color:#fff;background:linear-gradient(110deg,#ef3f91,#5d5df3)}.brand>span{display:grid;width:36px;height:36px;place-items:center;background:rgb(255 255 255/18%);border-radius:11px}.brand strong,.brand small{display:block}.brand strong{font-size:13px}.brand small{margin-top:3px;font-size:10px;opacity:.82}.menu-label{margin:17px 20px 7px;color:#9ba3b0;font-size:10px}nav{display:grid;gap:3px;padding:0 10px}nav a{position:relative;display:flex;align-items:center;gap:12px;padding:12px;color:#4e5868;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none}nav a i{width:18px;color:#697487;font-style:normal;text-align:center}nav a.active{color:#5f63ee;background:#eef0ff}nav a.active i{color:#5f63ee}.logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:14px 10px 10px;padding:11px;border:1px solid #e2e5ea;border-radius:9px;color:#687386;background:#fff;font-size:11px;font-weight:700;cursor:pointer}.logout-btn i{font-style:normal}.logout-btn:hover{color:#e33d64;border-color:#f2b6c4;background:#fff5f7}.profile{position:sticky;bottom:0;display:flex;align-items:center;gap:10px;padding:16px;border-top:1px solid #e9edf2;background:#fff}.profile>span{display:grid;width:34px;height:34px;place-items:center;color:#fff;background:#6266f2;border-radius:50%;font-weight:800}.profile strong,.profile small{display:block}.profile strong{font-size:11px}.profile small{margin-top:3px;color:#9299a5;font-size:9px}@media(max-width:760px){.sidebar{display:none}}
+nav a b{margin-left:auto;min-width:18px;padding:3px 6px;color:#fff;background:#fa4854;border-radius:10px;font-size:9px;text-align:center}
 </style>

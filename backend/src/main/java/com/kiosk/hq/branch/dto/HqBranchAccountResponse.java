@@ -42,6 +42,8 @@ public record HqBranchAccountResponse(
         String kioskStatus,
         LocalDateTime kioskLastAccessAt,
         LocalDateTime branchCreatedAt,
-        LocalDateTime branchUpdatedAt
+        LocalDateTime branchUpdatedAt,
+        // online은 최근 지점 신호가 기준 시간 안에 들어왔는지 나타낸다.
+        Boolean online
 ) {
 }
