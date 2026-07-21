@@ -7,11 +7,11 @@
         <div>
           <p class="eyebrow">BRANCH MANAGEMENT</p>
           <h1>입고 신청 현황</h1>
-          <p>필요한 재고를 본점에 직접 신청하고, 승인·배송 상황을 확인합니다.</p>
+          <p>본점에 신청한 재고의 승인·배송 진행 상황을 확인합니다.</p>
         </div>
         <div class="top-actions">
           <button class="ghost" type="button" @click="load">새로고침</button>
-          <button class="primary" type="button" @click="openCreate">+ 재고 신청</button>
+          <RouterLink class="primary" to="/branch/inventory">재고 현황에서 신청하기</RouterLink>
         </div>
       </header>
 
@@ -47,7 +47,7 @@
         <div v-else-if="error" class="empty error-text">{{ error }}</div>
         <div v-else-if="!filteredRequests.length" class="empty">
           해당하는 신청 내역이 없습니다.
-          <button class="link" type="button" @click="openCreate">지금 재고 신청하기</button>
+          <RouterLink class="link" to="/branch/inventory">재고 현황에서 신청하기</RouterLink>
         </div>
 
         <div v-else class="table-wrap">
@@ -101,90 +101,25 @@
       </section>
     </main>
 
-    <!-- 재고 신청 등록 -->
-    <div v-if="createOpen" class="modal-backdrop" @click.self="closeCreate">
-      <section class="modal">
-        <button class="close" type="button" @click="closeCreate">×</button>
-        <p class="eyebrow">STOCK REQUEST</p>
-        <h2>재고 신청</h2>
-        <p class="current">필요한 맛을 골라 수량(통)을 입력하세요. 1통은 3,000g입니다.</p>
-
-        <label class="search-label">
-          맛 검색
-          <input v-model="flavorKeyword" type="text" placeholder="예: 요거트, 초콜릿">
-        </label>
-
-        <div class="flavor-picker">
-          <button v-for="flavor in pickableFlavors" :key="flavor.flavorId" type="button" @click="addItem(flavor)">
-            + {{ flavor.flavorName }}
-          </button>
-          <p v-if="!pickableFlavors.length" class="muted small">검색 결과가 없거나 이미 모두 담았습니다.</p>
-        </div>
-
-        <div v-if="form.items.length" class="picked">
-          <div v-for="(item, index) in form.items" :key="item.flavorId" class="picked-row">
-            <span class="picked-name">{{ item.flavorName }}</span>
-            <div class="qty">
-              <button type="button" @click="item.requestedQuantity = Math.max(1, item.requestedQuantity - 1)">−</button>
-              <input v-model.number="item.requestedQuantity" min="1" type="number">
-              <button type="button" @click="item.requestedQuantity++">+</button>
-              <span class="unit">통</span>
-            </div>
-            <button class="remove" type="button" @click="form.items.splice(index, 1)">삭제</button>
-          </div>
-        </div>
-        <p v-else class="muted small picked-empty">아직 담은 품목이 없습니다.</p>
-
-        <label>
-          긴급도
-          <div class="type-buttons">
-            <button v-for="option in urgencyOptions" :key="option.value"
-                    :class="{ active: form.urgency === option.value }" type="button"
-                    @click="form.urgency = option.value">
-              {{ option.label }}
-            </button>
-          </div>
-        </label>
-
-        <label>신청 사유<input v-model="form.requestReason" type="text" placeholder="예: 주말 행사 대비 물량 확보"></label>
-
-        <p v-if="formError" class="form-error">{{ formError }}</p>
-
-        <div class="modal-actions">
-          <button type="button" @click="closeCreate">취소</button>
-          <button class="primary" type="button" :disabled="submitting" @click="submitRequest">
-            {{ submitting ? '신청 중...' : '신청하기' }}
-          </button>
-        </div>
-      </section>
-    </div>
-
     <div v-if="toast" class="toast">✓ {{ toast }}</div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import branchApi from '../../api/branch'
-import publicApi from '../../api/http'
 import BranchSidebar from '../../components/branch/BranchSidebar.vue'
 
 // 진행 중으로 묶어서 보여 줄 상태들 - 본점이 받아서 실제로 처리하고 있는 단계
 const IN_PROGRESS = ['APPROVED', 'PREPARING', 'SHIPPING']
 
 const requests = ref([])
-const flavors = ref([])
 const loading = ref(true)
 const error = ref('')
 const filter = ref('all')
 const busyId = ref(null)
 const toast = ref('')
-
-const createOpen = ref(false)
-const submitting = ref(false)
-const formError = ref('')
-const flavorKeyword = ref('')
-const form = reactive({ urgency: 'NORMAL', requestReason: '', items: [] })
 
 const tabs = [
   { label: '전체', value: 'all' },
@@ -193,11 +128,6 @@ const tabs = [
   { label: '수령 완료', value: 'DELIVERED' },
   { label: '반려', value: 'REJECTED' }
 ]
-const urgencyOptions = [
-  { label: '여유', value: 'LOW' },
-  { label: '보통', value: 'NORMAL' },
-  { label: '긴급', value: 'HIGH' }
-]
 
 const inProgressCount = computed(() => requests.value.filter(r => IN_PROGRESS.includes(r.requestStatus)).length)
 
@@ -205,16 +135,6 @@ const filteredRequests = computed(() => {
   if (filter.value === 'all') return requests.value
   if (filter.value === 'progress') return requests.value.filter(r => IN_PROGRESS.includes(r.requestStatus))
   return requests.value.filter(r => r.requestStatus === filter.value)
-})
-
-// 이미 담은 맛은 중복 신청이 서버에서 막히므로 목록에서 빼 준다.
-const pickableFlavors = computed(() => {
-  const picked = new Set(form.items.map(item => item.flavorId))
-  const keyword = flavorKeyword.value.trim().toLowerCase()
-  return flavors.value
-    .filter(flavor => !picked.has(flavor.flavorId))
-    .filter(flavor => !keyword || flavor.flavorName.toLowerCase().includes(keyword))
-    .slice(0, 12)
 })
 
 function countOf(status) {
@@ -262,58 +182,6 @@ async function load() {
   }
 }
 
-async function loadFlavors() {
-  try {
-    // 맛 목록은 로그인 없이도 볼 수 있는 공개 API라 http 인스턴스를 쓴다.
-    const { data } = await publicApi.get('/flavors')
-    flavors.value = data
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-function openCreate() {
-  form.urgency = 'NORMAL'
-  form.requestReason = ''
-  form.items = []
-  flavorKeyword.value = ''
-  formError.value = ''
-  createOpen.value = true
-}
-function closeCreate() { createOpen.value = false }
-
-function addItem(flavor) {
-  form.items.push({ flavorId: flavor.flavorId, flavorName: flavor.flavorName, requestedQuantity: 1 })
-  flavorKeyword.value = ''
-}
-
-async function submitRequest() {
-  formError.value = ''
-  if (!form.items.length) {
-    formError.value = '신청할 맛을 1개 이상 선택하세요.'
-    return
-  }
-  if (form.items.some(item => !item.requestedQuantity || item.requestedQuantity < 1)) {
-    formError.value = '신청 수량은 1통 이상이어야 합니다.'
-    return
-  }
-  submitting.value = true
-  try {
-    await branchApi.post('/stock-requests', {
-      requestReason: form.requestReason,
-      urgency: form.urgency,
-      items: form.items.map(item => ({ flavorId: item.flavorId, requestedQuantity: item.requestedQuantity }))
-    })
-    closeCreate()
-    showToast('재고 신청을 등록했습니다.')
-    await load()
-  } catch (e) {
-    formError.value = e.response?.data?.message || '재고 신청에 실패했습니다.'
-  } finally {
-    submitting.value = false
-  }
-}
-
 async function cancelRequest(request) {
   if (!window.confirm(`${request.requestNumber} 신청을 취소할까요?`)) return
   busyId.value = request.stockRequestId
@@ -341,10 +209,7 @@ async function confirmReceipt(request) {
   }
 }
 
-onMounted(() => {
-  load()
-  loadFlavors()
-})
+onMounted(load)
 </script>
 
 <style scoped>
@@ -358,8 +223,7 @@ button { cursor: pointer; }
 .topbar h1 { margin: 0 0 7px; font-size: 30px; letter-spacing: -.05em; }
 .topbar p { margin: 0; color: #8b8389; font-size: 14px; }
 .top-actions { display: flex; align-items: center; gap: 8px; }
-.primary { padding: 12px 18px; color: #fff; border: 0; background: #ef3f91; border-radius: 10px; font-size: 13px; font-weight: 800; box-shadow: 0 8px 20px rgb(239 63 145 / 20%); }
-.primary:disabled { opacity: .55; cursor: wait; }
+.primary { display: inline-block; padding: 12px 18px; color: #fff; border: 0; background: #ef3f91; border-radius: 10px; font-size: 13px; font-weight: 800; text-decoration: none; box-shadow: 0 8px 20px rgb(239 63 145 / 20%); }
 .ghost { padding: 11px 15px; color: #6d656b; border: 1px solid #e2dce0; background: #fff; border-radius: 10px; font-size: 12px; font-weight: 700; }
 
 .summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; margin-bottom: 20px; }
@@ -417,36 +281,8 @@ tbody tr:hover { background: #fffbfd; }
 .small { font-size: 10px; }
 .empty { padding: 70px; color: #999197; text-align: center; }
 .error-text { color: #c74454; }
-.link { margin-left: 8px; color: #e93685; border: 0; background: transparent; font-size: 12px; font-weight: 800; text-decoration: underline; }
+.link { margin-left: 8px; color: #e93685; font-size: 12px; font-weight: 800; text-decoration: underline; }
 
-.modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; padding: 24px; place-items: center; background: rgb(28 22 25 / 46%); backdrop-filter: blur(3px); }
-.modal { position: relative; width: min(520px,100%); max-height: 88vh; overflow-y: auto; padding: 30px; background: #fff; border-radius: 19px; box-shadow: 0 25px 70px rgb(32 17 24 / 25%); }
-.close { position: absolute; top: 15px; right: 16px; border: 0; background: transparent; font-size: 25px; }
-.modal h2 { margin: 0 0 8px; font-size: 22px; }
-.current { margin: 0 0 20px; color: #898187; font-size: 12px; }
-.modal label { display: grid; gap: 7px; margin-top: 14px; color: #665f63; font-size: 11px; font-weight: 800; }
-.modal input { padding: 11px 12px; border: 1px solid #dfd9dd; border-radius: 9px; outline: 0; }
-.modal input:focus { border-color: #ef6ba7; }
-.search-label { margin-top: 0 !important; }
-.flavor-picker { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
-.flavor-picker button { padding: 7px 9px; color: #756d72; border: 1px solid #e5dfe3; background: #faf9fa; border-radius: 7px; font-size: 10px; }
-.flavor-picker button:hover { color: #e93685; border-color: #f4b8d3; background: #fff5f9; }
-.picked { display: grid; gap: 6px; margin-top: 14px; padding: 12px; background: #faf7f9; border-radius: 11px; }
-.picked-row { display: flex; align-items: center; gap: 8px; }
-.picked-name { flex: 1; font-size: 11px; font-weight: 700; }
-.qty { display: flex; align-items: center; gap: 4px; }
-.qty button { width: 26px; height: 26px; color: #6d656b; border: 1px solid #e0dade; background: #fff; border-radius: 7px; font-size: 13px; }
-.qty input { width: 48px; padding: 5px; border: 1px solid #e0dade; border-radius: 7px; font-size: 11px; text-align: center; }
-.qty .unit { color: #918990; font-size: 10px; }
-.remove { padding: 5px 7px; color: #b56070; border: 1px solid #f0d5da; background: #fff; border-radius: 7px; font-size: 9px; }
-.picked-empty { margin-top: 12px; }
-.type-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
-.type-buttons button { padding: 10px; color: #746c71; border: 1px solid #e3dde1; background: #fff; border-radius: 9px; font-size: 11px; font-weight: 700; }
-.type-buttons button.active { color: #e93685; border-color: #ef82b3; background: #fff2f7; }
-.form-error { margin: 14px 0 0; padding: 10px 12px; color: #c52f47; background: #ffecef; border-radius: 8px; font-size: 11px; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 19px; }
-.modal-actions button { padding: 10px 16px; border: 1px solid #ded7dc; background: #fff; border-radius: 9px; font-size: 11px; font-weight: 800; }
-.modal-actions .primary { color: #fff; border-color: #ef3f91; background: #ef3f91; }
 .toast { position: fixed; right: 25px; bottom: 25px; z-index: 30; padding: 14px 18px; color: #fff; background: #272329; border-radius: 11px; box-shadow: 0 12px 35px rgb(24 16 20 / 25%); font-size: 12px; font-weight: 700; }
 
 @media (max-width: 1100px) { .content { margin-left: 190px; padding: 30px 24px; } .summary-grid { grid-template-columns: repeat(2,1fr); } }
