@@ -58,5 +58,5 @@ toss:
   secret-key: ${TOSS_SECRET_KEY:test_sk_LlDJaYngroawzQAvQJ9l3ezGdRpX}
   client-key: ${TOSS_CLIENT_KEY:test_ck_Gv6LjeKD8aXOdnl1lpYkrwYxAdXy}
   api-base-url: https://api.tosspayments.com
-  success-url: ${TOSS_SUCCESS_URL:http://172.16.15.68:5173/payment/success}
-  fail-url: ${TOSS_FAIL_URL:http://172.16.15.68:5173/payment/fail}
+  success-url: ${TOSS_SUCCESS_URL:http://localhost:5173/payment/success}
+  fail-url: ${TOSS_FAIL_URL:http://localhost:5173/payment/fail}
