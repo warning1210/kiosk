@@ -36,10 +36,6 @@
             type="number" min="1" required placeholder="할인 금액(원)"
           >
           <input v-model="couponForm.expiresAt" type="date" required>
-          <select v-model="couponForm.eventId">
-            <option value="">연결 이벤트 없음</option>
-            <option v-for="event in events" :key="event.eventId" :value="event.eventId">{{ event.eventName }}</option>
-          </select>
           <button :disabled="issuingCoupon" type="submit">{{ issuingCoupon ? '발급 중' : '쿠폰 발급' }}</button>
         </form>
         <p v-if="couponFormError" class="alert">{{ couponFormError }}</p>
@@ -94,13 +90,12 @@ import AdminPagination from '../../components/admin/AdminPagination.vue'
 
 const grades = ['ALL', 'FRIEND', 'FAMILY', 'VIP']
 
-const events = ref([])
 const coupons = ref([])
 const couponsLoading = ref(true)
 const issuingCoupon = ref(false)
 const couponFormError = ref('')
 const couponIssuedMessage = ref('')
-const couponForm = reactive({ couponName: '', grade: '', discountType: 'AMOUNT', discountRate: null, discountAmount: null, expiresAt: '', eventId: '' })
+const couponForm = reactive({ couponName: '', grade: '', discountType: 'AMOUNT', discountRate: null, discountAmount: null, expiresAt: '' })
 const keyword = ref('')
 const filter = ref('all')
 const page = ref(1)
@@ -112,17 +107,8 @@ const tabs = [
 ]
 
 onMounted(() => {
-  loadEvents()
   loadCoupons()
 })
-
-async function loadEvents() {
-  try {
-    events.value = (await http.get('/hq/events')).data
-  } catch {
-    events.value = []
-  }
-}
 
 async function loadCoupons() {
   couponsLoading.value = true
@@ -151,12 +137,11 @@ async function issueCoupon() {
   try {
     const { data } = await http.post('/hq/coupons', {
       ...couponForm,
-      expiresAt: toExclusiveEndOfDay(couponForm.expiresAt),
-      eventId: couponForm.eventId || null
+      expiresAt: toExclusiveEndOfDay(couponForm.expiresAt)
     })
     coupons.value = [...data, ...coupons.value]
     couponIssuedMessage.value = `${data.length}명에게 쿠폰을 발급했습니다.`
-    Object.assign(couponForm, { couponName: '', grade: '', discountType: 'AMOUNT', discountRate: null, discountAmount: null, expiresAt: '', eventId: '' })
+    Object.assign(couponForm, { couponName: '', grade: '', discountType: 'AMOUNT', discountRate: null, discountAmount: null, expiresAt: '' })
   } catch (e) {
     couponFormError.value = e.response?.data?.message || '쿠폰을 발급하지 못했습니다.'
   } finally {

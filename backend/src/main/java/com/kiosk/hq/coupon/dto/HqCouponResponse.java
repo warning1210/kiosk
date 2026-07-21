@@ -15,7 +15,6 @@ public record HqCouponResponse(
         Long customerId,
         String customerMobileNumber,
         String customerGrade,
-        Long eventId,
         LocalDateTime expiresAt
 ) {
     public static HqCouponResponse from(Coupon coupon) {
@@ -30,7 +29,6 @@ public record HqCouponResponse(
                 coupon.getCustomer() != null ? coupon.getCustomer().getCustomerId() : null,
                 coupon.getCustomer() != null ? coupon.getCustomer().getMobileNumber() : null,
                 coupon.getCustomer() != null ? coupon.getCustomer().getGrade().name() : null,
-                coupon.getEvent() != null ? coupon.getEvent().getEventId() : null,
                 coupon.getExpiresAt()
         );
     }

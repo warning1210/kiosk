@@ -7,18 +7,14 @@ import com.kiosk.domain.coupon.CouponStatus;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.customer.CustomerGrade;
 import com.kiosk.domain.customer.CustomerRepository;
-import com.kiosk.domain.event.Event;
-import com.kiosk.domain.event.EventRepository;
 import com.kiosk.hq.coupon.dto.HqCouponIssueRequest;
 import com.kiosk.hq.coupon.dto.HqCouponResponse;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 // 본점 쿠폰 발급 - 등급을 고르면 그 등급의 고객 전원에게 쿠폰을 1장씩 만들어준다.
 // 실제 알림 발송(FCM/SMS)은 범위 밖이라, 발급된 쿠폰 값(qrToken)은 이 화면에서 본점이 직접 확인/전달한다.
@@ -29,7 +25,6 @@ public class HqCouponService {
 
     private final CouponRepository couponRepository;
     private final CustomerRepository customerRepository;
-    private final EventRepository eventRepository;
 
     public List<HqCouponResponse> issue(HqCouponIssueRequest request) {
         CouponDiscountType discountType;
@@ -66,13 +61,6 @@ public class HqCouponService {
             throw new IllegalArgumentException("해당 등급의 고객이 없습니다.");
         }
 
-        Event event = null;
-        if (request.eventId() != null) {
-            event = eventRepository.findById(request.eventId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "이벤트를 찾을 수 없습니다."));
-        }
-
-        Event finalEvent = event;
         List<Coupon> coupons = targets.stream()
                 .map(customer -> Coupon.builder()
                         .couponName(request.couponName())
@@ -82,7 +70,6 @@ public class HqCouponService {
                         .discountAmount(discountType == CouponDiscountType.AMOUNT ? request.discountAmount() : null)
                         .couponStatus(CouponStatus.AVAILABLE)
                         .customer(customer)
-                        .event(finalEvent)
                         .expiresAt(request.expiresAt())
                         .build())
                 .toList();
