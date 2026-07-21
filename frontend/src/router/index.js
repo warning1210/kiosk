@@ -5,6 +5,7 @@ import CheckoutView from '../views/kiosk/CheckoutView.vue'
 import PaymentSuccessView from '../views/kiosk/PaymentSuccessView.vue'
 import AdminAccountsView from '../views/admin/AdminAccountsView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
+import AdminStockRequestsView from '../views/admin/AdminStockRequestsView.vue'
 import AdminBranchesView from '../views/admin/AdminBranchesView.vue'
 import AdminEventsView from '../views/admin/AdminEventsView.vue'
 import AdminCouponsView from '../views/admin/AdminCouponsView.vue'
@@ -31,12 +32,7 @@ const router = createRouter({
     // 본사/지점 로그인이 하나로 합쳐져서 BranchLoginView 하나로 통합됨 (로그인 성공 후 role로 목적지를 정함)
     { path: '/admin/login', redirect: '/branch/login' },
     { path: '/admin/dashboard', name: 'admin-dashboard', component: AdminDashboardView },
-    {
-      path: '/admin/stock-requests',
-      name: 'admin-stock-requests',
-      component: AdminComingSoonView,
-      meta: { active: 'stock-requests', title: '재고 신청', subtitle: '지점에서 요청한 재고를 확인하고 승인·반려할 수 있습니다.' }
-    },
+    { path: '/admin/stock-requests', name: 'admin-stock-requests', component: AdminStockRequestsView },
     {
       path: '/admin/inventory',
       name: 'admin-inventory',

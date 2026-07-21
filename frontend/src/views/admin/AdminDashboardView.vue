@@ -6,9 +6,9 @@
       <AdminPageHeader title="대시보드" subtitle="아이스크림 재고 신청·배송 현황 한눈에 보기" />
 
       <div class="summary">
-        <AdminStatCard icon="📋" label="전체 신청" :value="`${stockRequests.length}건`" delta="+12 지난주 대비" />
-        <AdminStatCard icon="⏱" label="처리 대기" :value="`${pendingCount}건`" delta="즉시 확인 필요" tone="orange" />
-        <AdminStatCard icon="🚚" label="배송 중" :value="`${shippingCount}건`" delta="배송 진행중" tone="blue" />
+        <AdminStatCard icon="📋" label="전체 신청" :value="`${summary.totalCount}건`" />
+        <AdminStatCard icon="⏱" label="처리 대기" :value="`${summary.pendingCount}건`" delta="즉시 확인 필요" tone="orange" />
+        <AdminStatCard icon="🚚" label="승인 후 진행" :value="`${summary.approvedCount}건`" delta="출고 준비 · 배송" tone="blue" />
         <AdminStatCard icon="✉" label="전체 문의" :value="`${chatRoomCount}건`" delta="정상 운영" tone="green" />
       </div>
 
@@ -30,20 +30,15 @@
             <tr><th>신청 번호</th><th>분점명</th><th>신청 메뉴</th><th>수량</th><th>신청일</th><th>상태</th><th>처리</th></tr>
           </thead>
           <tbody>
-            <tr v-for="req in pagedRequests" :key="req.id">
-              <td><strong>{{ req.code }}</strong></td>
-              <td><span class="dot" :style="{ background: req.branchColor }"></span>{{ req.branchName }}</td>
-              <td>{{ req.menu }}</td>
-              <td>{{ req.quantity }}개</td>
-              <td>{{ req.requestedAt }}</td>
-              <td><span class="status" :class="req.status">{{ statusLabel(req.status) }}</span></td>
+            <tr v-for="req in pagedRequests" :key="req.stockRequestId">
+              <td><strong>{{ req.requestNumber }}</strong></td>
+              <td>{{ req.branchName }}</td>
+              <td>{{ menuSummary(req) }}</td>
+              <td>{{ totalTubs(req) }}통</td>
+              <td>{{ formatDate(req.requestedAt) }}</td>
+              <td><span class="status" :class="req.requestStatus">{{ statusLabel(req.requestStatus) }}</span></td>
               <td>
-                <div v-if="req.status === 'PENDING'" class="row-actions">
-                  <button class="approve" type="button" @click="decide(req, 'APPROVED')">승인</button>
-                  <button class="reject" type="button" @click="decide(req, 'REJECTED')">반려</button>
-                </div>
-                <button v-else-if="req.status === 'SHIPPING'" class="track" type="button">배송 추적</button>
-                <button v-else class="detail" type="button">상세 보기</button>
+                <RouterLink class="detail" to="/admin/stock-requests">처리하러 가기</RouterLink>
               </td>
             </tr>
           </tbody>
@@ -60,21 +55,17 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import http from '../../api/hq'
 import AdminSidebar from '../../components/admin/AdminSidebar.vue'
 import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
 import AdminStatCard from '../../components/admin/AdminStatCard.vue'
 import AdminPagination from '../../components/admin/AdminPagination.vue'
 
-const statuses = ['PENDING', 'APPROVED', 'SHIPPING', 'REJECTED']
-const branches = [
-  { name: '강남점', color: '#ef3f91' }, { name: '홍대점', color: '#5f63ee' }, { name: '신촌점', color: '#38a970' },
-  { name: '수원점', color: '#e7892b' }, { name: '부산점', color: '#4384db' }, { name: '대구점', color: '#c74454' },
-  { name: '인천송도점', color: '#8a6fe8' }, { name: '광주상무점', color: '#0fae9c' }
-]
-const menus = ['딸기 아이스크림 외 3종', '초코 아이스크림 외 5종', '바닐라 소프트콘 외 2종', '망고 셔벗 외 1종', '민트초코 외 4종', '뉴욕 치즈케이크 외 3종']
+const statuses = ['PENDING', 'PREPARING', 'SHIPPING', 'DELIVERED', 'REJECTED']
 
 const stockRequests = ref([])
+const summary = ref({ totalCount: 0, pendingCount: 0, approvedCount: 0, rejectedCount: 0 })
 const statusFilter = ref('')
 const keyword = ref('')
 const page = ref(1)
@@ -82,22 +73,27 @@ const pageSize = 5
 const chatRoomCount = ref(0)
 
 onMounted(() => {
-  stockRequests.value = Array.from({ length: 23 }, (_, i) => {
-    const branch = branches[i % branches.length]
-    const status = statuses[i % statuses.length]
-    return {
-      id: i + 1,
-      code: `#REQ-${2024 - i}`,
-      branchName: branch.name,
-      branchColor: branch.color,
-      menu: menus[i % menus.length],
-      quantity: 40 + ((i * 17) % 200),
-      requestedAt: `2024.04.${String(15 - (i % 15)).padStart(2, '0')}`,
-      status
-    }
-  })
+  loadStockRequests()
+  loadSummary()
   loadChatRoomCount()
 })
+
+// 대시보드는 훑어보는 화면이라 최근 건만 받아 온다. 실제 처리는 재고 신청 화면에서 한다.
+async function loadStockRequests() {
+  try {
+    stockRequests.value = (await http.get('/hq/stock-requests', { params: { page: 0, size: 50 } })).data.content ?? []
+  } catch {
+    stockRequests.value = []
+  }
+}
+
+async function loadSummary() {
+  try {
+    summary.value = (await http.get('/hq/stock-requests/summary')).data
+  } catch {
+    // 요약을 못 받아도 화면 나머지는 그대로 보여 준다.
+  }
+}
 
 async function loadChatRoomCount() {
   try {
@@ -107,26 +103,35 @@ async function loadChatRoomCount() {
   }
 }
 
-const pendingCount = computed(() => stockRequests.value.filter(r => r.status === 'PENDING').length)
-const shippingCount = computed(() => stockRequests.value.filter(r => r.status === 'SHIPPING').length)
-
 const filteredRequests = computed(() => {
   const word = keyword.value.trim().toLowerCase()
   return stockRequests.value.filter(r =>
-    (!statusFilter.value || r.status === statusFilter.value) &&
-    (!word || r.code.toLowerCase().includes(word) || r.branchName.toLowerCase().includes(word))
+    (!statusFilter.value || r.requestStatus === statusFilter.value) &&
+    (!word || r.requestNumber.toLowerCase().includes(word) || (r.branchName || '').toLowerCase().includes(word))
   )
 })
 const pageStart = computed(() => filteredRequests.value.length ? (page.value - 1) * pageSize + 1 : 0)
 const pageEnd = computed(() => Math.min(page.value * pageSize, filteredRequests.value.length))
 const pagedRequests = computed(() => filteredRequests.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
-function decide(req, status) {
-  req.status = status
+/** 품목이 여러 개면 "첫 맛 외 N종"으로 줄여 보여 준다. */
+function menuSummary(request) {
+  const items = request.items ?? []
+  if (!items.length) return '-'
+  return items.length === 1 ? items[0].flavorName : `${items[0].flavorName} 외 ${items.length - 1}종`
 }
-
+function totalTubs(request) {
+  return (request.items ?? []).reduce((sum, item) => sum + (item.approvedQuantity ?? item.requestedQuantity ?? 0), 0)
+}
+function formatDate(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
 function statusLabel(status) {
-  return { PENDING: '대기중', APPROVED: '승인 완료', SHIPPING: '배송 중', REJECTED: '반려' }[status] || status
+  return ({
+    PENDING: '승인 대기', APPROVED: '승인됨', PREPARING: '출고 준비',
+    SHIPPING: '배송 중', DELIVERED: '수령 완료', REJECTED: '반려', CLOSED: '종료'
+  })[status] || status
 }
 </script>
 
@@ -143,15 +148,15 @@ function statusLabel(status) {
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{padding:12px 16px;color:#8c95a2;text-align:left;font-weight:800;border-bottom:1px solid #e9edf2}
 td{padding:14px 16px;border-bottom:1px solid #f1f3f7;vertical-align:middle}
-.dot{display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%}
 .status{display:inline-block;padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800}
 .status.PENDING{color:#d57d00;background:#fff3d6}.status.APPROVED{color:#0b9654;background:#e2f8ec}
 .status.SHIPPING{color:#3169c7;background:#e4f0ff}.status.REJECTED{color:#c63750;background:#ffe8ed}
+.status.PREPARING{color:#0b9654;background:#e2f8ec}.status.DELIVERED{color:#0b9654;background:#e2f8ec}.status.CLOSED{color:#7b838f;background:#eff1f4}
 .row-actions{display:flex;gap:6px}
 .row-actions button,.track,.detail{padding:7px 10px;border-radius:7px;font-size:9px;font-weight:800;cursor:pointer}
 .approve{color:#fff;border:0;background:#0b9654}.reject{color:#c63750;border:1px solid #ffc8d1;background:#fff4f6}
 .track{color:#3169c7;border:1px solid #c7dcfa;background:#eef5ff}
-.detail{color:#5960e9;border:1px solid #d9deea;background:#fff}
+.detail{display:inline-block;color:#5960e9;border:1px solid #d9deea;background:#fff;text-decoration:none}
 .empty{padding:50px;color:#929ba7;text-align:center;font-size:11px}
 .pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 22px;border-top:1px solid #e9edf2}
 .pagination-foot>span{color:#8c95a2;font-size:10px}
