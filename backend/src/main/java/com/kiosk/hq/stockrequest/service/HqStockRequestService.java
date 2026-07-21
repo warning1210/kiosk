@@ -8,7 +8,6 @@ import com.kiosk.domain.stockrequest.StockRequestItemRepository;
 import com.kiosk.domain.stockrequest.StockRequestRepository;
 import com.kiosk.domain.stockrequest.StockRequestStatus;
 import com.kiosk.hq.stockrequest.dto.RejectRequest;
-import com.kiosk.hq.stockrequest.dto.ShipRequest;
 import com.kiosk.hq.stockrequest.dto.StockRequestSummaryResponse;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -92,21 +91,7 @@ public class HqStockRequestService {
         return StockRequestResponse.from(stockRequest, loadItems(stockRequestId));
     }
 
-    /** 배송 등록 (HQ-013). 승인되어 출고 준비 상태인 건만 배송으로 넘길 수 있다. */
-    @Transactional
-    public StockRequestResponse shipStockRequest(Admin admin, Long stockRequestId, ShipRequest request) {
-        requireHqRole(admin);
-        StockRequest stockRequest = findRequestForUpdate(stockRequestId);
-        requireStatus(stockRequest, StockRequestStatus.PREPARING, "배송 준비중인 신청만 배송 등록할 수 있습니다");
-
-        stockRequest.startShipping(
-                request.trackingNumber(),
-                request.courierName(),
-                request.driverName(),
-                request.estimatedArrivalAt(),
-                LocalDateTime.now());
-        return StockRequestResponse.from(stockRequest, loadItems(stockRequestId));
-    }
+    // 배송(출고 처리)은 별도 배송 관리 기능으로 분리되었다. com.kiosk.hq.delivery 참고.
 
     // --- 보조 메서드 ---
 
