@@ -10,7 +10,7 @@
             <p>완료/취소된 주문 내역을 확인합니다</p>
           </div>
           <div class="date-picker-wrap">
-            <input type="date" v-model="filterDate" @change="load" class="date-input" />
+            <VueDatePicker v-model="filterDate" :enable-time-picker="false" :allowed-dates="availableDates" format="yyyy-MM-dd" model-type="yyyy-MM-dd" auto-apply class="date-input" @update:model-value="load" />
           </div>
         </header>
         <div class="list-container">
@@ -90,6 +90,8 @@
 import { computed, onMounted, ref } from 'vue';
 import http from '../../api/branch';
 import BranchSidebar from '../../components/branch/BranchSidebar.vue';
+import { VueDatePicker } from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 const orders = ref([]);
 const filteredOrders = computed(() => orders.value.filter(o => o.status === 'COMPLETED' || o.status === 'CANCELLED'));
@@ -101,6 +103,16 @@ const selectedOrder = ref(null);
 // 오늘 날짜를 기본값으로 설정
 const today = new Date();
 const filterDate = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+const availableDates = ref([]);
+
+async function loadDates() {
+  try {
+    const res = await http.get('/orders/dates');
+    availableDates.value = res.data.map(d => new Date(d));
+  } catch(e) {
+    console.error(e);
+  }
+}
 
 function label(s) {
   return ({ PAID: '신규', MAKING: '처리중', READY: '준비완료', COMPLETED: '완료', CANCELLED: '취소' })[s] || s;
@@ -137,8 +149,35 @@ async function selectOrder(orderId) {
 
 onMounted(() => {
   load();
+  loadDates();
 });
 </script>
+
+<style>
+/* VueDatePicker 스타일 커스텀 */
+.dp__theme_light {
+  --dp-border-radius: 10px;
+  --dp-input-padding: 10px 16px;
+  --dp-font-size: 14px;
+}
+.date-picker-wrap .dp__input {
+  border: 1px solid #e0e5ec;
+  font-family: inherit;
+  font-weight: 600;
+  color: #1f2938;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+}
+.date-picker-wrap .dp__input:hover {
+  border-color: #6165ee;
+  box-shadow: 0 4px 12px rgba(97, 101, 238, 0.15);
+}
+.date-picker-wrap .dp__input:focus {
+  border-color: #6165ee;
+  box-shadow: 0 0 0 3px rgba(97, 101, 238, 0.2);
+}
+</style>
 
 <style scoped>
 .shell { min-height: 100vh; color: #202a39; background: #f3f6fa; display: flex; }
