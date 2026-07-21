@@ -6,6 +6,7 @@ import PaymentSuccessView from '../views/kiosk/PaymentSuccessView.vue'
 import AdminAccountsView from '../views/admin/AdminAccountsView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
 import AdminStockRequestsView from '../views/admin/AdminStockRequestsView.vue'
+import AdminDeliveriesView from '../views/admin/AdminDeliveriesView.vue'
 import AdminBranchesView from '../views/admin/AdminBranchesView.vue'
 import AdminEventsView from '../views/admin/AdminEventsView.vue'
 import AdminCouponsView from '../views/admin/AdminCouponsView.vue'
@@ -39,12 +40,7 @@ const router = createRouter({
       component: AdminComingSoonView,
       meta: { active: 'inventory', title: '재고 현황', subtitle: '지점별 재고 현황을 실시간으로 확인하고 관리할 수 있습니다.' }
     },
-    {
-      path: '/admin/deliveries',
-      name: 'admin-deliveries',
-      component: AdminComingSoonView,
-      meta: { active: 'deliveries', title: '배송 관리', subtitle: '지점별 배송 요청 진행 상황과 배송 이력을 관리할 수 있습니다.' }
-    },
+    { path: '/admin/deliveries', name: 'admin-deliveries', component: AdminDeliveriesView },
     { path: '/admin/branches', name: 'admin-branches', component: AdminBranchesView },
     {
       path: '/admin/reports',
