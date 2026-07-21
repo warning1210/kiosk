@@ -486,6 +486,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
           orderType: cart.orderType,
           customerMobileNumber: cart.customerMobileNumber,
           usedPoints: cart.usedPoints,
+          couponCode: cart.couponCode || null,
           language: 'ko',
           // 백엔드 요청에는 quantity가 없으므로 장바구니 수량만큼 주문 항목을 펼친다.
           items: cart.items.flatMap((item) =>

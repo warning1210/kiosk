@@ -20,6 +20,7 @@ const EMPTY_STATE = () => ({
   orderType: null,
   customerMobileNumber: null,
   usedPoints: 0,
+  couponCode: null,
   items: []
 })
 
@@ -50,6 +51,7 @@ function persist(state) {
         orderType: state.orderType,
         customerMobileNumber: state.customerMobileNumber,
         usedPoints: state.usedPoints,
+        couponCode: state.couponCode,
         items: state.items
       })
     )
@@ -95,6 +97,11 @@ export const useCartStore = defineStore('cart', {
 
     setUsedPoints(points) {
       this.usedPoints = points
+      persist(this)
+    },
+
+    setCouponCode(code) {
+      this.couponCode = code
       persist(this)
     },
 
