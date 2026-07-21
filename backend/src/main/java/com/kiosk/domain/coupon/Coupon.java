@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,7 +42,15 @@ public class Coupon {
     @Column(name = "qr_token", unique = true, nullable = false)
     private String qrToken;
 
-    @Column(name = "discount_amount", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "discount_type", nullable = false)
+    @Builder.Default
+    private CouponDiscountType discountType = CouponDiscountType.AMOUNT;
+
+    @Column(name = "discount_rate", precision = 5, scale = 2)
+    private BigDecimal discountRate;
+
+    @Column(name = "discount_amount")
     private Integer discountAmount;
 
     @Enumerated(EnumType.STRING)
@@ -63,4 +72,16 @@ public class Coupon {
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
+
+    // 정률(RATE)이면 주문 금액 대비 %로, 정액(AMOUNT)이면 고정 금액으로 할인액을 계산한다
+    public int calculateDiscount(int amountBeforeDiscount) {
+        if (discountType == CouponDiscountType.RATE) {
+            return discountRate == null ? 0
+                    : discountRate.multiply(BigDecimal.valueOf(amountBeforeDiscount))
+                            .divide(BigDecimal.valueOf(100))
+                            .setScale(0, java.math.RoundingMode.HALF_UP)
+                            .intValue();
+        }
+        return discountAmount != null ? discountAmount : 0;
+    }
 }

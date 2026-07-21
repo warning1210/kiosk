@@ -43,6 +43,7 @@
                 </span>
                 <span class="flavor-name">{{ flavor.flavorName }}</span>
                 <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">이달의 맛</span>
+                <span v-if="flavor.discountType" class="discount-badge">{{ discountLabel(flavor) }}</span>
               </button>
             </li>
           </ul>
@@ -122,6 +123,12 @@ const SWIPE_THRESHOLD = 40 // px
 
 const orderFlow = useOrderFlowStore()
 const focusedFlavor = ref(null)
+
+function discountLabel(flavor) {
+  return flavor.discountType === 'DISCOUNT_RATE'
+    ? `${flavor.discountRate}% 할인`
+    : `${(flavor.discountAmount ?? 0).toLocaleString()}원 할인`
+}
 const selectedDescriptionFlavor = computed(() => focusedFlavor.value)
 const selectedDescription = computed(() => {
   if (!orderFlow.selectedProduct?.requiresFlavorSelection) return orderFlow.selectedProduct?.description?.trim() ?? ''
@@ -392,6 +399,15 @@ const emptySlotCount = computed(() => {
 .monthly-badge {
   color: #f20c93;
   font-size: 12px;
+  font-weight: 700;
+}
+
+.discount-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f20c93;
+  color: #fff;
+  font-size: 11px;
   font-weight: 700;
 }
 

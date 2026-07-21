@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,8 +24,8 @@ public class MenuController {
     }
 
     @GetMapping("/flavors")
-    public List<FlavorResponse> getFlavors() {
-        return menuService.getFlavors();
+    public List<FlavorResponse> getFlavors(@RequestParam(required = false) Long branchId) {
+        return menuService.getFlavors(branchId);
     }
 
     @GetMapping("/categories")
