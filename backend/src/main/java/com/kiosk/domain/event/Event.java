@@ -48,7 +48,7 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(name = "benefit_type", nullable = false)
     @Builder.Default
-    private BenefitType benefitType = BenefitType.NONE;
+    private BenefitType benefitType = BenefitType.COUPON;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;

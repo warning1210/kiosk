@@ -21,8 +21,21 @@
             <option value="" disabled>대상 등급</option>
             <option v-for="grade in grades" :key="grade" :value="grade">{{ gradeLabel(grade) }}</option>
           </select>
-          <input v-model.number="couponForm.discountAmount" type="number" min="1" required placeholder="할인 금액(원)">
-          <input v-model="couponForm.expiresAt" type="datetime-local" required>
+          <select v-model="couponForm.discountType">
+            <option value="AMOUNT">정액 할인(원)</option>
+            <option value="RATE">정률 할인(%)</option>
+          </select>
+          <input
+            v-if="couponForm.discountType === 'RATE'"
+            v-model.number="couponForm.discountRate"
+            type="number" min="1" max="100" required placeholder="할인율(%)"
+          >
+          <input
+            v-else
+            v-model.number="couponForm.discountAmount"
+            type="number" min="1" required placeholder="할인 금액(원)"
+          >
+          <input v-model="couponForm.expiresAt" type="date" required>
           <select v-model="couponForm.eventId">
             <option value="">연결 이벤트 없음</option>
             <option v-for="event in events" :key="event.eventId" :value="event.eventId">{{ event.eventName }}</option>
@@ -37,9 +50,9 @@
         <div class="list-head">
           <div>
             <h2>발급된 쿠폰</h2>
-            <span>{{ couponsLoading ? '불러오는 중' : `${filteredCoupons.length}건` }}</span>
+            <span>{{ couponsLoading ? '불러오는 중' : `${filteredCoupons.length}건 · ${groupedCoupons.length}종` }}</span>
           </div>
-          <label class="search"><span>⌕</span><input v-model="keyword" placeholder="쿠폰명, 코드 검색"></label>
+          <label class="search"><span>⌕</span><input v-model="keyword" placeholder="쿠폰명 검색"></label>
         </div>
 
         <div class="tabs">
@@ -48,24 +61,23 @@
           </button>
         </div>
 
-        <div v-if="!couponsLoading && !pagedCoupons.length" class="empty">발급된 쿠폰이 없습니다.</div>
+        <div v-if="!couponsLoading && !pagedGroups.length" class="empty">발급된 쿠폰이 없습니다.</div>
         <table v-else>
-          <thead><tr><th>쿠폰명</th><th>대상</th><th>코드</th><th>할인금액</th><th>상태</th><th>만료일</th></tr></thead>
+          <thead><tr><th>쿠폰명</th><th>할인</th><th>발급 인원</th><th>사용률</th><th>만료일</th></tr></thead>
           <tbody>
-            <tr v-for="coupon in pagedCoupons" :key="coupon.couponId">
-              <td><strong>{{ coupon.couponName }}</strong></td>
-              <td>{{ coupon.customerMobileNumber || '-' }}<small>{{ gradeLabel(coupon.customerGrade) }}</small></td>
-              <td><code class="coupon-code">{{ coupon.qrToken }}</code></td>
-              <td>₩{{ coupon.discountAmount.toLocaleString() }}</td>
-              <td><span :class="['status', coupon.couponStatus === 'AVAILABLE' ? 'approved' : coupon.couponStatus === 'USED' ? 'used' : 'expired']">{{ couponStatusLabel(coupon.couponStatus) }}</span></td>
-              <td>{{ formatDate(coupon.expiresAt) }}</td>
+            <tr v-for="group in pagedGroups" :key="group.couponName">
+              <td><strong>{{ group.couponName }}</strong></td>
+              <td>{{ discountLabel(group) }}</td>
+              <td>{{ group.total }}명</td>
+              <td>{{ usageRateOf(group) }}</td>
+              <td>{{ formatExpiresAt(group.expiresAt) }}</td>
             </tr>
           </tbody>
         </table>
 
         <div class="pagination-foot">
-          <span>전체 {{ filteredCoupons.length }}건 중 {{ pageStart }}-{{ pageEnd }} 표시</span>
-          <AdminPagination v-model="page" :total="filteredCoupons.length" :page-size="pageSize" />
+          <span>전체 {{ groupedCoupons.length }}종 중 {{ pageStart }}-{{ pageEnd }} 표시</span>
+          <AdminPagination v-model="page" :total="groupedCoupons.length" :page-size="pageSize" />
         </div>
       </section>
     </section>
@@ -80,7 +92,7 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
 import AdminStatCard from '../../components/admin/AdminStatCard.vue'
 import AdminPagination from '../../components/admin/AdminPagination.vue'
 
-const grades = ['FRIEND', 'FAMILY', 'VIP']
+const grades = ['ALL', 'FRIEND', 'FAMILY', 'VIP']
 
 const events = ref([])
 const coupons = ref([])
@@ -88,7 +100,7 @@ const couponsLoading = ref(true)
 const issuingCoupon = ref(false)
 const couponFormError = ref('')
 const couponIssuedMessage = ref('')
-const couponForm = reactive({ couponName: '', grade: '', discountAmount: null, expiresAt: '', eventId: '' })
+const couponForm = reactive({ couponName: '', grade: '', discountType: 'AMOUNT', discountRate: null, discountAmount: null, expiresAt: '', eventId: '' })
 const keyword = ref('')
 const filter = ref('all')
 const page = ref(1)
@@ -96,7 +108,7 @@ const pageSize = 6
 
 const tabs = [
   { label: '전체', value: 'all' }, { label: '사용 가능', value: 'AVAILABLE' },
-  { label: '사용 완료', value: 'USED' }, { label: '만료', value: 'EXPIRED' }
+  { label: '만료', value: 'EXPIRED' }
 ]
 
 onMounted(() => {
@@ -123,6 +135,15 @@ async function loadCoupons() {
   }
 }
 
+// 날짜만 입력받되, 시간 기준은 항상 자정(00:00)이다. 고른 날짜까지 포함되도록
+// "고른 날짜 다음날 자정"을 실제 만료 시각으로 보낸다 (이벤트 기간과 동일한 규칙).
+function toExclusiveEndOfDay(dateStr) {
+  const next = new Date(`${dateStr}T00:00:00`)
+  next.setDate(next.getDate() + 1)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}T00:00:00`
+}
+
 async function issueCoupon() {
   issuingCoupon.value = true
   couponFormError.value = ''
@@ -130,11 +151,12 @@ async function issueCoupon() {
   try {
     const { data } = await http.post('/hq/coupons', {
       ...couponForm,
+      expiresAt: toExclusiveEndOfDay(couponForm.expiresAt),
       eventId: couponForm.eventId || null
     })
     coupons.value = [...data, ...coupons.value]
     couponIssuedMessage.value = `${data.length}명에게 쿠폰을 발급했습니다.`
-    Object.assign(couponForm, { couponName: '', grade: '', discountAmount: null, expiresAt: '', eventId: '' })
+    Object.assign(couponForm, { couponName: '', grade: '', discountType: 'AMOUNT', discountRate: null, discountAmount: null, expiresAt: '', eventId: '' })
   } catch (e) {
     couponFormError.value = e.response?.data?.message || '쿠폰을 발급하지 못했습니다.'
   } finally {
@@ -164,18 +186,51 @@ const filteredCoupons = computed(() => {
     (!word || c.couponName.toLowerCase().includes(word) || c.qrToken.toLowerCase().includes(word))
   )
 })
-const pageStart = computed(() => filteredCoupons.value.length ? (page.value - 1) * pageSize + 1 : 0)
-const pageEnd = computed(() => Math.min(page.value * pageSize, filteredCoupons.value.length))
-const pagedCoupons = computed(() => filteredCoupons.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+// 같은 이름으로 대량 발급하면 수백~수천 건이 개별로 나열돼 보기 힘드므로, 쿠폰명을 하나의
+// 캠페인 단위로 인식해서 발급인원/사용률만 요약해서 보여준다 - 개별 발급분은 화면에 노출하지 않는다.
+const groupedCoupons = computed(() => {
+  const groups = new Map()
+  for (const coupon of filteredCoupons.value) {
+    if (!groups.has(coupon.couponName)) {
+      groups.set(coupon.couponName, {
+        couponName: coupon.couponName,
+        discountType: coupon.discountType,
+        discountRate: coupon.discountRate,
+        discountAmount: coupon.discountAmount,
+        expiresAt: coupon.expiresAt,
+        total: 0,
+        used: 0
+      })
+    }
+    const group = groups.get(coupon.couponName)
+    group.total++
+    if (coupon.couponStatus === 'USED') group.used++
+  }
+  return Array.from(groups.values())
+})
+
+function usageRateOf(group) {
+  return group.total ? `${Math.round(group.used / group.total * 100)}%` : '0%'
+}
+
+const pageStart = computed(() => groupedCoupons.value.length ? (page.value - 1) * pageSize + 1 : 0)
+const pageEnd = computed(() => Math.min(page.value * pageSize, groupedCoupons.value.length))
+const pagedGroups = computed(() => groupedCoupons.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
 function gradeLabel(grade) {
-  return { FRIEND: '프렌드', FAMILY: '패밀리', VIP: 'VIP' }[grade] || grade
+  return { ALL: '전체', FRIEND: '프렌드', FAMILY: '패밀리', VIP: 'VIP' }[grade] || grade
 }
-function couponStatusLabel(status) {
-  return { AVAILABLE: '사용 가능', USED: '사용됨', EXPIRED: '만료' }[status] || status
+function discountLabel(coupon) {
+  return coupon.discountType === 'RATE' ? `${coupon.discountRate}%` : `₩${(coupon.discountAmount ?? 0).toLocaleString()}`
 }
 function formatDate(value) {
-  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))
+}
+// expiresAt은 "고른 날짜 다음날 자정"으로 저장돼 있어서, 화면엔 실제 고른 만료일(하루 전)로 보여준다
+function formatExpiresAt(value) {
+  const date = new Date(value)
+  date.setDate(date.getDate() - 1)
+  return formatDate(date)
 }
 </script>
 
@@ -200,9 +255,6 @@ table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
 th{padding:12px 16px;color:#8c95a2;text-align:left;font-weight:800;border-bottom:1px solid #e9edf2}
 td{padding:14px 16px;border-bottom:1px solid #f1f3f7;vertical-align:middle}
 td small{display:block;margin-top:3px;color:#98a1ae;font-size:9px}
-.coupon-code{padding:6px 8px;color:#5d62e8;background:#f0f1ff;border-radius:6px;font-size:9px}
-.status{display:inline-block;padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800}
-.status.approved{color:#0b9654;background:#e2f8ec}.status.used{color:#3169c7;background:#e4f0ff}.status.expired{color:#c63750;background:#ffe8ed}
 .empty{padding:50px;color:#929ba7;text-align:center;font-size:11px}
 .pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 22px;border-top:1px solid #e9edf2}
 .pagination-foot>span{color:#8c95a2;font-size:10px}
