@@ -53,6 +53,35 @@ public interface StockRequestRepository extends JpaRepository<StockRequest, Long
 
     long countByRequestStatusNotIn(Collection<StockRequestStatus> statuses);
 
+    // --- 배송 관리 화면 ---
+
+    // 배송과 관련된 단계(출고 준비/배송 중/수령 완료)만 모아서 본다.
+    // status를 따로 주면 그 상태 하나만, 안 주면 아래 statuses 집합 전체를 조회한다.
+    @Query("""
+            SELECT sr FROM StockRequest sr
+            WHERE sr.requestStatus IN :statuses
+              AND (:status IS NULL OR sr.requestStatus = :status)
+              AND (:branchId IS NULL OR sr.branch.branchId = :branchId)
+              AND (:keyword IS NULL
+                   OR LOWER(sr.requestNumber) LIKE :keyword
+                   OR LOWER(sr.shipmentNumber) LIKE :keyword
+                   OR LOWER(sr.branch.branchName) LIKE :keyword)
+            ORDER BY
+              CASE WHEN sr.requestStatus = com.kiosk.domain.stockrequest.StockRequestStatus.PREPARING THEN 0
+                   WHEN sr.requestStatus = com.kiosk.domain.stockrequest.StockRequestStatus.SHIPPING THEN 1
+                   ELSE 2 END,
+              sr.requestedAt DESC
+            """)
+    Page<StockRequest> searchDeliveries(
+            @Param("statuses") Collection<StockRequestStatus> statuses,
+            @Param("status") StockRequestStatus status,
+            @Param("branchId") Long branchId,
+            @Param("keyword") String keyword,
+            Pageable pageable);
+
+    // 배송 중인데 도착 예정 시각이 지난(지연) 건수 - 배송 관리 요약 카드에 쓴다.
+    long countByRequestStatusAndEstimatedArrivalAtBefore(StockRequestStatus status, LocalDateTime time);
+
     // 승인/반려/배송/수령확인은 같은 신청 건을 두 사람이 동시에 건드릴 수 있어서,
     // 상태를 바꾸기 전에 이 메서드로 행을 잠그고 시작한다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)

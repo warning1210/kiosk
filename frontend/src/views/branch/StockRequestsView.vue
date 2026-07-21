@@ -70,8 +70,8 @@
                   </div>
                   <small v-if="request.requestReason" class="reason">사유 · {{ request.requestReason }}</small>
                   <small v-if="request.rejectionReason" class="reject">반려 사유 · {{ request.rejectionReason }}</small>
-                  <small v-if="request.trackingNumber" class="tracking">
-                    운송장 {{ request.trackingNumber }}<template v-if="request.courierName"> · {{ request.courierName }}</template>
+                  <small v-if="request.shipmentNumber" class="tracking">
+                    배송 {{ request.shipmentNumber }}<template v-if="request.driverName"> · {{ request.driverName }}</template>
                   </small>
                 </td>
                 <td><span class="urgency" :class="request.urgency.toLowerCase()">{{ urgencyLabel(request.urgency) }}</span></td>

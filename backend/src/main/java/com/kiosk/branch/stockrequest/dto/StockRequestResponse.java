@@ -27,8 +27,7 @@ public record StockRequestResponse(
         LocalDateTime requestedAt,
         String processedAdminName,
         LocalDateTime processedAt,
-        String trackingNumber,
-        String courierName,
+        String shipmentNumber,
         String driverName,
         LocalDateTime estimatedArrivalAt,
         LocalDateTime shippedAt,
@@ -53,9 +52,8 @@ public record StockRequestResponse(
                 // 본사의 승인·반려 처리 정보 (아직 처리 전이면 비어 있다)
                 request.getProcessedAdmin() == null ? null : request.getProcessedAdmin().getName(),
                 request.getProcessedAt(),
-                // 배송이 시작된 뒤에 채워지는 운송 정보
-                request.getTrackingNumber(),
-                request.getCourierName(),
+                // 배송이 시작된 뒤에 채워지는 배송 정보 (자체 배송이라 배송번호 + 담당자)
+                request.getShipmentNumber(),
                 request.getDriverName(),
                 request.getEstimatedArrivalAt(),
                 request.getShippedAt(),
