@@ -20,6 +20,7 @@ import InventoryView from '../views/branch/InventoryView.vue'
 import StockRequestsView from '../views/branch/StockRequestsView.vue'
 import SalesView from '../views/branch/SalesView.vue'
 import ChatView from '../views/branch/ChatView.vue'
+import EventsView from '../views/branch/EventsView.vue'
 import NoticeDetailView from '../views/branch/NoticeDetailView.vue'
 
 const router = createRouter({
@@ -83,6 +84,7 @@ const router = createRouter({
     { path: '/branch/stock-requests', name: 'branch-stock-requests', component: StockRequestsView },
     { path: '/branch/sales', name: 'branch-sales', component: SalesView },
     { path: '/branch/chat', name: 'branch-chat', component: ChatView },
+    { path: '/branch/events', name: 'branch-events', component: EventsView },
     { path: '/branch/notices/:type/:id', name: 'branch-notice-detail', component: NoticeDetailView }
   ]
 })

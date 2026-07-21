@@ -1,12 +1,15 @@
 package com.kiosk.hq.coupon.dto;
 
 import com.kiosk.domain.coupon.Coupon;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record HqCouponResponse(
         Long couponId,
         String couponName,
         String qrToken,
+        String discountType,
+        BigDecimal discountRate,
         Integer discountAmount,
         String couponStatus,
         Long customerId,
@@ -20,6 +23,8 @@ public record HqCouponResponse(
                 coupon.getCouponId(),
                 coupon.getCouponName(),
                 coupon.getQrToken(),
+                coupon.getDiscountType().name(),
+                coupon.getDiscountRate(),
                 coupon.getDiscountAmount(),
                 coupon.getCouponStatus().name(),
                 coupon.getCustomer() != null ? coupon.getCustomer().getCustomerId() : null,

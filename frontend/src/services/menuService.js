@@ -9,6 +9,6 @@ export async function fetchProducts() {
   return (await http.get('/products')).data
 }
 
-export async function fetchFlavors() {
-  return (await http.get('/flavors')).data
+export async function fetchFlavors(branchId) {
+  return (await http.get('/flavors', { params: { branchId } })).data
 }

@@ -174,16 +174,12 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         const [categoriesData, productsData, flavorsData] = await Promise.all([
           fetchCategories(),
           fetchProducts(),
-          fetchFlavors()
+          fetchFlavors(1) // 키오스크 1대=지점 1곳 가정의 임시 고정값 (체크아웃과 동일)
         ])
         this.categories = categoriesData
         this.products = productsData
-        // 현재 이달의 맛 2종을 실제 DB id와 무관하게 항상 첫 카드로 노출한다.
-        this.flavors = [...flavorsData].sort((a, b) => {
-          const aOrder = MONTHLY_FLAVOR_NAMES.indexOf(a.flavorName)
-          const bOrder = MONTHLY_FLAVOR_NAMES.indexOf(b.flavorName)
-          return (aOrder === -1 ? 999 : aOrder) - (bOrder === -1 ? 999 : bOrder)
-        })
+        // 할인이 붙은 맛이 맨 앞에 오도록 백엔드가 이미 정렬해서 내려준다 (지점이 event_branch_flavor로 고른 맛)
+        this.flavors = flavorsData
         this.selectedCategory = categoriesData[0] ?? null
       } catch (e) {
         this.loadError = true
