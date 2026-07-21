@@ -174,7 +174,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         const [categoriesData, productsData, flavorsData] = await Promise.all([
           fetchCategories(),
           fetchProducts(),
-          fetchFlavors(1) // 키오스크 1대=지점 1곳 가정의 임시 고정값 (체크아웃과 동일)
+          fetchFlavors(getKioskBranchId())
         ])
         this.categories = categoriesData
         this.products = productsData
