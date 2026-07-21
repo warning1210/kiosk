@@ -43,20 +43,24 @@
   import{firebaseAuth}from'../../firebase';
   import http from'../../api/http';
   
-  const router=useRouter(),loginId=ref(''),password=ref(''),remember=ref(true),error=ref('');
+  const router=useRouter(),loginId=ref(''),password=ref(''),remember=ref(true) //,error=ref('');
   async function login(){error.value='';
-                         try{
-                           const identity=(
+                         // 보통함수는 sum(1,2); 이지만 여기는 dienfity=(명령; 명령; 명령; 명령;)으로 실행되는 것 
+                         try{ // try 안에 있는 게 명령 하나하나가 통과가 되야지만
+                           const identity=( // 익명함수 - 갱신이 되는 방식
                              await http.get(`/branch-auth/login-identity/${encodeURIComponent(loginId.value)}`)).data;
-                           await setPersistence(firebaseAuth,remember.value?browserLocalPersistence:browserSessionPersistence);
-                           const credential=await signInWithEmailAndPassword(firebaseAuth,identity.email,password.value);
+                           // setPersistence : 인증값을 어디에 넣어줄지 저장해주는
+                           // 보안 수정 사항에서 변경 / 시간을 주고 처리하는 방식 / firebase가 막혔으면 안되니까 잘 됐다고는 못함. 보안상으로는 기본적인 부분이 좋을지도 / firebase가 털리면 다 털림
+                           await setPersistence(firebaseAuth,remember.value?browserLocalPersistence:browserSessionPersistence); // 세션(날라감) 저장하느냐? 로컬(저장됨)에 저장하느냐?
+                           const credential=await signInWithEmailAndPassword(firebaseAuth,identity.email,password.value); // 토큰 발급 -> 인증
                            const{data}=await http.post('/branch-auth/firebase-session',{
                              idToken:await credential.user.getIdToken(true)
                            });
                            
-                           localStorage.setItem('branch-session',JSON.stringify(data));
+                           localStorage.setItem('branch-session',JSON.stringify(data)); 
                            router.replace('/branch/dashboard')
                          }
+                           // try에서 하나라도 오류나면 잡힘
                          catch(e){console.error(e);
                                   error.value=e.response?.data?.message||firebaseMessage(e.code)||'로그인할 수 없습니다.'}
                         }
