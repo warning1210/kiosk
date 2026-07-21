@@ -27,7 +27,7 @@ public record FlavorResponse(
                 flavor.getImageUrl(),
                 flavor.getDescription(),
                 flavor.getAllergyInfo(),
-                discountEvent != null ? discountEvent.getBenefitType().name() : null,
+                discountEvent != null && discountEvent.getBenefitType() != null ? discountEvent.getBenefitType().name() : null,
                 discountEvent != null && discountEvent.getBenefitType() == BenefitType.DISCOUNT_RATE ? discountEvent.getDiscountRate() : null,
                 discountEvent != null && discountEvent.getBenefitType() == BenefitType.DISCOUNT_AMOUNT ? discountEvent.getDiscountAmount() : null
         );

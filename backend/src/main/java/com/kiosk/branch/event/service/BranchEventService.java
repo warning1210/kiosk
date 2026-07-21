@@ -75,7 +75,7 @@ public class BranchEventService {
         return new BranchEventResponse(
                 event.getEventId(),
                 event.getEventName(),
-                event.getBenefitType().name(),
+                event.getBenefitType() != null ? event.getBenefitType().name() : null,
                 event.getDiscountRate(),
                 event.getDiscountAmount(),
                 event.getStartAt(),
