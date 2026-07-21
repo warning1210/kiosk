@@ -3,7 +3,6 @@ import HomeView from '../views/HomeView.vue'
 import OrderView from '../views/kiosk/OrderView.vue'
 import CheckoutView from '../views/kiosk/CheckoutView.vue'
 import PaymentSuccessView from '../views/kiosk/PaymentSuccessView.vue'
-import AdminLoginView from '../views/admin/AdminLoginView.vue'
 import AdminAccountsView from '../views/admin/AdminAccountsView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
 import AdminBranchesView from '../views/admin/AdminBranchesView.vue'
@@ -27,7 +26,8 @@ const router = createRouter({
     { path: '/kiosk/order', name: 'kiosk-order', component: OrderView },
     { path: '/pay/:token', name: 'payment-scan', component: CheckoutView },
     { path: '/payment/success', name: 'payment-success', component: PaymentSuccessView },
-    { path: '/admin/login', name: 'admin-login', component: AdminLoginView },
+    // 본사/지점 로그인이 하나로 합쳐져서 BranchLoginView 하나로 통합됨 (로그인 성공 후 role로 목적지를 정함)
+    { path: '/admin/login', redirect: '/branch/login' },
     { path: '/admin/dashboard', name: 'admin-dashboard', component: AdminDashboardView },
     {
       path: '/admin/stock-requests',
