@@ -54,9 +54,11 @@ printer:
 
 # 토스페이먼츠 - 기본값은 테스트 키라 실제 결제망을 타지 않음.
 # 실 서비스로 전환할 땐 코드 안 고치고 아래 환경변수만 라이브 키로 교체.
+# success-url/fail-url을 비워두면 TossPaymentsProperties가 이 서버 PC의 LAN IP를 자동으로 잡아서 쓴다.
+# 공인 도메인(ngrok 등)으로 데모할 땐 TOSS_SUCCESS_URL/TOSS_FAIL_URL 환경변수로 직접 지정할 것.
 toss:
   secret-key: ${TOSS_SECRET_KEY:test_sk_LlDJaYngroawzQAvQJ9l3ezGdRpX}
   client-key: ${TOSS_CLIENT_KEY:test_ck_Gv6LjeKD8aXOdnl1lpYkrwYxAdXy}
   api-base-url: https://api.tosspayments.com
-  success-url: ${TOSS_SUCCESS_URL:http://172.16.15.68:5173/payment/success}
-  fail-url: ${TOSS_FAIL_URL:http://172.16.15.68:5173/payment/fail}
+  success-url: ${TOSS_SUCCESS_URL:}
+  fail-url: ${TOSS_FAIL_URL:}

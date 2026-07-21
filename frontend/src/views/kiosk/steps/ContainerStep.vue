@@ -23,7 +23,7 @@
             <template v-if="isCupConeMode">(콘/컵)</template>
           </p>
         </div>
-        <p class="product-price">₩{{ orderFlow.selectedProduct.basePrice.toLocaleString() }}</p>
+        <p class="product-price">₩{{ displayPrice.toLocaleString() }}</p>
       </div>
       <p class="product-desc">원하는 맛의 아이스크림을 {{ orderFlow.selectedProduct.productName }}로 즐기세요!</p>
 
@@ -113,6 +113,11 @@ const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 
 const isCupConeMode = computed(() => orderFlow.selectedProduct?.containerPolicy === 'CUP_OR_CONE')
+
+// 와플콘을 고르면 담기 전에도 바로 +500원이 보이게 (실제 추가 금액은 orderFlow.addCurrentSelectionToCart와 동일한 규칙)
+const displayPrice = computed(
+  () => orderFlow.selectedProduct.basePrice + (orderFlow.containerType === 'WAFFLE_CONE' ? 500 : 0)
+)
 
 const DRY_ICE_CHOICES = [
   { value: null, label: '사용 안함' },
