@@ -130,11 +130,21 @@ function openPopup() {
     tempWaitTime.value = 20; // default selection
   }
 }
-function applyWaitTime() {
+async function loadStatus() {
+  try {
+    const status = (await http.get('/status')).data;
+    waitTime.value = status.isBusy ? status.estimatedWaitMinutes : 0;
+  } catch (e) {
+    console.error(e);
+  }
+}
+async function applyWaitTime() {
+  await http.patch('/status', { isBusy: true, estimatedWaitMinutes: tempWaitTime.value });
   waitTime.value = tempWaitTime.value;
   showPopup.value = false;
 }
-function clearWaitTime() {
+async function clearWaitTime() {
+  await http.patch('/status', { isBusy: false, estimatedWaitMinutes: null });
   waitTime.value = 0;
   showPopup.value = false;
 }
@@ -165,6 +175,7 @@ async function changeStatus(o, status, cancelReason = null) {
 }
 onMounted(() => {
   load();
+  loadStatus();
   timer = setInterval(load, 2000);
 });
 onBeforeUnmount(() => clearInterval(timer));

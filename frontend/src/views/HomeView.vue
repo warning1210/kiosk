@@ -12,6 +12,10 @@
   </main>
 
   <main v-else class="home" aria-label="키오스크 광고" @click="startOrder">
+    <div v-if="isBusy" class="busy-banner">
+      현재 매장이 혼잡하여 주문이 지연될 수 있습니다 (약 {{ estimatedWaitMinutes }}분)
+    </div>
+
     <Transition name="ad-fade" mode="out-in">
       <img
         :key="currentAdIndex"
@@ -43,6 +47,7 @@ import { firebaseAuth } from '../firebase'
 import http from '../api/http'
 import { useCartStore } from '../stores/cart'
 import { getKioskSession, setKioskSession } from '../utils/kioskSession'
+import { useBranchBusyBanner } from '../composables/useBranchBusyBanner'
 import ad1 from '../assets/kiosk/ads/ad-1.png'
 import ad2 from '../assets/kiosk/ads/ad-2.png'
 import ad3 from '../assets/kiosk/ads/ad-3.png'
@@ -60,6 +65,8 @@ const router = useRouter()
 const cart = useCartStore()
 const currentAdIndex = ref(0)
 let rotationTimer
+
+const { isBusy, estimatedWaitMinutes } = useBranchBusyBanner()
 
 const kioskSession = ref(getKioskSession())
 const loginId = ref('')
@@ -250,10 +257,26 @@ function firebaseMessage(code) {
   background: #fff;
 }
 
+.busy-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 14px 20px;
+  color: #fff;
+  background: rgb(220 30 30 / 88%);
+  backdrop-filter: blur(4px);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .branch-switch {
   position: absolute;
   top: 16px;
   right: 16px;
+  z-index: 6;
   padding: 9px 14px;
   color: rgb(255 255 255 / 85%);
   border: 1px solid rgb(255 255 255 / 35%);
