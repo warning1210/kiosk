@@ -58,6 +58,18 @@
           <p v-else class="point-desc">사용 가능한 포인트가 없어요. (100P 이상 보유 시 사용 가능)</p>
         </template>
       </div>
+
+      <div class="coupon-section">
+        <p class="section-title">쿠폰 코드가 있으신가요?</p>
+        <input
+          v-model.trim="couponInput"
+          type="text"
+          class="coupon-input"
+          placeholder="쿠폰 코드 입력"
+          @input="cart.setCouponCode(couponInput || null)"
+        />
+        <p class="coupon-hint">결제 시 유효성을 확인합니다.</p>
+      </div>
     </div>
 
     <!-- 해피포인트 카드를 누르면 뜨는 휴대폰 번호 입력 팝업. 조회 후 '사용하기'면 이어서 포인트 입력 단계로 넘어간다 -->
@@ -202,6 +214,7 @@ const cart = useCartStore()
 const closeXSvg = closeXRaw
 
 const canUsePoints = computed(() => (orderFlow.customer?.pointBalance ?? 0) >= 100)
+const couponInput = ref(cart.couponCode || '')
 
 // STEP01/STEP02 탭 - QR을 만든 뒤에도 포인트를 다시 조정하러 STEP01로 자유롭게 돌아갈 수 있게 별도 상태로 관리
 const activeTab = ref('points') // 'points' | 'payment'
@@ -446,6 +459,27 @@ const remainingTimeLabel = computed(() => {
 
 .point-result {
   margin-top: 16px;
+}
+
+.coupon-section {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.coupon-input {
+  width: 100%;
+  max-width: 340px;
+  padding: 14px;
+  border: 1px solid #d2d2d2;
+  border-radius: 8px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.coupon-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #a1a1a1;
 }
 
 .phone-display {
