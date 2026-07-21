@@ -53,4 +53,17 @@ public class StockRequestItem {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+
+    /** 본사가 승인하면서 실제로 보내 줄 수량을 확정한다. */
+    public void approve(int approvedQuantity) {
+        this.approvedQuantity = approvedQuantity;
+    }
+
+    /**
+     * 지점이 실제로 받게 될 수량(통 단위).
+     * 본사가 승인 수량을 따로 지정했으면 그 값을, 아니면 지점이 신청한 수량을 그대로 쓴다.
+     */
+    public int getQuantityToReceive() {
+        return approvedQuantity != null ? approvedQuantity : requestedQuantity;
+    }
 }
