@@ -1,5 +1,17 @@
 <template>
-  <main class="home" aria-label="키오스크 광고" @click="startOrder">
+  <!-- 이 키오스크 기기가 아직 어느 지점 소속인지 모르면(최초 부팅), 광고 화면 대신 지점 로그인만 보여준다 -->
+  <main v-if="!kioskSession" class="setup">
+    <form class="setup-form" @submit.prevent="loginKiosk">
+      <h1>키오스크 지점 등록</h1>
+      <p>이 키오스크가 소속된 지점의 관리자 계정으로 로그인해주세요. 최초 1회만 하면 됩니다.</p>
+      <label>아이디 또는 이메일<input v-model="loginId" required placeholder="아이디 또는 이메일 입력"></label>
+      <label>비밀번호<input v-model="password" required type="password" placeholder="비밀번호 입력"></label>
+      <button :disabled="loggingIn" type="submit">{{ loggingIn ? '확인 중...' : '등록' }}</button>
+      <p v-if="error" class="error">{{ error }}</p>
+    </form>
+  </main>
+
+  <main v-else class="home" aria-label="키오스크 광고" @click="startOrder">
     <Transition name="ad-fade" mode="out-in">
       <img
         :key="currentAdIndex"
@@ -26,7 +38,11 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { firebaseAuth } from '../firebase'
+import http from '../api/http'
 import { useCartStore } from '../stores/cart'
+import { getKioskSession, setKioskSession } from '../utils/kioskSession'
 import ad1 from '../assets/kiosk/ads/ad-1.png'
 import ad2 from '../assets/kiosk/ads/ad-2.png'
 import ad3 from '../assets/kiosk/ads/ad-3.png'
@@ -44,6 +60,12 @@ const router = useRouter()
 const cart = useCartStore()
 const currentAdIndex = ref(0)
 let rotationTimer
+
+const kioskSession = ref(getKioskSession())
+const loginId = ref('')
+const password = ref('')
+const loggingIn = ref(false)
+const error = ref('')
 
 onMounted(() => {
   rotationTimer = window.setInterval(() => {
@@ -63,9 +85,117 @@ function startOrder() {
 function goBranchLogin() {
   router.push('/branch/login')
 }
+
+// @가 있으면 이메일로 보고 Firebase 로그인, 없으면 아이디로 보고 DB 폴백 로그인 (지점 로그인과 동일 규칙).
+// 성공하면 branchId/branchName만 기억해두고, Firebase 세션은 즉시 로그아웃한다 -
+// 손님이 만지는 키오스크 화면에 관리자 자격증명(토큰)이 남아있으면 안 되기 때문이다.
+async function loginKiosk() {
+  loggingIn.value = true
+  error.value = ''
+  try {
+    let data
+    if (loginId.value.includes('@')) {
+      await setPersistence(firebaseAuth, browserLocalPersistence)
+      const credential = await signInWithEmailAndPassword(firebaseAuth, loginId.value, password.value)
+      const idToken = await credential.user.getIdToken(true)
+      data = (await http.post('/branch-auth/firebase-session', { idToken })).data
+      await signOut(firebaseAuth)
+    } else {
+      data = (await http.post('/branch-auth/db-login', { loginId: loginId.value, password: password.value })).data
+    }
+    const session = { branchId: data.branchId, branchName: data.branchName }
+    setKioskSession(session)
+    kioskSession.value = session
+  } catch (e) {
+    console.error(e)
+    error.value = e.response?.data?.message || firebaseMessage(e.code) || '로그인할 수 없습니다.'
+  } finally {
+    loggingIn.value = false
+  }
+}
+
+function firebaseMessage(code) {
+  return ({
+    'auth/invalid-credential': '아이디 또는 비밀번호가 올바르지 않습니다.',
+    'auth/too-many-requests': '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.',
+    'auth/network-request-failed': '네트워크 연결을 확인하세요.'
+  })[code]
+}
 </script>
 
 <style scoped>
+.setup {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f7f0ed;
+}
+
+.setup-form {
+  width: min(420px, 90vw);
+  padding: 40px 36px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 8%);
+}
+
+.setup-form h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  color: #f20c93;
+}
+
+.setup-form > p {
+  margin: 0 0 24px;
+  color: #888;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.setup-form label {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+}
+
+.setup-form input {
+  padding: 13px;
+  border: 1px solid #dfe3e9;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.setup-form button {
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  color: #fff;
+  border: 0;
+  background: #f20c93;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.setup-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.setup-form .error {
+  margin-top: 14px;
+  padding: 10px;
+  color: #c52f47;
+  background: #ffecef;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
 .home {
   position: relative;
   width: 100%;
