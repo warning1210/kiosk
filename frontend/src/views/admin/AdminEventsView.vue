@@ -3,14 +3,14 @@
     <AdminSidebar active="events" />
 
     <section class="content">
-      <header>
-        <div>
-          <p>본점 관리</p>
-          <h1>이벤트 관리</h1>
-          <span>이벤트를 만들면 지정한 기간 동안 지점 대시보드 공지사항에 자동으로 노출됩니다.</span>
-        </div>
-        <button class="refresh" type="button" @click="load">새로고침</button>
-      </header>
+      <AdminPageHeader title="이벤트 관리" subtitle="본사 이벤트를 생성하고 지점, 기간, 참여 현황을 관리할 수 있습니다." />
+
+      <div class="summary">
+        <AdminStatCard icon="🎁" label="진행 중 이벤트" :value="`${liveCount}건`" tone="pink" />
+        <AdminStatCard icon="🕒" label="예정 이벤트" :value="`${scheduledCount}건`" tone="blue" />
+        <AdminStatCard icon="✓" label="종료 이벤트" :value="`${endedCount}건`" tone="green" />
+        <AdminStatCard icon="▦" label="전체 이벤트" :value="`${events.length}건`" />
+      </div>
 
       <section class="invite-card">
         <h2>새 이벤트 만들기</h2>
@@ -33,91 +33,69 @@
 
       <section class="list-card">
         <div class="list-head">
-          <h2>이벤트 목록</h2>
-          <span>{{ loading ? '불러오는 중' : `${events.length}건` }}</span>
+          <div>
+            <h2>이벤트 목록</h2>
+            <span>{{ loading ? '불러오는 중' : `${filteredEvents.length}건` }}</span>
+          </div>
+          <label class="search"><span>⌕</span><input v-model="keyword" placeholder="이벤트명 검색"></label>
         </div>
 
-        <div v-if="!loading && !events.length" class="empty">등록된 이벤트가 없습니다.</div>
-        <article v-for="event in events" :key="event.eventId" class="event-row">
-          <div>
-            <strong>{{ event.eventName }}</strong>
-            <p>{{ event.description || '설명 없음' }}</p>
-          </div>
-          <span class="tag">{{ eventTypeLabel(event.eventType) }}</span>
-          <span :class="['status', isLive(event) ? 'approved' : 'pending']">{{ isLive(event) ? '노출중' : statusLabel(event.status) }}</span>
-          <small>{{ formatDate(event.startAt) }} ~ {{ formatDate(event.endAt) }}</small>
-        </article>
-      </section>
-
-      <section class="invite-card">
-        <h2>등급별 쿠폰 발급</h2>
-        <p class="section-desc">선택한 등급의 고객 전원에게 쿠폰을 1장씩 발급합니다. 발송(알림/문자)은 별도이며, 아래 목록의 코드를 직접 전달해주세요.</p>
-        <form class="event-form" @submit.prevent="issueCoupon">
-          <input v-model.trim="couponForm.couponName" required placeholder="쿠폰 이름">
-          <select v-model="couponForm.grade" required>
-            <option value="" disabled>대상 등급</option>
-            <option v-for="grade in grades" :key="grade" :value="grade">{{ gradeLabel(grade) }}</option>
-          </select>
-          <input v-model.number="couponForm.discountAmount" type="number" min="1" required placeholder="할인 금액(원)">
-          <input v-model="couponForm.expiresAt" type="datetime-local" required>
-          <select v-model="couponForm.eventId">
-            <option value="">연결 이벤트 없음</option>
-            <option v-for="event in events" :key="event.eventId" :value="event.eventId">{{ event.eventName }}</option>
-          </select>
-          <button :disabled="issuingCoupon" type="submit">{{ issuingCoupon ? '발급 중' : '쿠폰 발급' }}</button>
-        </form>
-        <p v-if="couponFormError" class="alert">{{ couponFormError }}</p>
-        <p v-if="couponIssuedMessage" class="issued">{{ couponIssuedMessage }}</p>
-      </section>
-
-      <section class="list-card">
-        <div class="list-head">
-          <h2>발급된 쿠폰</h2>
-          <span>{{ couponsLoading ? '불러오는 중' : `${coupons.length}건` }}</span>
+        <div class="tabs">
+          <button v-for="tab in tabs" :key="tab.value" :class="{ active: filter === tab.value }" type="button" @click="filter = tab.value">
+            {{ tab.label }} <span>{{ tabCount(tab.value) }}</span>
+          </button>
         </div>
 
-        <div v-if="!couponsLoading && !coupons.length" class="empty">발급된 쿠폰이 없습니다.</div>
-        <article v-for="coupon in coupons" :key="coupon.couponId" class="coupon-row">
-          <div>
-            <strong>{{ coupon.couponName }}</strong>
-            <p>{{ coupon.customerMobileNumber || '-' }} · {{ gradeLabel(coupon.customerGrade) }}</p>
-          </div>
-          <code class="coupon-code">{{ coupon.qrToken }}</code>
-          <span>₩{{ coupon.discountAmount.toLocaleString() }}</span>
-          <span :class="['status', coupon.couponStatus === 'AVAILABLE' ? 'approved' : 'pending']">{{ couponStatusLabel(coupon.couponStatus) }}</span>
-          <small>~{{ formatDate(coupon.expiresAt) }}</small>
-        </article>
+        <div v-if="!loading && !pagedEvents.length" class="empty">등록된 이벤트가 없습니다.</div>
+        <table v-else>
+          <thead><tr><th>이벤트명</th><th>유형</th><th>기간</th><th>상태</th><th>처리</th></tr></thead>
+          <tbody>
+            <tr v-for="event in pagedEvents" :key="event.eventId">
+              <td><strong>{{ event.eventName }}</strong><small>{{ event.description || '설명 없음' }}</small></td>
+              <td><span class="tag">{{ eventTypeLabel(event.eventType) }}</span></td>
+              <td>{{ formatDate(event.startAt) }} ~ {{ formatDate(event.endAt) }}</td>
+              <td><span :class="['status', bucketOf(event)]">{{ bucketLabel(event) }}</span></td>
+              <td><button class="detail" type="button">상세보기</button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination-foot">
+          <span>전체 {{ filteredEvents.length }}건 중 {{ pageStart }}-{{ pageEnd }} 표시</span>
+          <AdminPagination v-model="page" :total="filteredEvents.length" :page-size="pageSize" />
+        </div>
       </section>
     </section>
   </main>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import http from '../../api/hq'
 import AdminSidebar from '../../components/admin/AdminSidebar.vue'
+import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
+import AdminStatCard from '../../components/admin/AdminStatCard.vue'
+import AdminPagination from '../../components/admin/AdminPagination.vue'
 
 const eventTypes = ['MONTHLY_FLAVOR', 'SIZE_UP', 'AMOUNT_DISCOUNT', 'COUPON', 'NEW_PRODUCT', 'STOCK_CLEARANCE']
 const benefitTypes = ['NONE', 'DISCOUNT_RATE', 'DISCOUNT_AMOUNT', 'SIZE_UP', 'COUPON']
-const grades = ['FRIEND', 'FAMILY', 'VIP']
 
 const events = ref([])
 const loading = ref(true)
 const creating = ref(false)
 const formError = ref('')
 const form = reactive({ eventName: '', eventType: '', benefitType: 'NONE', startAt: '', endAt: '', description: '' })
+const keyword = ref('')
+const filter = ref('all')
+const page = ref(1)
+const pageSize = 6
 
-const coupons = ref([])
-const couponsLoading = ref(true)
-const issuingCoupon = ref(false)
-const couponFormError = ref('')
-const couponIssuedMessage = ref('')
-const couponForm = reactive({ couponName: '', grade: '', discountAmount: null, expiresAt: '', eventId: '' })
+const tabs = [
+  { label: '전체', value: 'all' }, { label: '진행중', value: 'live' },
+  { label: '예정', value: 'scheduled' }, { label: '종료', value: 'ended' }
+]
 
-onMounted(() => {
-  load()
-  loadCoupons()
-})
+onMounted(load)
 
 async function load() {
   loading.value = true
@@ -128,43 +106,6 @@ async function load() {
   } finally {
     loading.value = false
   }
-}
-
-async function loadCoupons() {
-  couponsLoading.value = true
-  try {
-    coupons.value = (await http.get('/hq/coupons')).data
-  } catch (e) {
-    couponFormError.value = e.response?.data?.message || '쿠폰 목록을 불러오지 못했습니다.'
-  } finally {
-    couponsLoading.value = false
-  }
-}
-
-async function issueCoupon() {
-  issuingCoupon.value = true
-  couponFormError.value = ''
-  couponIssuedMessage.value = ''
-  try {
-    const { data } = await http.post('/hq/coupons', {
-      ...couponForm,
-      eventId: couponForm.eventId || null
-    })
-    coupons.value = [...data, ...coupons.value]
-    couponIssuedMessage.value = `${data.length}명에게 쿠폰을 발급했습니다.`
-    Object.assign(couponForm, { couponName: '', grade: '', discountAmount: null, expiresAt: '', eventId: '' })
-  } catch (e) {
-    couponFormError.value = e.response?.data?.message || '쿠폰을 발급하지 못했습니다.'
-  } finally {
-    issuingCoupon.value = false
-  }
-}
-
-function gradeLabel(grade) {
-  return { FRIEND: '프렌드', FAMILY: '패밀리', VIP: 'VIP' }[grade] || grade
-}
-function couponStatusLabel(status) {
-  return { AVAILABLE: '사용 가능', USED: '사용됨', EXPIRED: '만료' }[status] || status
 }
 
 async function createEvent() {
@@ -181,10 +122,33 @@ async function createEvent() {
   }
 }
 
-function isLive(event) {
+function bucketOf(event) {
   const now = new Date()
-  return event.status === 'ACTIVE' && new Date(event.startAt) <= now && now <= new Date(event.endAt)
+  if (event.status !== 'ACTIVE' && event.status !== 'SCHEDULED') return 'ended'
+  if (now < new Date(event.startAt)) return 'scheduled'
+  if (now > new Date(event.endAt)) return 'ended'
+  return 'live'
 }
+function bucketLabel(event) {
+  return { live: '진행중', scheduled: '예정', ended: '종료' }[bucketOf(event)]
+}
+
+const liveCount = computed(() => events.value.filter(e => bucketOf(e) === 'live').length)
+const scheduledCount = computed(() => events.value.filter(e => bucketOf(e) === 'scheduled').length)
+const endedCount = computed(() => events.value.filter(e => bucketOf(e) === 'ended').length)
+
+function tabCount(value) {
+  if (value === 'all') return events.value.length
+  return events.value.filter(e => bucketOf(e) === value).length
+}
+
+const filteredEvents = computed(() => {
+  const word = keyword.value.trim().toLowerCase()
+  return events.value.filter(e => (filter.value === 'all' || bucketOf(e) === filter.value) && (!word || e.eventName.toLowerCase().includes(word)))
+})
+const pageStart = computed(() => filteredEvents.value.length ? (page.value - 1) * pageSize + 1 : 0)
+const pageEnd = computed(() => Math.min(page.value * pageSize, filteredEvents.value.length))
+const pagedEvents = computed(() => filteredEvents.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
 function eventTypeLabel(type) {
   return {
@@ -195,27 +159,35 @@ function eventTypeLabel(type) {
 function benefitTypeLabel(type) {
   return { NONE: '없음', DISCOUNT_RATE: '할인율', DISCOUNT_AMOUNT: '할인금액', SIZE_UP: '사이즈업', COUPON: '쿠폰' }[type] || type
 }
-function statusLabel(status) {
-  return { DRAFT: '초안', SCHEDULED: '예정', ACTIVE: '진행중', ENDED: '종료', CANCELLED: '취소' }[status] || status
-}
 function formatDate(value) {
   return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 </script>
 
 <style scoped>
-*{box-sizing:border-box}.page{min-height:100vh;color:#202938;background:#f3f6fa}.content{margin-left:238px;padding:38px 42px}header{display:flex;align-items:flex-end;justify-content:space-between}header p{margin:0 0 7px;color:#666bef;font-size:10px;font-weight:900}h1{margin:0;font-size:27px}header span{display:block;margin-top:7px;color:#7d8796;font-size:11px}.refresh{padding:10px 14px;color:#5960e9;border:1px solid #d9deea;background:#fff;border-radius:9px;font-weight:800;cursor:pointer}
-.invite-card{margin-top:24px;padding:20px 22px;background:#fff;border:1px solid #e4e8ef;border-radius:14px}.invite-card h2{margin:0 0 12px;font-size:14px}
+*{box-sizing:border-box}.page{min-height:100vh;color:#202938;background:#f3f6fa}.content{margin-left:238px;padding:38px 42px}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:14px;margin:24px 0}
+.invite-card{margin-bottom:20px;padding:20px 22px;background:#fff;border:1px solid #e4e8ef;border-radius:14px}.invite-card h2{margin:0 0 12px;font-size:14px}
 .event-form{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}.event-form textarea{grid-column:1/-1;padding:11px 13px;border:1px solid #dfe3e9;border-radius:8px;font-size:12px;font-family:inherit;resize:vertical}.event-form input,.event-form select{padding:11px 13px;border:1px solid #dfe3e9;border-radius:8px;font-size:12px}.event-form button{grid-column:1/-1;padding:11px 18px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer}.event-form button:disabled{opacity:.55}
 .alert{margin-top:10px;padding:13px;color:#b52c48;background:#fff0f3;border:1px solid #ffd7df;border-radius:9px;font-size:11px}
-.issued{margin-top:10px;padding:13px;color:#0b9654;background:#e2f8ec;border:1px solid #c7f0da;border-radius:9px;font-size:11px}
-.section-desc{margin:0 0 12px;color:#8c95a2;font-size:11px}
-.coupon-row{display:grid;grid-template-columns:1fr 200px 90px 90px 130px;gap:16px;align-items:center;padding:16px 22px;border-bottom:1px solid #eef1f5}.coupon-row:last-child{border:0}.coupon-row strong{font-size:12px}.coupon-row p{margin:4px 0 0;color:#88919e;font-size:10px}.coupon-row small{color:#98a1ae;font-size:9px;text-align:right}
-.coupon-code{overflow:hidden;padding:6px 8px;color:#5d62e8;background:#f0f1ff;border-radius:6px;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
-.list-card{overflow:hidden;margin-top:20px;background:#fff;border:1px solid #e4e8ef;border-radius:16px}.list-head{display:flex;align-items:center;justify-content:space-between;padding:19px 22px;border-bottom:1px solid #e9edf2}.list-head h2{margin:0;font-size:15px}.list-head span{color:#8c95a2;font-size:10px}
-.event-row{display:grid;grid-template-columns:1fr 110px 90px 220px;gap:16px;align-items:center;padding:16px 22px;border-bottom:1px solid #eef1f5}.event-row:last-child{border:0}.event-row strong{font-size:12px}.event-row p{margin:4px 0 0;color:#88919e;font-size:10px}.event-row small{color:#98a1ae;font-size:9px;text-align:right}
-.tag{padding:5px 8px;color:#5d62e8;background:#f0f1ff;border-radius:6px;font-size:9px;font-weight:800;text-align:center}
-.status{padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800;text-align:center}.status.pending{color:#d57d00;background:#fff3d6}.status.approved{color:#0b9654;background:#e2f8ec}
+.list-card{overflow:hidden;background:#fff;border:1px solid #e4e8ef;border-radius:16px}
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:19px 22px;border-bottom:1px solid #e9edf2}
+.list-head h2{margin:0;font-size:15px}.list-head span{color:#8c95a2;font-size:10px}
+.search{display:flex;align-items:center;gap:7px;width:200px;padding:0 10px;border:1px solid #dfe3e9;border-radius:8px}
+.search input{width:100%;padding:9px 0;border:0;outline:0;font-size:11px}
+.tabs{display:flex;gap:3px;padding:12px 22px 0}
+.tabs button{padding:8px 11px;color:#697487;border:0;background:transparent;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer}
+.tabs button span{padding:2px 5px;background:#eef0f3;border-radius:6px;font-size:9px}
+.tabs button.active{color:#5f63ee;background:#eef0ff}.tabs button.active span{background:#dbdefc}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+th{padding:12px 16px;color:#8c95a2;text-align:left;font-weight:800;border-bottom:1px solid #e9edf2}
+td{padding:14px 16px;border-bottom:1px solid #f1f3f7;vertical-align:middle}
+td strong{display:block;font-size:12px}td small{display:block;margin-top:3px;color:#98a1ae;font-size:9px}
+.tag{padding:5px 8px;color:#5d62e8;background:#f0f1ff;border-radius:6px;font-size:9px;font-weight:800}
+.status{padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800}.status.live{color:#0b9654;background:#e2f8ec}.status.scheduled{color:#d57d00;background:#fff3d6}.status.ended{color:#697487;background:#eef0f3}
+.detail{padding:7px 10px;color:#5960e9;border:1px solid #d9deea;background:#fff;border-radius:7px;font-size:9px;font-weight:800;cursor:pointer}
 .empty{padding:50px;color:#929ba7;text-align:center;font-size:11px}
-@media(max-width:980px){.content{margin-left:0;padding:25px 16px}.event-form{grid-template-columns:1fr}.event-row{grid-template-columns:1fr}.coupon-row{grid-template-columns:1fr}}
+.pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 22px;border-top:1px solid #e9edf2}
+.pagination-foot>span{color:#8c95a2;font-size:10px}
+@media(max-width:980px){.content{margin-left:0;padding:25px 16px}.summary{grid-template-columns:1fr 1fr}.event-form{grid-template-columns:1fr}table{display:block;overflow-x:auto}}
 </style>

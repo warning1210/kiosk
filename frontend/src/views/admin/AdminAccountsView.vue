@@ -1,6 +1,6 @@
 <template>
   <main class="page">
-    <AdminSidebar active="accounts" />
+    <AdminSidebar active="branches" />
 
     <section class="content">
       <header>
