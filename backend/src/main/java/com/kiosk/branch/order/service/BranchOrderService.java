@@ -143,4 +143,12 @@ public class BranchOrderService {
                 .items(itemResponses)
                 .build();
     }
+    @Transactional(readOnly = true)
+    public List<String> getAvailableOrderDates(Long branchId) {
+        List<LocalDateTime> createdAts = orderRepository.findCreatedAtByBranchId(branchId);
+        return createdAts.stream()
+                .map(dateTime -> dateTime.toLocalDate().toString())
+                .distinct()
+                .collect(Collectors.toList());
+    }
 }
