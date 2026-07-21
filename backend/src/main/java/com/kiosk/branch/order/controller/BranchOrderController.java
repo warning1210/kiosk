@@ -1,6 +1,7 @@
 package com.kiosk.branch.order.controller;
 
 import com.kiosk.branch.order.dto.BranchOrderListResponse;
+import com.kiosk.branch.order.dto.BranchOrderDetailResponse;
 import com.kiosk.branch.order.dto.OrderStatusUpdateRequest;
 import com.kiosk.branch.order.service.BranchOrderService;
 import com.kiosk.global.security.BranchAccessService;
@@ -20,9 +21,10 @@ public class BranchOrderController {
 
     @GetMapping
     public ResponseEntity<List<BranchOrderListResponse>> getBranchOrders(
+            @RequestParam(required = false) java.time.LocalDate date,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         Long branchId = branchAccessService.requireBranchId(authorization);
-        List<BranchOrderListResponse> orders = branchOrderService.getBranchOrders(branchId);
+        List<BranchOrderListResponse> orders = branchOrderService.getBranchOrders(branchId, date);
         return ResponseEntity.ok(orders);
     }
 
@@ -34,5 +36,14 @@ public class BranchOrderController {
         Long branchId = branchAccessService.requireBranchId(authorization);
         branchOrderService.updateOrderStatus(branchId, orderId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<BranchOrderDetailResponse> getBranchOrderDetail(
+            @PathVariable Long orderId,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        Long branchId = branchAccessService.requireBranchId(authorization);
+        BranchOrderDetailResponse response = branchOrderService.getBranchOrderDetail(branchId, orderId);
+        return ResponseEntity.ok(response);
     }
 }
