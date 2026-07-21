@@ -20,14 +20,29 @@
             <option value="" disabled>이벤트 유형</option>
             <option v-for="type in eventTypes" :key="type" :value="type">{{ eventTypeLabel(type) }}</option>
           </select>
-          <select v-model="form.benefitType">
-            <option v-for="type in benefitTypes" :key="type" :value="type">{{ benefitTypeLabel(type) }}</option>
-          </select>
-          <input v-model="form.startAt" type="datetime-local" required>
-          <input v-model="form.endAt" type="datetime-local" required>
+          <template v-if="form.eventType === 'FLAVOR_DISCOUNT'">
+            <select v-model="form.benefitType">
+              <option value="DISCOUNT_AMOUNT">정액 할인(원)</option>
+              <option value="DISCOUNT_RATE">정률 할인(%)</option>
+            </select>
+            <input
+              v-if="form.benefitType === 'DISCOUNT_RATE'"
+              v-model.number="form.discountRate"
+              type="number" min="1" max="100" required placeholder="할인율(%)"
+            >
+            <input
+              v-else
+              v-model.number="form.discountAmount"
+              type="number" min="1" required placeholder="할인 금액(원)"
+            >
+          </template>
+          <input v-model="form.startAt" type="date" required>
+          <input v-model="form.endAt" type="date" required>
           <textarea v-model.trim="form.description" placeholder="설명 (지점 공지사항에 그대로 노출됩니다)" rows="2"></textarea>
           <button :disabled="creating" type="submit">{{ creating ? '생성 중' : '이벤트 생성' }}</button>
         </form>
+        <p v-if="form.eventType === 'COUPON'" class="hint">쿠폰 발급 자체는 <RouterLink to="/admin/coupons">쿠폰 발송</RouterLink> 탭에서 진행하세요. 여기서는 캠페인 이름/기간만 등록합니다.</p>
+        <p v-if="form.eventType === 'FLAVOR_DISCOUNT'" class="hint">실제로 어느 맛에 할인을 붙일지는 각 지점이 지점의 "이벤트 관리" 화면에서 선택합니다.</p>
         <p v-if="formError" class="alert">{{ formError }}</p>
       </section>
 
@@ -48,12 +63,13 @@
 
         <div v-if="!loading && !pagedEvents.length" class="empty">등록된 이벤트가 없습니다.</div>
         <table v-else>
-          <thead><tr><th>이벤트명</th><th>유형</th><th>기간</th><th>상태</th><th>처리</th></tr></thead>
+          <thead><tr><th>이벤트명</th><th>유형</th><th>할인</th><th>기간</th><th>상태</th><th>처리</th></tr></thead>
           <tbody>
             <tr v-for="event in pagedEvents" :key="event.eventId">
               <td><strong>{{ event.eventName }}</strong><small>{{ event.description || '설명 없음' }}</small></td>
               <td><span class="tag">{{ eventTypeLabel(event.eventType) }}</span></td>
-              <td>{{ formatDate(event.startAt) }} ~ {{ formatDate(event.endAt) }}</td>
+              <td>{{ discountLabel(event) }}</td>
+              <td>{{ formatDate(event.startAt) }} ~ {{ formatEndDate(event.endAt) }}</td>
               <td><span :class="['status', bucketOf(event)]">{{ bucketLabel(event) }}</span></td>
               <td><button class="detail" type="button">상세보기</button></td>
             </tr>
@@ -77,14 +93,18 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
 import AdminStatCard from '../../components/admin/AdminStatCard.vue'
 import AdminPagination from '../../components/admin/AdminPagination.vue'
 
-const eventTypes = ['MONTHLY_FLAVOR', 'SIZE_UP', 'AMOUNT_DISCOUNT', 'COUPON', 'NEW_PRODUCT', 'STOCK_CLEARANCE']
-const benefitTypes = ['NONE', 'DISCOUNT_RATE', 'DISCOUNT_AMOUNT', 'SIZE_UP', 'COUPON']
+// 이벤트는 크게 2가지뿐: 본점이 쿠폰을 배부하는 것(COUPON) / 특정 상품(맛)에 할인을 붙이는 것(FLAVOR_DISCOUNT).
+// 후자는 할인 값(율 또는 금액)만 본점이 정하고, 실제로 어느 맛에 붙일지는 지점이 고른다(event_branch_flavor).
+const eventTypes = ['COUPON', 'FLAVOR_DISCOUNT']
 
 const events = ref([])
 const loading = ref(true)
 const creating = ref(false)
 const formError = ref('')
-const form = reactive({ eventName: '', eventType: '', benefitType: 'NONE', startAt: '', endAt: '', description: '' })
+const form = reactive({
+  eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
+  discountRate: null, discountAmount: null, startAt: '', endAt: '', description: ''
+})
 const keyword = ref('')
 const filter = ref('all')
 const page = ref(1)
@@ -108,13 +128,32 @@ async function load() {
   }
 }
 
+// 날짜만 입력받되, 시간 기준은 항상 자정(00:00)이다. 종료일은 그 날짜까지 포함되도록
+// "종료일 다음날 자정"을 실제 endAt으로 보낸다 - 그래야 시작일=종료일(하루짜리 이벤트)도 만들 수 있다.
+function toStartOfDay(dateStr) {
+  return `${dateStr}T00:00:00`
+}
+function toExclusiveEndOfDay(dateStr) {
+  const next = new Date(`${dateStr}T00:00:00`)
+  next.setDate(next.getDate() + 1)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}T00:00:00`
+}
+
 async function createEvent() {
   creating.value = true
   formError.value = ''
   try {
-    const { data } = await http.post('/hq/events', { ...form })
+    const { data } = await http.post('/hq/events', {
+      ...form,
+      startAt: toStartOfDay(form.startAt),
+      endAt: toExclusiveEndOfDay(form.endAt)
+    })
     events.value.unshift(data)
-    Object.assign(form, { eventName: '', eventType: '', benefitType: 'NONE', startAt: '', endAt: '', description: '' })
+    Object.assign(form, {
+      eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
+      discountRate: null, discountAmount: null, startAt: '', endAt: '', description: ''
+    })
   } catch (e) {
     formError.value = e.response?.data?.message || '이벤트를 만들지 못했습니다.'
   } finally {
@@ -151,16 +190,20 @@ const pageEnd = computed(() => Math.min(page.value * pageSize, filteredEvents.va
 const pagedEvents = computed(() => filteredEvents.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
 function eventTypeLabel(type) {
-  return {
-    MONTHLY_FLAVOR: '이달의 맛', SIZE_UP: '사이즈업', AMOUNT_DISCOUNT: '금액 할인',
-    COUPON: '쿠폰', NEW_PRODUCT: '신제품', STOCK_CLEARANCE: '재고 정리'
-  }[type] || type
+  return { COUPON: '쿠폰 배부', FLAVOR_DISCOUNT: '상품(맛) 할인' }[type] || type
 }
-function benefitTypeLabel(type) {
-  return { NONE: '없음', DISCOUNT_RATE: '할인율', DISCOUNT_AMOUNT: '할인금액', SIZE_UP: '사이즈업', COUPON: '쿠폰' }[type] || type
+function discountLabel(event) {
+  if (event.eventType !== 'FLAVOR_DISCOUNT') return '-'
+  return event.benefitType === 'DISCOUNT_RATE' ? `${event.discountRate}%` : `₩${(event.discountAmount ?? 0).toLocaleString()}`
 }
 function formatDate(value) {
-  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))
+}
+// endAt은 "종료일 다음날 자정"으로 저장돼 있어서, 화면엔 관리자가 실제로 고른 종료일(하루 전)로 보여준다
+function formatEndDate(value) {
+  const date = new Date(value)
+  date.setDate(date.getDate() - 1)
+  return formatDate(date)
 }
 </script>
 
@@ -170,6 +213,7 @@ function formatDate(value) {
 .invite-card{margin-bottom:20px;padding:20px 22px;background:#fff;border:1px solid #e4e8ef;border-radius:14px}.invite-card h2{margin:0 0 12px;font-size:14px}
 .event-form{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}.event-form textarea{grid-column:1/-1;padding:11px 13px;border:1px solid #dfe3e9;border-radius:8px;font-size:12px;font-family:inherit;resize:vertical}.event-form input,.event-form select{padding:11px 13px;border:1px solid #dfe3e9;border-radius:8px;font-size:12px}.event-form button{grid-column:1/-1;padding:11px 18px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer}.event-form button:disabled{opacity:.55}
 .alert{margin-top:10px;padding:13px;color:#b52c48;background:#fff0f3;border:1px solid #ffd7df;border-radius:9px;font-size:11px}
+.hint{margin-top:10px;color:#8c95a2;font-size:11px}.hint a{color:#5960e9;font-weight:800;text-decoration:none}
 .list-card{overflow:hidden;background:#fff;border:1px solid #e4e8ef;border-radius:16px}
 .list-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:19px 22px;border-bottom:1px solid #e9edf2}
 .list-head h2{margin:0;font-size:15px}.list-head span{color:#8c95a2;font-size:10px}

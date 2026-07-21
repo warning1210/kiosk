@@ -1,6 +1,6 @@
 <template>
-  <!-- 7단계: 포인트/할인 선택 (CU-008) -->
-  <div class="page" :class="{ 'page--no-actions': activeTab !== 'points' }">
+  <!-- 7단계: 쿠폰/포인트(휴대폰 번호로 함께 조회) -> 결제 (CU-008) -->
+  <div class="page" :class="{ 'page--no-actions': activeTab === 'payment' }">
     <header class="top-bar">
       <img class="logo" :src="logo" alt="배스킨라빈스" />
       <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
@@ -8,12 +8,12 @@
       </button>
     </header>
 
-    <!-- 결제 QR을 한 번 만든 뒤에도 포인트를 다시 조정하고 싶을 수 있어서, 탭을 자유롭게 오갈 수 있게 함
+    <!-- 결제 QR을 한 번 만든 뒤에도 쿠폰/포인트를 다시 조정하고 싶을 수 있어서, 탭을 자유롭게 오갈 수 있게 함
          (STEP02는 QR이 실제로 있어야 볼 내용이 있으므로, qrInfo가 생기기 전까진 비활성) -->
     <nav class="tab-bar">
-      <button type="button" class="tab" :class="{ active: activeTab === 'points' }" @click="activeTab = 'points'">
-        <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'points' }">STEP01</span>
-        <span>포인트/할인</span>
+      <button type="button" class="tab" :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
+        <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'main' }">STEP01</span>
+        <span>쿠폰/포인트</span>
       </button>
       <button
         type="button"
@@ -23,63 +23,82 @@
         @click="activeTab = 'payment'"
       >
         <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'payment' }">STEP02</span>
-        <span>쿠폰/결제</span>
+        <span>결제</span>
       </button>
     </nav>
 
-    <div v-if="activeTab === 'points'" class="content">
-      <p class="section-title">해피포인트 회원이신가요?</p>
+    <div v-if="activeTab === 'main'" class="content">
+      <template v-if="!orderFlow.customerLookupDone">
+        <p class="section-title">쿠폰・포인트 조회</p>
+        <p class="coupon-hint">휴대폰 번호를 입력하면 사용 가능한 쿠폰과 포인트 정보를 확인할 수 있어요.</p>
+        <button type="button" class="lookup-btn" @click="openLookup">휴대폰 번호로 조회하기</button>
+      </template>
 
-      <div class="point-options">
-        <button type="button" class="point-card" :class="{ selected: pointsMode === 'earn' }" @click="openPointFlow('earn')">
-          <span class="point-label">적립하기</span>
-        </button>
-        <button type="button" class="point-card" :class="{ selected: pointsMode === 'use' }" @click="openPointFlow('use')">
-          <span class="point-label">사용하기</span>
-        </button>
-      </div>
+      <template v-else>
+        <!-- 번호를 잘못 입력했거나 다른 회원으로 바꾸고 싶을 때 다시 입력할 수 있게 함 -->
+        <div class="phone-recheck">
+          <span class="phone-recheck-value">{{ phoneDisplay }}</span>
+          <button type="button" class="phone-recheck-btn" @click="openLookup">번호 재입력</button>
+        </div>
 
-      <!-- 고른 모드에 따라 이 부분(중앙)만 바뀐다 -->
-      <div v-if="pointsMode === 'earn'" class="point-result">
-        <p v-if="orderFlow.isNewMember" class="new-member-hint">
-          신규 회원(FRIEND 등급)으로 시작합니다. 결제 완료 시 {{ orderFlow.estimatedEarnedPoints.toLocaleString() }}P가 적립됩니다.
+        <p class="section-title">사용 가능한 쿠폰</p>
+        <p v-if="!orderFlow.customer?.coupons?.length" class="coupon-hint">사용 가능한 쿠폰이 없어요.</p>
+        <ul v-else class="coupon-list">
+          <li v-for="coupon in orderFlow.customer.coupons" :key="coupon.couponId" class="coupon-item">
+            <div class="coupon-item-info">
+              <span class="coupon-item-name">{{ coupon.couponName }}</span>
+              <span class="coupon-item-desc">{{ couponDiscountLabel(coupon) }} · {{ coupon.expiresAt.slice(0, 10) }}까지</span>
+            </div>
+            <button
+              type="button"
+              class="coupon-use-btn"
+              :class="{ selected: cart.couponCode === coupon.qrToken }"
+              :disabled="couponChecking"
+              @click="toggleCoupon(coupon)"
+            >
+              {{ cart.couponCode === coupon.qrToken ? '선택됨' : '사용' }}
+            </button>
+          </li>
+        </ul>
+        <p v-if="couponError" class="coupon-error">{{ couponError }}</p>
+
+        <p class="section-title">포인트</p>
+        <p v-if="cart.couponDiscount > 0" class="coupon-applied-hint">
+          쿠폰 할인 {{ cart.couponDiscount.toLocaleString() }}원이 적용된 금액 기준으로 적립됩니다.
         </p>
-        <p v-else-if="orderFlow.customer" class="customer-hint">
-          {{ orderFlow.customer.grade }} 등급 · 보유 포인트 {{ orderFlow.customer.pointBalance.toLocaleString() }}P
-          (예상 적립 {{ orderFlow.estimatedEarnedPoints.toLocaleString() }}P)
-        </p>
-      </div>
 
-      <div v-else-if="pointsMode === 'use'" class="point-result">
-        <template v-if="orderFlow.customer">
-          <p v-if="canUsePoints" class="point-desc">
-            보유 포인트 {{ orderFlow.customer.pointBalance.toLocaleString() }}P · 사용 포인트 {{ cart.usedPoints.toLocaleString() }}P
-          </p>
-          <p v-else class="point-desc">사용 가능한 포인트가 없어요. (100P 이상 보유 시 사용 가능)</p>
-        </template>
-      </div>
-
-      <div class="coupon-section">
-        <p class="section-title">쿠폰 코드가 있으신가요?</p>
-        <div class="coupon-row">
-          <input
-            v-model.trim="couponInput"
-            type="text"
-            class="coupon-input"
-            placeholder="쿠폰 코드 입력"
-            @input="onCouponInputChange"
-          />
-          <button type="button" class="coupon-check-btn" :disabled="!couponInput || couponChecking" @click="checkCoupon">
-            {{ couponChecking ? '확인 중...' : '확인' }}
+        <div class="point-options">
+          <button type="button" class="point-card" :class="{ selected: pointsMode === 'earn' }" @click="openPointFlow('earn')">
+            <span class="point-label">적립하기</span>
+          </button>
+          <button type="button" class="point-card" :class="{ selected: pointsMode === 'use' }" @click="openPointFlow('use')">
+            <span class="point-label">사용하기</span>
           </button>
         </div>
-        <p v-if="couponSuccess" class="coupon-success">{{ couponSuccess }}</p>
-        <p v-else-if="couponError" class="coupon-error">{{ couponError }}</p>
-        <p v-else class="coupon-hint">쿠폰 코드를 입력하고 확인을 누르면 사용 가능 여부를 미리 확인할 수 있어요.</p>
-      </div>
+
+        <!-- 고른 모드에 따라 이 부분(중앙)만 바뀐다 -->
+        <div v-if="pointsMode === 'earn'" class="point-result">
+          <p v-if="orderFlow.isNewMember" class="new-member-hint">
+            신규 회원(FRIEND 등급)으로 시작합니다. 결제 완료 시 {{ orderFlow.estimatedEarnedPoints.toLocaleString() }}P가 적립됩니다.
+          </p>
+          <p v-else-if="orderFlow.customer" class="customer-hint">
+            {{ orderFlow.customer.grade }} 등급 · 보유 포인트 {{ orderFlow.customer.pointBalance.toLocaleString() }}P
+            (예상 적립 {{ orderFlow.estimatedEarnedPoints.toLocaleString() }}P)
+          </p>
+        </div>
+
+        <div v-else-if="pointsMode === 'use'" class="point-result">
+          <template v-if="orderFlow.customer">
+            <p v-if="canUsePoints" class="point-desc">
+              보유 포인트 {{ orderFlow.customer.pointBalance.toLocaleString() }}P · 사용 포인트 {{ cart.usedPoints.toLocaleString() }}P
+            </p>
+            <p v-else class="point-desc">사용 가능한 포인트가 없어요. (100P 이상 보유 시 사용 가능)</p>
+          </template>
+        </div>
+      </template>
     </div>
 
-    <!-- 해피포인트 카드를 누르면 뜨는 휴대폰 번호 입력 팝업. 조회 후 '사용하기'면 이어서 포인트 입력 단계로 넘어간다 -->
+    <!-- 조회하기/해피포인트 카드를 누르면 뜨는 휴대폰 번호 입력 팝업. 조회 후 '사용하기'면 이어서 포인트 입력 단계로 넘어간다 -->
     <div v-if="showKeypad" class="modal-backdrop">
       <div class="modal">
         <button type="button" class="modal-close" aria-label="닫기" @click="showKeypad = false">
@@ -88,7 +107,7 @@
 
         <template v-if="phoneStage === 'phone'">
           <h3 class="modal-title">휴대폰 번호 입력</h3>
-          <p class="modal-subtitle">포인트 {{ pointsMode === 'use' ? '사용' : '적립' }}을 위해 번호를 입력해주세요.</p>
+          <p class="modal-subtitle">쿠폰・포인트 조회를 위해 번호를 입력해주세요.</p>
 
           <div class="phone-display">
             <span v-if="orderFlow.mobileNumberInput" class="phone-value">{{ phoneDisplay }}</span>
@@ -144,7 +163,7 @@
       </div>
     </div>
 
-    <footer class="summary-bar" :class="{ 'summary-bar--no-actions': activeTab !== 'points' }">
+    <footer class="summary-bar" :class="{ 'summary-bar--no-actions': activeTab === 'payment' }">
       <div class="summary-final">
         <span>최종 결제금액</span>
         <span>₩ {{ cart.totalAmount.toLocaleString() }}</span>
@@ -158,7 +177,7 @@
       </div>
     </footer>
 
-    <div v-if="activeTab === 'points'" class="bottom-bar">
+    <div v-if="activeTab !== 'payment'" class="bottom-bar">
       <button type="button" class="prev-btn" @click="orderFlow.step = 'cart'">
         <img :src="arrowForwardIos" alt="" class="prev-arrow" />
         <span>이전</span>
@@ -169,7 +188,7 @@
     </div>
     <p v-if="orderFlow.checkoutError" class="checkout-error">{{ orderFlow.checkoutError }}</p>
 
-    <!-- CU-009: STEP02 - 결제하기를 누르면 팝업이 아니라 이 화면(쿠폰/결제 탭) 안에서 그대로 진행된다 -->
+    <!-- CU-009: STEP02 - 결제하기를 누르면 팝업이 아니라 이 화면(결제 탭) 안에서 그대로 진행된다 -->
     <div v-if="activeTab === 'payment'" class="content step2-content">
       <h3 class="modal-title">QR 결제</h3>
       <p class="modal-subtitle">휴대폰으로 QR코드를 스캔해주세요.</p>
@@ -222,43 +241,43 @@ const cart = useCartStore()
 const closeXSvg = closeXRaw
 
 const canUsePoints = computed(() => (orderFlow.customer?.pointBalance ?? 0) >= 100)
-const couponInput = ref(cart.couponCode || '')
 const couponChecking = ref(false)
-const couponSuccess = ref('')
 const couponError = ref('')
 
-// 코드를 고치면 이전 확인 결과(할인 금액)는 더 이상 유효하지 않으므로 되돌리고 다시 확인받게 한다.
-function onCouponInputChange() {
-  cart.setCouponCode(couponInput.value || null)
-  cart.setCouponDiscount(0)
-  couponSuccess.value = ''
-  couponError.value = ''
+function couponDiscountLabel(coupon) {
+  return coupon.discountType === 'RATE'
+    ? `${Number(coupon.discountRate)}% 할인`
+    : `${coupon.discountAmount.toLocaleString()}원 할인`
 }
 
-async function checkCoupon() {
-  if (!couponInput.value || couponChecking.value) return
-  couponChecking.value = true
-  couponSuccess.value = ''
+// 쿠폰 목록의 '사용' 버튼 - 이미 선택된 쿠폰을 다시 누르면 해제, 다른 쿠폰을 누르면 그걸로 교체(필드가 하나라 최대 1개는 자연히 보장)
+async function toggleCoupon(coupon) {
   couponError.value = ''
+  if (cart.couponCode === coupon.qrToken) {
+    cart.setCouponCode(null)
+    cart.setCouponDiscount(0)
+    return
+  }
+  couponChecking.value = true
   try {
     const { data } = await http.get('/coupons/check', {
-      params: { code: couponInput.value, mobileNumber: cart.customerMobileNumber || undefined }
+      params: { code: coupon.qrToken, amount: cart.amountBeforeDiscount }
     })
+    cart.setCouponCode(coupon.qrToken)
     cart.setCouponDiscount(data.discountAmount)
-    couponSuccess.value = `${data.couponName} · ${data.discountAmount.toLocaleString()}원 할인이 적용되었습니다.`
   } catch (e) {
     cart.setCouponDiscount(0)
-    couponError.value = e.response?.data?.message || '쿠폰을 확인할 수 없습니다.'
+    couponError.value = e.response?.data?.message || '쿠폰을 사용할 수 없습니다.'
   } finally {
     couponChecking.value = false
   }
 }
 
-// STEP01/STEP02 탭 - QR을 만든 뒤에도 포인트를 다시 조정하러 STEP01로 자유롭게 돌아갈 수 있게 별도 상태로 관리
-const activeTab = ref('points') // 'points' | 'payment'
+// STEP01(쿠폰/포인트)/STEP02(결제) 탭 - QR을 만든 뒤에도 STEP01로 자유롭게 돌아갈 수 있게 별도 상태로 관리
+const activeTab = ref('main') // 'main' | 'payment'
 
 function goToPayment() {
-  // QR이 이미 있으면(포인트만 다시 보러 왔던 경우) 재요청하지 않고 탭만 이동
+  // QR이 이미 있으면(쿠폰/포인트만 다시 보러 왔던 경우) 재요청하지 않고 탭만 이동
   if (orderFlow.qrInfo) {
     activeTab.value = 'payment'
     return
@@ -266,11 +285,11 @@ function goToPayment() {
   orderFlow.startPayment()
 }
 
-// QR이 새로 생기면 결제 탭으로, 취소/만료 등으로 QR이 사라지면 포인트 탭으로 자동 이동
+// QR이 새로 생기면 결제 탭으로, 취소/만료 등으로 QR이 사라지면 쿠폰/포인트 탭으로 자동 이동
 watch(
   () => orderFlow.qrInfo,
   (qrInfo) => {
-    activeTab.value = qrInfo ? 'payment' : 'points'
+    activeTab.value = qrInfo ? 'payment' : 'main'
   }
 )
 
@@ -283,8 +302,31 @@ const phoneStage = ref('phone') // 'phone' -> 확인(조회) -> 'use'면 'points
 
 const PHONE_PREFIX = '010'
 
+// STEP01 진입 시 쿠폰/포인트를 아직 조회하지 않았을 때 보이는 "휴대폰 번호로 조회하기" 버튼
+function openLookup() {
+  phoneStage.value = 'phone'
+  orderFlow.mobileNumberInput = PHONE_PREFIX
+  showKeypad.value = true
+}
+
 function openPointFlow(mode) {
+  // 신규 회원(조회했지만 보유 포인트 없음)은 사용할 포인트가 없다 - 안내만 띄우고 적립하기 선택은 그대로 둔다
+  if (mode === 'use' && orderFlow.isNewMember) {
+    orderFlow.showNotice('사용 가능한 포인트가 없어요. 이번 결제로 포인트를 적립해보세요!')
+    return
+  }
+
   pointsMode.value = mode
+  // 적립하기로 바꾸면 이전에 잡아둔 사용 포인트는 무효(적립 대상에서 제외되므로) - 초기화해서 헷갈리지 않게 한다
+  if (mode === 'earn') cart.setUsedPoints(0)
+  // 적립/사용 중 한쪽에서 번호 조회를 이미 마쳤다면, 다른 쪽으로 바꿀 때 번호를 다시 묻지 않는다
+  if (orderFlow.customerLookupDone) {
+    if (mode === 'use') {
+      phoneStage.value = 'points'
+      showKeypad.value = true
+    }
+    return
+  }
   phoneStage.value = 'phone'
   orderFlow.mobileNumberInput = PHONE_PREFIX
   showKeypad.value = true
@@ -310,6 +352,12 @@ function backspacePhone() {
 // 팝업의 '확인' - 먼저 조회하고, 사용하기를 골랐을 때만 이어서 포인트 입력 단계로 넘어간다
 async function confirmPhoneEntry() {
   await orderFlow.lookupCustomer()
+  // 신규 회원은 사용할 포인트가 없으므로, 사용하기로 조회했더라도 적립하기로 전환한다
+  if (pointsMode.value === 'use' && orderFlow.isNewMember) {
+    pointsMode.value = 'earn'
+    showKeypad.value = false
+    return
+  }
   if (pointsMode.value === 'use') {
     phoneStage.value = 'points'
   } else {
@@ -368,7 +416,7 @@ const remainingTimeLabel = computed(() => {
   min-height: 100vh;
 }
 
-/* STEP02(QR결제) 탭은 .bottom-bar가 없으니 그만큼(233px) 여백을 덜 잡는다 */
+/* STEP03(QR결제) 탭은 .bottom-bar가 없으니 그만큼(233px) 여백을 덜 잡는다 */
 .page--no-actions {
   padding-bottom: 200px;
 }
@@ -466,6 +514,13 @@ const remainingTimeLabel = computed(() => {
   text-align: center;
 }
 
+.coupon-applied-hint {
+  margin: -8px 0 16px;
+  font-size: 14px;
+  color: #f20c93;
+  text-align: center;
+}
+
 .point-options {
   display: flex;
   justify-content: center;
@@ -499,60 +554,109 @@ const remainingTimeLabel = computed(() => {
   margin-top: 16px;
 }
 
-.coupon-section {
-  margin-top: 32px;
-  text-align: center;
-}
-
-.coupon-row {
+.phone-recheck {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 8px;
-  max-width: 420px;
-  margin: 0 auto;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #666;
 }
 
-.coupon-input {
-  flex: 1;
-  padding: 14px;
-  border: 1px solid #d2d2d2;
-  border-radius: 8px;
-  font-size: 16px;
-  text-align: center;
-}
-
-.coupon-check-btn {
-  padding: 0 24px;
+.phone-recheck-btn {
+  padding: 4px 12px;
   border: 1px solid #f20c93;
-  border-radius: 8px;
-  background: #f20c93;
-  color: #fff;
-  font-size: 16px;
+  border-radius: 99px;
+  background: #fff;
+  color: #f20c93;
+  font-size: 13px;
   cursor: pointer;
-  white-space: nowrap;
-}
-
-.coupon-check-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .coupon-hint {
   margin: 8px 0 0;
   font-size: 13px;
   color: #a1a1a1;
-}
-
-.coupon-success {
-  margin: 8px 0 0;
-  font-size: 14px;
-  color: #0b9654;
+  text-align: center;
 }
 
 .coupon-error {
   margin: 8px 0 0;
   font-size: 14px;
   color: #f20c0c;
+  text-align: center;
+}
+
+.lookup-btn {
+  display: block;
+  margin: 16px auto 0;
+  padding: 14px 32px;
+  border: 1px solid #f20c93;
+  border-radius: 99px;
+  background: #f20c93;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.coupon-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coupon-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #d2d2d2;
+  border-radius: 8px;
+}
+
+.coupon-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.coupon-item-name {
+  font-size: 15px;
+  color: #000;
+}
+
+.coupon-item-desc {
+  font-size: 12px;
+  color: #a1a1a1;
+}
+
+.coupon-use-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border: 1px solid #f20c93;
+  border-radius: 99px;
+  background: #fff;
+  color: #f20c93;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.coupon-use-btn.selected {
+  background: #f20c93;
+  color: #fff;
+}
+
+.coupon-use-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .phone-display {
@@ -646,7 +750,7 @@ const remainingTimeLabel = computed(() => {
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
 }
 
-/* STEP02(QR결제) 탭은 .bottom-bar가 렌더링되지 않으므로, 그 자리(233px)를 비워두지 않고 화면 맨 아래에 붙인다 */
+/* STEP03(QR결제) 탭은 .bottom-bar가 렌더링되지 않으므로, 그 자리(233px)를 비워두지 않고 화면 맨 아래에 붙인다 */
 .summary-bar--no-actions {
   bottom: 0;
 }

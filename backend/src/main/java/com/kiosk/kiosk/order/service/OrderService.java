@@ -7,6 +7,7 @@ import com.kiosk.domain.coupon.Coupon;
 import com.kiosk.domain.coupon.CouponRepository;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.customer.CustomerRepository;
+import com.kiosk.domain.event.Event;
 import com.kiosk.domain.flavor.Flavor;
 import com.kiosk.domain.flavor.FlavorRepository;
 import com.kiosk.domain.order.ContainerType;
@@ -20,11 +21,13 @@ import com.kiosk.domain.order.OrderStatus;
 import com.kiosk.domain.product.Product;
 import com.kiosk.domain.product.ProductRepository;
 import com.kiosk.kiosk.coupon.service.CouponValidationService;
+import com.kiosk.kiosk.event.service.KioskFlavorDiscountService;
 import com.kiosk.kiosk.order.dto.OrderCheckoutRequest;
 import com.kiosk.kiosk.order.dto.OrderCheckoutResponse;
 import com.kiosk.kiosk.order.dto.OrderItemRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -45,6 +48,7 @@ public class OrderService {
         private final CustomerRepository customerRepository;
         private final CouponRepository couponRepository;
         private final CouponValidationService couponValidationService;
+        private final KioskFlavorDiscountService kioskFlavorDiscountService;
 
         private record ResolvedItem(Product product, OrderItemRequest request, int itemTotal) {
         }
@@ -63,6 +67,8 @@ public class OrderService {
                                                                         .build()));
                 }
 
+                Map<Long, Event> activeFlavorDiscounts = kioskFlavorDiscountService.activeDiscountsByFlavor(branch.getBranchId());
+
                 List<ResolvedItem> resolved = new ArrayList<>();
                 int amountBeforeDiscount = 0;
                 for (OrderItemRequest itemRequest : request.items()) {
@@ -75,6 +81,10 @@ public class OrderService {
                         if (itemRequest.containerType() == ContainerType.WAFFLE_CONE) {
                                 itemTotal += 500;
                         }
+                        // 지점이 이 상품에 담긴 맛 중 하나를 "상품(맛) 할인" 이벤트 대상으로 골라뒀다면 반영한다
+                        // (여러 맛에 할인이 겹쳐도 중복 적용 없이 가장 큰 할인 하나만 뺀다)
+                        int flavorDiscount = kioskFlavorDiscountService.resolveDiscount(activeFlavorDiscounts, itemRequest.flavorIds(), itemTotal);
+                        itemTotal = Math.max(0, itemTotal - flavorDiscount);
                         amountBeforeDiscount += itemTotal;
                         resolved.add(new ResolvedItem(product, itemRequest, itemTotal));
                 }
@@ -83,9 +93,9 @@ public class OrderService {
                 usedPoints = Math.max(0, Math.min(usedPoints, amountBeforeDiscount));
                 usedPoints = customer != null ? Math.min(usedPoints, customer.getPointBalance()) : 0;
 
-                Coupon coupon = couponValidationService.validate(request.couponCode(), customer);
+                Coupon coupon = couponValidationService.validate(request.couponCode());
                 int couponDiscount = coupon != null
-                                ? Math.min(coupon.getDiscountAmount(), Math.max(0, amountBeforeDiscount - usedPoints))
+                                ? Math.min(coupon.calculateDiscount(amountBeforeDiscount), Math.max(0, amountBeforeDiscount - usedPoints))
                                 : 0;
                 int discountAmount = usedPoints + couponDiscount;
                 int finalAmount = amountBeforeDiscount - discountAmount;
