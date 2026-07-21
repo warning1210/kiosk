@@ -1,6 +1,8 @@
 package com.kiosk.kiosk.payment.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kiosk.domain.coupon.CouponRepository;
+import com.kiosk.domain.coupon.CouponStatus;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.order.Order;
 import com.kiosk.domain.order.OrderRepository;
@@ -32,6 +34,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final CouponRepository couponRepository;
     private final BranchInventoryService branchInventoryService;
     private final TossPaymentGateway tossPaymentGateway;
     private final TossPaymentsProperties tossProperties;
@@ -172,6 +175,15 @@ public class PaymentService {
             order.setEarnedPoints(earnedPoints);
         }
         orderRepository.save(order);
+
+        // 체크아웃 때 이 주문에 연결해둔 쿠폰이 있으면, 결제가 실제로 끝난 지금에서야 소진 처리한다.
+        couponRepository.findByUsedOrder_OrderId(order.getOrderId())
+                .filter(c -> c.getCouponStatus() == CouponStatus.AVAILABLE)
+                .ifPresent(c -> {
+                    c.setCouponStatus(CouponStatus.USED);
+                    couponRepository.save(c);
+                });
+
         branchInventoryService.deductForOrder(order);
     }
 

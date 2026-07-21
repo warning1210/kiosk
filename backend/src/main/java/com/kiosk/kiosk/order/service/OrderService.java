@@ -5,7 +5,6 @@ import com.kiosk.domain.branch.BranchRepository;
 import com.kiosk.domain.common.Language;
 import com.kiosk.domain.coupon.Coupon;
 import com.kiosk.domain.coupon.CouponRepository;
-import com.kiosk.domain.coupon.CouponStatus;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.customer.CustomerRepository;
 import com.kiosk.domain.flavor.Flavor;
@@ -20,10 +19,10 @@ import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.order.OrderStatus;
 import com.kiosk.domain.product.Product;
 import com.kiosk.domain.product.ProductRepository;
+import com.kiosk.kiosk.coupon.service.CouponValidationService;
 import com.kiosk.kiosk.order.dto.OrderCheckoutRequest;
 import com.kiosk.kiosk.order.dto.OrderCheckoutResponse;
 import com.kiosk.kiosk.order.dto.OrderItemRequest;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +44,7 @@ public class OrderService {
         private final FlavorRepository flavorRepository;
         private final CustomerRepository customerRepository;
         private final CouponRepository couponRepository;
+        private final CouponValidationService couponValidationService;
 
         private record ResolvedItem(Product product, OrderItemRequest request, int itemTotal) {
         }
@@ -83,7 +83,7 @@ public class OrderService {
                 usedPoints = Math.max(0, Math.min(usedPoints, amountBeforeDiscount));
                 usedPoints = customer != null ? Math.min(usedPoints, customer.getPointBalance()) : 0;
 
-                Coupon coupon = resolveCoupon(request.couponCode(), customer);
+                Coupon coupon = couponValidationService.validate(request.couponCode(), customer);
                 int couponDiscount = coupon != null
                                 ? Math.min(coupon.getDiscountAmount(), Math.max(0, amountBeforeDiscount - usedPoints))
                                 : 0;
@@ -111,9 +111,9 @@ public class OrderService {
                 order.setWaitingNumber(generatedWaitingNumber);
                 order = orderRepository.save(order);
 
-                // 쿠폰은 결제 성공 여부와 무관하게 체크아웃 시점에 바로 소진 처리한다 (order와 1:1로 즉시 연결 가능하도록).
+                // 쿠폰은 체크아웃 시점엔 이 주문에 "연결"만 해두고, 실제 소진(USED) 처리는 결제가 완료됐을 때
+                // PaymentService.markPaidAndComplete()에서 한다 - 포인트 차감과 동일한 타이밍 정책.
                 if (coupon != null) {
-                        coupon.setCouponStatus(CouponStatus.USED);
                         coupon.setUsedOrder(order);
                         couponRepository.save(coupon);
                 }
@@ -158,30 +158,6 @@ public class OrderService {
 
                 return new OrderCheckoutResponse(order.getOrderId(), order.getOrderNumber(), amountBeforeDiscount,
                                 discountAmount, finalAmount);
-        }
-
-        // 쿠폰 코드(qr_token)를 검증한다: 존재/미사용/미만료/(발급 대상이 있다면) 본인 명의인지까지 확인한다.
-        private Coupon resolveCoupon(String couponCode, Customer customer) {
-                if (couponCode == null || couponCode.isBlank()) {
-                        return null;
-                }
-                Coupon coupon = couponRepository.findByQrToken(couponCode)
-                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유효하지 않은 쿠폰입니다."));
-                if (coupon.getExpiresAt().isBefore(LocalDateTime.now())) {
-                        if (coupon.getCouponStatus() == CouponStatus.AVAILABLE) {
-                                coupon.setCouponStatus(CouponStatus.EXPIRED);
-                                couponRepository.save(coupon);
-                        }
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "유효기간이 지난 쿠폰입니다.");
-                }
-                if (coupon.getCouponStatus() != CouponStatus.AVAILABLE) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용된 쿠폰입니다.");
-                }
-                if (coupon.getCustomer() != null
-                                && (customer == null || !coupon.getCustomer().getCustomerId().equals(customer.getCustomerId()))) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 명의의 쿠폰이 아닙니다.");
-                }
-                return coupon;
         }
 
         private int resolveMonthlyFlavorUpgradePrice(Product product, OrderItemRequest request) {
