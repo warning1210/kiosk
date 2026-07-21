@@ -10,6 +10,10 @@ import com.kiosk.domain.branchapplication.ApprovalStatus;
 import com.kiosk.domain.branchapplication.BranchApplication;
 import com.kiosk.domain.branchapplication.BranchApplicationRepository;
 import com.kiosk.hq.branch.dto.HqBranchAccountResponse;
+import com.google.firebase.auth.AuthErrorCode;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -17,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 // 본점에서 실제로 생성된 모든 지점장 계정을 조회하고 관리한다.
@@ -27,12 +32,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class HqBranchAccountService {
 
+    // 지점이 15초 안에 신호를 보냈으면 현재 온라인으로 표시한다.
+    private static final int ONLINE_WINDOW_SECONDS = 15;
+
     // 지점장 계정을 조회하고 저장하는 저장소다.
     private final AdminRepository adminRepository;
     // 계정이 아직 연결되지 않은 기존 지점까지 목록에 포함하기 위해 사용한다.
     private final BranchRepository branchRepository;
     // 실제 가입 승인 대기 신청에 연결된 임시 지점만 목록에서 제외하기 위해 사용한다.
     private final BranchApplicationRepository applicationRepository;
+    // 폐업 시 외래키 순서에 맞춰 해당 지점의 업무 데이터를 완전히 제거한다.
+    private final JdbcTemplate jdbcTemplate;
 
     // 현재 DB에 만들어진 모든 지점장 계정을 반환한다.
     @Transactional(readOnly = true)
@@ -149,6 +159,60 @@ public class HqBranchAccountService {
                 branch.getKioskStatus().name(),
                 branch.getKioskLastAccessAt(),
                 branch.getCreatedAt(),
-                branch.getUpdatedAt());
+                branch.getUpdatedAt(),
+                branch.getKioskLastAccessAt() != null
+                        && branch.getKioskLastAccessAt().isAfter(LocalDateTime.now().minusSeconds(ONLINE_WINDOW_SECONDS)));
+    }
+
+    // 폐업은 Firebase 로그인과 해당 지점의 DB 업무 데이터를 함께 영구 삭제한다.
+    public void closeBranch(Long adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .filter(account -> account.getRole() == AdminRole.BRANCH_MANAGER)
+                .filter(account -> account.getBranch() != null)
+                .orElseThrow(() -> new IllegalArgumentException("폐업할 지점 계정을 찾을 수 없습니다."));
+        Long branchId = admin.getBranch().getBranchId();
+
+        // Firebase 삭제에 실패하면 DB 삭제를 시작하지 않아 두 저장소가 엇갈리는 상황을 줄인다.
+        deleteFirebaseUser(admin.getEmail());
+
+        // 주문·재고·채팅처럼 지점을 직접 또는 간접 참조하는 자식 행부터 지운다.
+        jdbcTemplate.update("DELETE cm FROM chat_message cm JOIN chat_room cr ON cm.chat_room_id=cr.chat_room_id WHERE cr.branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM chat_message WHERE sender_admin_id=?", adminId);
+        jdbcTemplate.update("DELETE FROM chat_room WHERE branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM inventory_transaction WHERE branch_id=?", branchId);
+        jdbcTemplate.update("DELETE sri FROM stock_request_item sri JOIN stock_request sr ON sri.stock_request_id=sr.stock_request_id WHERE sr.branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM stock_request WHERE branch_id=?", branchId);
+        jdbcTemplate.update("UPDATE coupon c JOIN `order` o ON c.used_order_id=o.order_id SET c.used_order_id=NULL WHERE o.branch_id=?", branchId);
+        jdbcTemplate.update("DELETE p FROM payment p JOIN `order` o ON p.order_id=o.order_id WHERE o.branch_id=?", branchId);
+        jdbcTemplate.update("DELETE oif FROM order_item_flavor oif JOIN order_item oi ON oif.order_item_id=oi.order_item_id JOIN `order` o ON oi.order_id=o.order_id WHERE o.branch_id=?", branchId);
+        jdbcTemplate.update("DELETE oi FROM order_item oi JOIN `order` o ON oi.order_id=o.order_id WHERE o.branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM `order` WHERE branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM branch_inventory WHERE branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM branch_product WHERE branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM event_branch_flavor WHERE branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM audit_log WHERE admin_id=?", adminId);
+        // 다른 업무 행의 선택적 처리자 참조를 비워 관리자 외래키 삭제를 안전하게 만든다.
+        jdbcTemplate.update("UPDATE branch_application SET issued_by_admin_id=NULL WHERE issued_by_admin_id=?", adminId);
+        jdbcTemplate.update("UPDATE branch_application SET processed_admin_id=NULL WHERE processed_admin_id=?", adminId);
+        jdbcTemplate.update("UPDATE stock_request SET processed_admin_id=NULL WHERE processed_admin_id=?", adminId);
+        jdbcTemplate.update("UPDATE stock_request SET receipt_confirmed_admin_id=NULL WHERE receipt_confirmed_admin_id=?", adminId);
+        jdbcTemplate.update("UPDATE inventory_transaction SET processed_admin_id=NULL WHERE processed_admin_id=?", adminId);
+        jdbcTemplate.update("UPDATE chat_room SET assigned_admin_id=NULL WHERE assigned_admin_id=?", adminId);
+        jdbcTemplate.update("UPDATE admin SET inviter_admin_id=NULL WHERE inviter_admin_id=?", adminId);
+        jdbcTemplate.update("DELETE FROM branch_application WHERE approved_branch_id=?", branchId);
+        jdbcTemplate.update("DELETE FROM admin WHERE admin_id=?", adminId);
+        jdbcTemplate.update("DELETE FROM branch WHERE branch_id=?", branchId);
+    }
+
+    // 이미 Firebase에서 사라진 사용자는 폐업 완료로 간주하고 그 밖의 오류만 사용자에게 전달한다.
+    private void deleteFirebaseUser(String email) {
+        try {
+            String uid = FirebaseAuth.getInstance().getUserByEmail(email).getUid();
+            FirebaseAuth.getInstance().deleteUser(uid);
+        } catch (FirebaseAuthException e) {
+            if (e.getAuthErrorCode() != AuthErrorCode.USER_NOT_FOUND) {
+                throw new IllegalStateException("Firebase 계정을 삭제하지 못했습니다: " + e.getMessage());
+            }
+        }
     }
 }

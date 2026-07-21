@@ -3,6 +3,8 @@ package com.kiosk.hq.branch.service;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
 import com.kiosk.branch.auth.dto.ApplicationResponse;
+import com.kiosk.branch.auth.service.BranchAuthService;
+import com.kiosk.branch.inventory.service.BranchInventoryService;
 import com.kiosk.domain.admin.AccountStatus;
 import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.admin.AdminRepository;
@@ -14,6 +16,8 @@ import com.kiosk.domain.branch.OperationStatus;
 import com.kiosk.domain.branch.Branch;
 import com.kiosk.domain.branch.BranchRepository;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +41,8 @@ public class BranchApplicationService {
     private final BranchRepository branchRepository;
     // 초대 링크와 승인 결과를 이메일로 발송한다.
     private final BranchInviteMailService mailService;
+    // 승인 직후 판매 중인 모든 맛의 초기 재고를 만재 상태로 만든다.
+    private final BranchInventoryService branchInventoryService;
     // 이메일과 복사 버튼에 사용할 외부 접속 가능한 프론트 주소다.
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -46,6 +52,8 @@ public class BranchApplicationService {
         // 요청 브라우저의 localhost가 아니라 서버에 설정된 공개 주소를 사용한다.
         String base = frontendBaseUrl;
         return applicationRepository.findAllByOrderByAppliedAtDesc().stream()
+                // 승인까지 끝난 가입은 초대 메일의 역할이 끝났으므로 발송 내역에서 제외한다.
+                .filter(application -> application.getApprovalStatus() != ApprovalStatus.APPROVED)
                 .map(a -> toResponse(a, inviteUrl(a, base)))
                 .toList();
     }
@@ -117,12 +125,22 @@ public class BranchApplicationService {
         if (application.getApprovedBranch() == null || application.getManagerName() == null) throw new IllegalStateException("아직 제출되지 않은 신청서입니다.");
         // 신청 이메일과 연결된 지점장 계정을 찾는다.
         Admin admin = adminRepository.findByEmail(application.getEmail()).orElseThrow(() -> new IllegalStateException("지점장 계정을 찾을 수 없습니다."));
-        // Firebase 계정을 활성화해 로그인을 허용한다.
+        // Firebase 권한을 지점장으로 연결하고 초대 과정에서 만든 사용자만 활성화한다.
         try {
             // Firebase에서 신청 이메일의 사용자를 조회한다.
             UserRecord firebaseUser = FirebaseAuth.getInstance().getUserByEmail(application.getEmail());
-            // 비활성 상태를 해제한다.
-            FirebaseAuth.getInstance().updateUser(new UserRecord.UpdateRequest(firebaseUser.getUid()).setDisabled(false));
+            // 기존 사용자에게 있던 다른 Firebase 권한을 잃지 않도록 현재 클레임을 복사한다.
+            Map<String, Object> claims = new HashMap<>(firebaseUser.getCustomClaims());
+            // 초대 내부 표식은 승인 완료 후 더 이상 필요하지 않으므로 제거한다.
+            boolean inviteProvisioned = Boolean.TRUE.equals(claims.remove(BranchAuthService.INVITE_PROVISIONED_CLAIM));
+            // 승인된 지점장 역할과 실제 생성된 지점 식별자를 Firebase 토큰에 연결한다.
+            claims.put("role", "BRANCH_MANAGER");
+            claims.put("branchId", application.getApprovedBranch().getBranchId());
+            FirebaseAuth.getInstance().setCustomUserClaims(firebaseUser.getUid(), claims);
+            // 초대 과정에서 새로 만든 비활성 사용자만 활성화하고 기존 사용자의 상태는 건드리지 않는다.
+            if (inviteProvisioned) {
+                FirebaseAuth.getInstance().updateUser(new UserRecord.UpdateRequest(firebaseUser.getUid()).setDisabled(false));
+            }
         } catch (Exception e) {
             // Firebase 활성화 실패 시 DB 승인도 진행하지 않는다.
             throw new IllegalStateException("Firebase 계정을 활성화하지 못했습니다: " + e.getMessage());
@@ -131,6 +149,8 @@ public class BranchApplicationService {
         admin.setAccountStatus(AccountStatus.ACTIVE);
         // 지점 운영 상태를 정상으로 변경한다.
         application.getApprovedBranch().setOperationStatus(OperationStatus.ACTIVE);
+        // 최초 승인 때만 없는 재고 행을 2통으로 생성하고 기존 수량은 건드리지 않는다.
+        branchInventoryService.initializeMissingInventory(application.getApprovedBranch());
         // 신청 상태를 승인 완료로 변경한다.
         application.setApprovalStatus(ApprovalStatus.APPROVED);
         // 처리한 본점 관리자를 기록한다.
@@ -169,12 +189,14 @@ public class BranchApplicationService {
         ApplicationResponse rejectedResponse = toResponse(application, null);
         // 지점장에게 반려 결과 메일을 발송한다.
         mailService.sendResult(application.getEmail(), false, application.getRejectionReason());
-        // Firebase에 만들어 둔 승인 대기 사용자를 삭제한다.
+        // 초대 과정에서 새로 만든 승인 대기 사용자만 삭제하고 기존 Firebase 사용자는 보존한다.
         try {
             // 신청 이메일에 해당하는 Firebase 사용자를 조회한다.
             UserRecord firebaseUser = FirebaseAuth.getInstance().getUserByEmail(application.getEmail());
-            // 반려된 사용자가 로그인 계정으로 남지 않도록 완전히 삭제한다.
-            FirebaseAuth.getInstance().deleteUser(firebaseUser.getUid());
+            // 내부 표식이 있는 사용자만 이 초대가 만든 임시 계정이므로 삭제한다.
+            if (Boolean.TRUE.equals(firebaseUser.getCustomClaims().get(BranchAuthService.INVITE_PROVISIONED_CLAIM))) {
+                FirebaseAuth.getInstance().deleteUser(firebaseUser.getUid());
+            }
         } catch (Exception e) {
             // Firebase 삭제 실패 시 DB만 삭제되어 불일치하지 않도록 처리를 중단한다.
             throw new IllegalStateException("Firebase 임시 계정을 삭제하지 못했습니다: " + e.getMessage());
