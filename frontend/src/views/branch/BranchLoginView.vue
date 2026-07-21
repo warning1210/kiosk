@@ -3,6 +3,7 @@
     <form @submit.prevent="login">
         <p style="font-size:16px;font-weight:800;color:#c52f47;background:#ffecef;padding:12px;border-radius:8px;margin-bottom:16px;">
             테스트 id/pw는 admin/admin1234 입니다!!
+            본점 id/pw는 hadmin/hadmin1234 입니다!!
         </p><h2>로그인</h2><p>계정 정보를 입력하세요</p>
 <label>아이디 또는 이메일
     <input v-model="loginId" required placeholder="아이디 또는 이메일 입력">
