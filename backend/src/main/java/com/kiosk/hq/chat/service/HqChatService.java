@@ -71,11 +71,12 @@ public class HqChatService {
 
     private HqChatMessageResponse toResponse(ChatMessage message) {
         Admin sender = message.getSenderAdmin();
+        boolean isBranchManager = sender.getRole() == AdminRole.BRANCH_MANAGER;
         return new HqChatMessageResponse(
                 message.getChatMessageId(),
                 sender.getAdminId(),
-                sender.getName(),
-                sender.getRole() != AdminRole.BRANCH_MANAGER,
+                isBranchManager ? sender.getBranch().getBranchName() : sender.getName(),
+                !isBranchManager,
                 message.getMessageContent(),
                 message.getCreatedAt()
         );
