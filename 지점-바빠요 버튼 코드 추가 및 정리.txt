@@ -1,0 +1,86 @@
+지점 "바빠요" 버튼 → 키오스크 표시 기능 작업 정리
+=====================================================
+
+■ 요구사항
+지점 주문관리 화면에서 "바빠요" 버튼을 눌러 10분/20분/30분 중 하나를 선택하면,
+해당 지점 키오스크의 광고화면과 주문화면 상단에 대기시간 안내 배너가 표시되도록 함.
+
+■ 기존에 이미 있던 것 (수정 안 함)
+- db/init/01-schema.sql, backend Branch 엔티티에 branch.is_busy / branch.estimated_wait_minutes
+  컬럼과 필드가 이미 있었음 -> 그대로 재사용, 스키마 변경 없음.
+- frontend OrdersView.vue에 "바빠요" 버튼/팝업 UI(10/20/30분 선택)는 이미 있었으나
+  서버 저장 없이 로컬 상태(ref)만 바뀌는 상태였음 -> 이번 작업에서 실제 API 연동으로 교체.
+
+
+[신규 생성 파일 - 백엔드]
+-------------------------
+1. backend/src/main/java/com/kiosk/branch/status/package-info.java
+2. backend/src/main/java/com/kiosk/branch/status/dto/BranchStatusUpdateRequest.java
+   - 지점 관리자가 보내는 요청 DTO { isBusy, estimatedWaitMinutes }
+3. backend/src/main/java/com/kiosk/branch/status/dto/BranchStatusResponse.java
+   - 지점 관리자용 응답 DTO { isBusy, estimatedWaitMinutes }
+4. backend/src/main/java/com/kiosk/branch/status/service/BranchStatusService.java
+   - getStatus(branchId) / updateStatus(branchId, request)
+   - 대기시간은 10/20/30분만 허용하도록 검증 (그 외 값이면 IllegalArgumentException -> 400)
+   - isBusy=false로 끄면 estimatedWaitMinutes를 null로 초기화
+5. backend/src/main/java/com/kiosk/branch/status/controller/BranchStatusController.java
+   - GET  /api/branch/status   : 현재 지점의 바빠요 상태 조회
+   - PATCH /api/branch/status  : 바빠요 상태 설정/해제
+   - 기존 BranchAccessService.requireBranchId(authorization)로 인증 처리
+     (URL에 branchId를 안 받고 로그인 토큰에서 역산 - 기존 BranchOrderController와 동일 패턴)
+
+6. backend/src/main/java/com/kiosk/kiosk/branch/package-info.java
+7. backend/src/main/java/com/kiosk/kiosk/branch/dto/BranchStatusResponse.java
+   - 키오스크(비인증)용 응답 DTO(record) { isBusy, estimatedWaitMinutes }
+8. backend/src/main/java/com/kiosk/kiosk/branch/service/KioskBranchService.java
+   - getStatus(branchId) : 인증 없이 지점 상태만 조회
+9. backend/src/main/java/com/kiosk/kiosk/branch/controller/KioskBranchController.java
+   - GET /api/branch-status?branchId=  : 키오스크 화면이 폴링할 공개 API
+     (기존 MenuController의 "GET /api/flavors?branchId=" 패턴과 동일)
+
+
+[신규 생성 파일 - 프론트엔드]
+-----------------------------
+10. frontend/src/services/branchStatusService.js
+    - fetchBranchStatus(branchId) : GET /api/branch-status 호출 함수
+
+11. frontend/src/composables/useBranchBusyBanner.js
+    - 키오스크 화면(광고/주문)에서 공용으로 쓰는 폴링 로직
+    - 15초 간격 setInterval로 지점 상태를 조회해 isBusy / estimatedWaitMinutes를 반환
+    - 이 프로젝트에 WebSocket이 없고 다른 화면들도 전부 setInterval 폴링 방식이라 동일 패턴 사용
+
+
+[기존 파일 수정]
+-----------------
+12. frontend/src/views/branch/OrdersView.vue
+    - loadStatus() 함수 추가: 화면 진입 시 GET /api/branch/status로 현재 상태를 서버에서 불러와
+      waitTime을 복원 (기존에는 새로고침하면 항상 0으로 초기화되던 문제 해결)
+    - applyWaitTime(): 로컬 상태만 바꾸던 것 -> PATCH /api/branch/status { isBusy:true, estimatedWaitMinutes } 호출로 교체
+    - clearWaitTime(): PATCH /api/branch/status { isBusy:false, estimatedWaitMinutes:null } 호출로 교체
+    - onMounted에서 load()와 함께 loadStatus() 같이 호출하도록 수정
+
+13. frontend/src/views/HomeView.vue (키오스크 광고화면)
+    - useBranchBusyBanner() composable 사용
+    - 광고 화면 최상단에 isBusy일 때 "현재 매장이 혼잡하여 주문이 지연될 수 있습니다 (약 N분)" 배너 표시
+    - .busy-banner CSS 추가, 기존 .branch-switch 버튼은 배너 위에서도 눌리도록 z-index 조정
+
+14. frontend/src/views/kiosk/OrderView.vue (키오스크 주문화면)
+    - useBranchBusyBanner() composable 사용
+    - 주문 화면(<section class="order">) 최상단, 단계 표시 문구 위에 동일한 배너 추가
+    - .busy-banner CSS 추가
+
+
+■ 데이터 흐름 요약
+지점 관리자(OrdersView.vue)
+  -> PATCH /api/branch/status (인증 O, 토큰에서 branchId 확인)
+  -> branch 테이블의 is_busy / estimated_wait_minutes 갱신
+       ↓ (15초 폴링)
+키오스크 광고화면(HomeView.vue) / 주문화면(kiosk/OrderView.vue)
+  -> GET /api/branch-status?branchId= (인증 불필요, 공개 조회)
+  -> isBusy=true면 상단에 대기시간 배너 표시
+
+
+■ 작업 중 발생했던 이슈 (참고용)
+- 새 백엔드 파일 작성 직후 서버가 자동으로 재컴파일되지 않아 새 API가 404로 응답하는 문제가 있었음.
+- 원인: VS Code Java 확장(redhat.java)이 새로 추가된 소스 파일을 감지하지 못한 상태로 계속 재실행만 되고 있었음.
+- 해결: VS Code에서 "Java: Clean Java Language Server Workspace" 실행 후 백엔드 재시작 -> 정상 반영됨.
