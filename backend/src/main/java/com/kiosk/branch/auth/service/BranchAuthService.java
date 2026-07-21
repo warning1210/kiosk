@@ -58,7 +58,9 @@ public class BranchAuthService {
                     .setEmail(application.getEmail())
                     .setPassword(request.password())
                     .setDisplayName(request.managerName())
-                    .setEmailVerified(true));
+                    .setEmailVerified(true)
+                    // 본점이 승인하기 전에는 Firebase 로그인을 차단한다.
+                    .setDisabled(true));
         } catch (Exception e) {
             throw new IllegalArgumentException("Firebase 계정을 만들 수 없습니다: " + e.getMessage());
         }
@@ -69,7 +71,8 @@ public class BranchAuthService {
                 .phone(request.phone())
                 .email(application.getEmail())
                 .managerName(request.managerName())
-                .operationStatus(OperationStatus.ACTIVE)
+                // 본점 승인 전에는 매장을 운영 대기 상태로 저장한다.
+                .operationStatus(OperationStatus.PENDING)
                 .kioskStatus(KioskStatus.ACTIVE)
                 .build());
 
@@ -88,7 +91,8 @@ public class BranchAuthService {
                 .phone(request.phone())
                 .email(application.getEmail())
                 .role(AdminRole.BRANCH_MANAGER)
-                .accountStatus(AccountStatus.ACTIVE)
+                // 신청서 제출만으로 로그인할 수 없도록 승인 대기 상태로 저장한다.
+                .accountStatus(AccountStatus.PENDING)
                 .build());
 
         application.setManagerName(request.managerName());
@@ -97,8 +101,11 @@ public class BranchAuthService {
         application.setAddress(request.address());
         application.setBusinessNumber(request.businessNumber());
         application.setApprovedBranch(branch);
+        // 신청서 제출 뒤에도 본점이 수락하기 전까지 승인 대기 상태를 유지한다.
+        application.setApprovalStatus(com.kiosk.domain.branchapplication.ApprovalStatus.PENDING);
         application.setInviteToken(null);
-        application.setProcessedAt(LocalDateTime.now());
+        // 아직 본점이 처리하지 않았으므로 처리 시각을 비워 둔다.
+        application.setProcessedAt(null);
         applicationRepository.save(application);
 
         return new LoginResponse(admin.getAdminId(), branch.getBranchId(), branch.getBranchName(), admin.getName());

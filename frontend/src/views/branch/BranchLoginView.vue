@@ -26,12 +26,14 @@
 
 <script setup>
 import{ref}from'vue';
-import{useRouter}from'vue-router';
+import{useRoute,useRouter}from'vue-router';
 import{setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword}from'firebase/auth';
 import{firebaseAuth}from'../../firebase';
 import http from'../../api/http';
 
 const router = useRouter()
+// 로그인 전에 사용자가 열려고 했던 본점 주소를 확인하기 위해 현재 경로 정보를 받는다.
+const route = useRoute()
 const loginId = ref('')
 const password = ref('')
 const remember = ref(true)
@@ -62,7 +64,12 @@ async function login() {
 async function loginAsHq() {
   const { data } = await http.post('/hq-auth/login', { loginId: loginId.value, password: password.value })
   localStorage.setItem('hq-session', JSON.stringify(data))
-  router.replace('/admin/dashboard')
+  // 인증 때문에 로그인 화면으로 이동됐다면 로그인 후 원래 본점 화면으로 돌아간다.
+  const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/admin/')
+    ? route.query.redirect
+    : '/admin/dashboard'
+  // 검증된 본점 경로 또는 기본 대시보드로 이동한다.
+  router.replace(redirect)
 }
 
 // 입력값 자체가 이메일이므로, 로그인 아이디로 이메일을 조회하는 과정 없이 바로 Firebase에 로그인한다

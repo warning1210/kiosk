@@ -50,10 +50,8 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { signInWithEmailAndPassword } from 'firebase/auth'
 import { useRoute, useRouter } from 'vue-router'
 import http from '../../api/http'
-import { firebaseAuth } from '../../firebase'
 
 const KAKAO_POSTCODE_SCRIPT = 'https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
 const route = useRoute()
@@ -128,6 +126,7 @@ async function join() {
     return
   }
   try {
+    // 신청 정보를 서버에 제출하면 계정은 본점 승인 전까지 잠긴 상태로 만들어진다.
     await http.post('/branch-auth/join', {
       token: route.query.token,
       loginId: loginId.value,
@@ -138,11 +137,10 @@ async function join() {
       address: [baseAddress.value, detailAddress.value].filter(Boolean).join(' '),
       businessNumber: businessNumber.value
     })
-    const credential = await signInWithEmailAndPassword(firebaseAuth, invite.value.email, password.value)
-    const idToken = await credential.user.getIdToken()
-    const { data } = await http.post('/branch-auth/firebase-session', { idToken })
-    localStorage.setItem('branch-session', JSON.stringify(data))
-    router.replace('/branch/dashboard')
+    // 제출 즉시 로그인하지 않고 본점 승인 대기 안내를 보여 준다.
+    window.alert('지점 개설 신청이 접수되었습니다. 본점 승인 후 로그인할 수 있습니다.')
+    // 승인 뒤 다시 로그인할 수 있도록 로그인 화면으로 이동한다.
+    router.replace('/branch/login')
   } catch (e) {
     error.value = e.response?.data?.message || '계정을 만들 수 없습니다.'
   }
