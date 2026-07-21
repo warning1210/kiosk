@@ -39,7 +39,7 @@ app:
 
 firebase:
   credentials:
-    path: "C:/Users/seoil/Downloads/firebase.json"
+    path: "C:/Users/dldyd/Downloads/firebase.json"
 
 logging:
   level:
