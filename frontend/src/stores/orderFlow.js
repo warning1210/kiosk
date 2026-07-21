@@ -189,7 +189,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       try {
         const [categoriesData, productsData, flavorsData] = await Promise.all([
           fetchCategories(),
-          fetchProducts(),
+          fetchProducts(getKioskBranchId()),
           fetchFlavors(getKioskBranchId())
         ])
         this.categories = categoriesData
