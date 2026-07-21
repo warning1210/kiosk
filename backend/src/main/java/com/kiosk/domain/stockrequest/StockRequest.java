@@ -151,16 +151,17 @@ public class StockRequest {
         this.processedAt = processedAt;
     }
 
-    /** 본사가 운송 정보를 등록하고 배송중(SHIPPING) 상태로 전환한다. */
-    public void startShipping(
-            String trackingNumber,
-            String courierName,
-            String driverName,
-            LocalDateTime estimatedArrivalAt,
+    /**
+     * 본사가 출고 처리를 하면서 배송중(SHIPPING) 상태로 전환한다.
+     *
+     * <p>택배사에 맡기는 게 아니라 본사가 직접 배송하는 구조라, 운송장번호(택배사 발급)나 택배사명은
+     * 쓰지 않는다. 대신 본사 내부 배송번호({@code shipmentNumber})를 시스템이 자동으로 발급하고,
+     * 배송담당자({@code driverName})는 본사 담당자가 직접 입력한다.
+     */
+    public void dispatch(String shipmentNumber, String driverName, LocalDateTime estimatedArrivalAt,
             LocalDateTime shippedAt) {
         this.requestStatus = StockRequestStatus.SHIPPING;
-        this.trackingNumber = trackingNumber;
-        this.courierName = courierName;
+        this.shipmentNumber = shipmentNumber;
         this.driverName = driverName;
         this.estimatedArrivalAt = estimatedArrivalAt;
         this.shippedAt = shippedAt;
