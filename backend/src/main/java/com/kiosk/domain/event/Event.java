@@ -1,6 +1,7 @@
 package com.kiosk.domain.event;
 
 import com.kiosk.domain.admin.Admin;
+import com.kiosk.domain.flavor.Flavor;
 import com.kiosk.domain.product.Product;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -48,7 +49,7 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(name = "benefit_type", nullable = false)
     @Builder.Default
-    private BenefitType benefitType = BenefitType.COUPON;
+    private BenefitType benefitType = BenefitType.DISCOUNT_AMOUNT;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
@@ -62,6 +63,11 @@ public class Event {
 
     @Column(name = "discount_amount")
     private Integer discountAmount;
+
+    // MONTHLY_FLAVOR 전용 - 본점이 직접 지정한 할인 맛 (전 지점 자동 적용, 지점별 선택 없음)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "flavor_id")
+    private Flavor flavor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "size_up_from_product_id")

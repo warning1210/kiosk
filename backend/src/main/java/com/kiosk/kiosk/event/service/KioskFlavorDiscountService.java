@@ -4,36 +4,81 @@ import com.kiosk.domain.event.BenefitType;
 import com.kiosk.domain.event.Event;
 import com.kiosk.domain.event.EventBranchFlavor;
 import com.kiosk.domain.event.EventBranchFlavorRepository;
+import com.kiosk.domain.event.EventRepository;
 import com.kiosk.domain.event.EventStatus;
 import com.kiosk.domain.event.EventType;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// 지점이 event_branch_flavor로 선택해둔 "상품(맛) 할인" 이벤트 중, 지금 시각 기준으로 실제
-// 진행 중인 것만 flavorId -> Event로 매핑한다. 키오스크 메뉴 표시(MenuService)와 결제 금액
-// 계산(OrderService)이 "지금 이 맛에 할인이 살아있는가"를 같은 기준으로 판단하도록 공용으로 둔다.
+// 지금 시각 기준으로 실제 진행 중인 맛 할인/사이즈업 이벤트를 판단한다. 키오스크 메뉴 표시(MenuService)와
+// 결제 금액 계산(OrderService)이 같은 기준을 쓰도록 공용으로 둔다.
+// 맛 할인은 두 경로가 있다: MONTHLY_FLAVOR(본점이 맛을 직접 지정, 전 지점 자동 적용) /
+// FLAVOR_DISCOUNT(본점은 할인값만 정하고 지점이 event_branch_flavor로 맛을 선택).
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class KioskFlavorDiscountService {
 
+    private final EventRepository eventRepository;
     private final EventBranchFlavorRepository eventBranchFlavorRepository;
 
     public Map<Long, Event> activeDiscountsByFlavor(Long branchId) {
         LocalDateTime now = LocalDateTime.now();
         Map<Long, Event> result = new HashMap<>();
-        for (EventBranchFlavor mapping : eventBranchFlavorRepository.findByBranch_BranchId(branchId)) {
-            Event event = mapping.getEvent();
-            if (isActiveFlavorDiscount(event, now)) {
-                result.put(mapping.getFlavor().getFlavorId(), event);
+
+        for (Event event : eventRepository.findByEventTypeAndStatus(EventType.MONTHLY_FLAVOR, EventStatus.ACTIVE)) {
+            if (event.getFlavor() != null && isCurrentlyActive(event, now)) {
+                result.put(event.getFlavor().getFlavorId(), event);
+            }
+        }
+
+        if (branchId != null) {
+            for (EventBranchFlavor mapping : eventBranchFlavorRepository.findByBranch_BranchId(branchId)) {
+                Event event = mapping.getEvent();
+                if (event.getEventType() == EventType.FLAVOR_DISCOUNT && isCurrentlyActive(event, now)) {
+                    result.put(mapping.getFlavor().getFlavorId(), event);
+                }
             }
         }
         return result;
+    }
+
+    // 이 맛이 본점이 직접 지정한 "이달의 맛"(MONTHLY_FLAVOR)인지 - 사이즈업 자격/배지 판단에 쓰인다
+    public boolean isMonthlyFlavor(Long flavorId) {
+        if (flavorId == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        return eventRepository.findByEventTypeAndStatus(EventType.MONTHLY_FLAVOR, EventStatus.ACTIVE).stream()
+                .anyMatch(event -> isCurrentlyActive(event, now)
+                        && event.getFlavor() != null
+                        && flavorId.equals(event.getFlavor().getFlavorId()));
+    }
+
+    // 이 상품에서 사이즈업할 수 있는(fromProduct 기준) 진행 중인 SIZE_UP 이벤트
+    public Optional<Event> activeSizeUpEventFrom(Long fromProductId) {
+        if (fromProductId == null) return Optional.empty();
+        LocalDateTime now = LocalDateTime.now();
+        return eventRepository.findByEventTypeAndStatus(EventType.SIZE_UP, EventStatus.ACTIVE).stream()
+                .filter(event -> isCurrentlyActive(event, now))
+                .filter(event -> event.getSizeUpFromProduct() != null
+                        && fromProductId.equals(event.getSizeUpFromProduct().getProductId()))
+                .findFirst();
+    }
+
+    // 이 상품으로 사이즈업 도착하는(toProduct 기준) 진행 중인 SIZE_UP 이벤트 - 결제 금액 재계산에 쓰인다
+    public Optional<Event> activeSizeUpEventTo(Long toProductId) {
+        if (toProductId == null) return Optional.empty();
+        LocalDateTime now = LocalDateTime.now();
+        return eventRepository.findByEventTypeAndStatus(EventType.SIZE_UP, EventStatus.ACTIVE).stream()
+                .filter(event -> isCurrentlyActive(event, now))
+                .filter(event -> event.getSizeUpToProduct() != null
+                        && toProductId.equals(event.getSizeUpToProduct().getProductId()))
+                .findFirst();
     }
 
     // 한 주문 항목에 여러 맛이 담겨도, 할인이 중복 적용되지 않도록 그중 가장 큰 할인 하나만 적용한다.
@@ -59,9 +104,8 @@ public class KioskFlavorDiscountService {
         return event.getDiscountAmount() != null ? event.getDiscountAmount() : 0;
     }
 
-    private boolean isActiveFlavorDiscount(Event event, LocalDateTime now) {
-        return event.getEventType() == EventType.FLAVOR_DISCOUNT
-                && event.getStatus() == EventStatus.ACTIVE
+    private boolean isCurrentlyActive(Event event, LocalDateTime now) {
+        return event.getStatus() == EventStatus.ACTIVE
                 && !now.isBefore(event.getStartAt())
                 && now.isBefore(event.getEndAt());
     }

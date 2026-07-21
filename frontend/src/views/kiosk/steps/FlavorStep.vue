@@ -198,7 +198,7 @@ function onSwipeEnd(e) {
 async function onFlavorClick(flavor) {
   if (isDragging.value) return
   const flavorId = flavor.flavorId
-  if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.productName === '싱글레귤러') {
+  if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.sizeUpToProductId) {
     const canSelect = await orderFlow.offerMonthlyFlavorUpgrade()
     if (!canSelect) return
   }

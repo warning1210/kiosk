@@ -11,6 +11,10 @@ public record HqEventCreateRequest(
         String imageUrl,
         BigDecimal discountRate,
         Integer discountAmount,
+        Long flavorId,
+        Long sizeUpFromProductId,
+        Long sizeUpToProductId,
+        Integer additionalPayment,
         LocalDateTime startAt,
         LocalDateTime endAt
 ) {
