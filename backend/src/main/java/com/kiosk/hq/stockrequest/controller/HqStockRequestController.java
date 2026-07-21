@@ -5,7 +5,6 @@ import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.stockrequest.StockRequestStatus;
 import com.kiosk.global.security.HqAccessService;
 import com.kiosk.hq.stockrequest.dto.RejectRequest;
-import com.kiosk.hq.stockrequest.dto.ShipRequest;
 import com.kiosk.hq.stockrequest.dto.StockRequestSummaryResponse;
 import com.kiosk.hq.stockrequest.service.HqStockRequestService;
 import jakarta.validation.Valid;
@@ -79,13 +78,5 @@ public class HqStockRequestController {
         return hqStockRequestService.rejectStockRequest(admin, stockRequestId, request);
     }
 
-    /** 배송 등록 (HQ-013). */
-    @PatchMapping("/{stockRequestId}/ship")
-    public StockRequestResponse shipStockRequest(
-            @PathVariable Long stockRequestId,
-            @Valid @RequestBody ShipRequest request,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        Admin admin = hqAccessService.requireAdmin(authorization);
-        return hqStockRequestService.shipStockRequest(admin, stockRequestId, request);
-    }
+    // 승인 뒤 출고(배송)는 별도 배송 관리 API로 분리되었다: PATCH /api/hq/deliveries/{id}/dispatch
 }
