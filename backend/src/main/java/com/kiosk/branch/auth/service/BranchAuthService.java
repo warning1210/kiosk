@@ -21,11 +21,14 @@ import com.kiosk.domain.branchapplication.BranchApplicationRepository;
 import java.time.LocalDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// 지점 회원가입/로그인 - 실제 비밀번호 검증은 Firebase Auth에 위임하고,
-// Admin.passwordHash에는 "FIREBASE$"+uid만 표시용으로 저장한다(우리 쪽에서 별도 해시 비교 안 함).
+// 지점 회원가입/로그인(이메일) - 평상시 비밀번호 검증은 Firebase Auth에 위임한다.
+// Admin.passwordHash에는 Firebase 계정 생성과 동시에 BCrypt 해시도 저장해두는데, 이건 Firebase 로그인
+// 경로에서는 쓰이지 않고 Firebase 장애 시의 폴백 로그인(BranchFallbackLoginService, 완전히 별도 파일)이
+// 쓴다 - 이 클래스는 그 폴백 경로와 무관하게 기존 Firebase 흐름만 그대로 담당한다.
 // 본점은 이메일로 가입 초대 URL만 발급하고(BranchApplicationService.issueInvite),
 // 지점명/주소/지점장 정보/로그인 계정은 전부 지점이 join()할 때 직접 입력한다 (BR-018/HQ-017).
 @Service
@@ -36,6 +39,7 @@ public class BranchAuthService {
     private final BranchApplicationRepository applicationRepository;
     private final BranchRepository branchRepository;
     private final AdminRepository adminRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public ApplicationResponse invite(String token) {
@@ -79,7 +83,7 @@ public class BranchAuthService {
         Admin admin = adminRepository.save(Admin.builder()
                 .branch(branch)
                 .loginId(request.loginId())
-                .passwordHash("FIREBASE$" + firebaseUser.getUid())
+                .passwordHash(passwordEncoder.encode(request.password()))
                 .name(request.managerName())
                 .phone(request.phone())
                 .email(application.getEmail())

@@ -4,8 +4,8 @@
         <p style="font-size:16px;font-weight:800;color:#c52f47;background:#ffecef;padding:12px;border-radius:8px;margin-bottom:16px;">
             테스트 id/pw는 admin/admin1234 입니다!!
         </p><h2>로그인</h2><p>계정 정보를 입력하세요</p>
-<label>아이디
-    <input v-model="loginId" required placeholder="아이디 입력">
+<label>아이디 또는 이메일
+    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력">
 </label>
 <label>비밀번호
     <input v-model="password" required type="password" placeholder="비밀번호 입력">
@@ -31,56 +31,53 @@ import{setPersistence,browserLocalPersistence,browserSessionPersistence,signInWi
 import{firebaseAuth}from'../../firebase';
 import http from'../../api/http';
 
-const router=useRouter(),loginId=ref(''),password=ref(''),remember=ref(true),error=ref('');
-async function login(){
-    error.value='';
-    // 본점(hadmin 등) 계정이면 여기서 처리하고 끝낸다. 지점 계정이면 400이 나므로 아래 지점 로그인으로 넘어간다.
-    try{
-        const{data}=await http.post('/hq-auth/login',{loginId:loginId.value,password:password.value});
-        localStorage.setItem('hq-session',JSON.stringify(data));
-        router.replace('/admin/dashboard');
-        return;
-    }catch(hqError){
-        // 본점 계정이 아님 - 지점 로그인 흐름 계속 진행
+const router = useRouter()
+const loginId = ref('')
+const password = ref('')
+const remember = ref(true)
+const error = ref('')
+
+async function login() {
+  error.value = ''
+  try {
+    if (loginId.value.includes('@')) {
+      await loginWithFirebase()
+    } else {
+      await loginWithDb()
     }
-    try{
-        // 아래의 실행에서 1개라도 이상이 생기면 catch로 잡게 된다.
-        const identity=(
-            // id를 이용해서 DB에 저장이 되어 있는 Email을 가져온다.
-            await http.get(`/branch-auth/login-identity/${encodeURIComponent(loginId.value)}`)
-            ).data;
+    router.replace('/branch/dashboard')
+  } catch (e) {
+    console.error(e)
+    error.value = e.response?.data?.message || firebaseMessage(e.code) || '로그인할 수 없습니다.'
+  }
+}
 
-            // 로그인 할 경우 로컬에 저장할 지 & 아니면 세션에 저장을 할 지 결정
-            await setPersistence(firebaseAuth,remember.value?browserLocalPersistence:browserSessionPersistence);
-            // 위에서 가져온 email과 입력한 pw를 firebase에 설정한 값과 비교해서 인증이 되는 지를 저장한다.
-            const credential=await signInWithEmailAndPassword(firebaseAuth,identity.email,password.value);
-            // 인증된 토큰을 이용해서 토큰값을 받아서 백으로 보낸다
-            const{data}=await http.post('/branch-auth/firebase-session',
-            {
-                // 인증된것의 토큰키를 idToken으로 저장
-                idToken:await credential.user.getIdToken(true)
-            });
+// 입력값 자체가 이메일이므로, 로그인 아이디로 이메일을 조회하는 과정 없이 바로 Firebase에 로그인한다
+async function loginWithFirebase() {
+  await setPersistence(firebaseAuth, remember.value ? browserLocalPersistence : browserSessionPersistence)
+  const credential = await signInWithEmailAndPassword(firebaseAuth, loginId.value, password.value)
+  const { data } = await http.post('/branch-auth/firebase-session', {
+    idToken: await credential.user.getIdToken(true)
+  })
+  localStorage.setItem('branch-session', JSON.stringify(data))
+}
 
-            // 백에서 리턴된 값을 son으로 가져온다.
-            localStorage.setItem('branch-session',JSON.stringify(data));
+// Firebase 서버가 응답하지 않는 상황을 위한 폴백 - DB에 저장된 비밀번호 해시와 직접 대조한다
+async function loginWithDb() {
+  const { data } = await http.post('/branch-auth/db-login', {
+    loginId: loginId.value,
+    password: password.value
+  })
+  localStorage.setItem('branch-session', JSON.stringify(data))
+}
 
-            // /branch/dashboard으로 이동한다.
-            router.replace('/branch/dashboard')
-        }
-            
-            catch(e){
-                console.error(e);
-                error.value=e.response?.data?.message||firebaseMessage(e.code)||'로그인할 수 없습니다.'}
-            }
-            
-            function firebaseMessage(code){
-                return({
-                     'auth/invalid-credential':'아이디 또는 비밀번호가 올바르지 않습니다.',
-                     'auth/too-many-requests':'로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.',
-                     'auth/network-request-failed':'네트워크 연결을 확인하세요.'
-                     })
-                [code]
-            }
+function firebaseMessage(code) {
+  return ({
+    'auth/invalid-credential': '아이디 또는 비밀번호가 올바르지 않습니다.',
+    'auth/too-many-requests': '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.',
+    'auth/network-request-failed': '네트워크 연결을 확인하세요.'
+  })[code]
+}
 </script>
 
 
@@ -103,13 +100,13 @@ async function login(){
     }
 .auth aside p{
     max-width:330px;
-    ont-size:12px;
+    font-size:12px;
     line-height:1.8;
     opacity:.78}
 .auth aside small{
     font-size:9px;opacity:.7}
 .auth section{
-    isplay:grid;
-    lace-items:center
+    display:grid;
+    place-items:center
     }
 form{width:min(440px,80%)}h2{margin:0;font-size:25px}form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}input:focus{border-color:#6266ef}.options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}.options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}.options a,.apply a{color:#5f64ee;text-decoration:none}form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}.error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}.apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}@media(max-width:700px){.auth{grid-template-columns:1fr}.auth aside{display:none}}</style>
