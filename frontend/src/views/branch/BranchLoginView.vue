@@ -75,4 +75,47 @@
   }
 </script>
 
-<style scoped>.auth{display:grid;min-height:100vh;grid-template-columns:38% 62%;color:#222b38;background:#fff}.auth aside{display:flex;padding:38px 44px;flex-direction:column;justify-content:space-between;color:#fff;background:linear-gradient(155deg,#6165ee,#9959dc 50%,#ea3c9b)}.brand{font-weight:900}.auth aside h1{font-size:34px;line-height:1.3}.auth aside p{max-width:330px;font-size:12px;line-height:1.8;opacity:.78}.auth aside small{font-size:9px;opacity:.7}.auth section{display:grid;place-items:center}form{width:min(440px,80%)}h2{margin:0;font-size:25px}form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}input:focus{border-color:#6266ef}.options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}.options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}.options a,.apply a{color:#5f64ee;text-decoration:none}form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}.error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}.apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}@media(max-width:700px){.auth{grid-template-columns:1fr}.auth aside{display:none}}</style>
+<style scoped>
+  .auth{display:grid;min-height:100vh;grid-template-columns:38% 62%;color:#222b38;background:#fff}
+  
+  .auth aside{display:flex;padding:38px 44px;flex-direction:column;justify-content:space-between;color:#fff;background:linear-gradient(155deg,#6165ee,#9959dc 50%,#ea3c9b)}
+  
+  .brand{font-weight:900}
+  
+  .auth aside h1{font-size:34px;line-height:1.3}
+  
+  .auth aside p{max-width:330px;font-size:12px;line-height:1.8;opacity:.78}
+  
+  .auth aside small{font-size:9px;opacity:.7}
+  
+  .auth section{display:grid;place-items:center}
+  
+  form{width:min(440px,80%)}
+  
+  h2{margin:0;font-size:25px}
+  
+  form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}
+  
+  label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}
+  
+  input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}
+  
+  input:focus{border-color:#6266ef}
+  
+  .options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}
+  
+  .options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}
+  
+  .options a,.apply a{color:#5f64ee;text-decoration:none}
+  
+  form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}
+  
+  .error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}
+  
+  .apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}
+  
+  @media(max-width:700px){
+    .auth{grid-template-columns:1fr}
+    .auth aside{display:none}
+  }
+</style>
