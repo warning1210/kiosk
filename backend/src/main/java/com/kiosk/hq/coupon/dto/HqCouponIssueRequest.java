@@ -9,7 +9,6 @@ public record HqCouponIssueRequest(
         String discountType, // RATE | AMOUNT
         BigDecimal discountRate,
         Integer discountAmount,
-        LocalDateTime expiresAt,
-        Long eventId
+        LocalDateTime expiresAt
 ) {
 }
