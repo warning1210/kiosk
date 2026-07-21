@@ -37,19 +37,32 @@ const password = ref('')
 const remember = ref(true)
 const error = ref('')
 
+// 본사/지점 로그인 페이지를 하나로 합친 것 - 아이디가 본사 계정인지 지점 계정인지는
+// 미리 나누지 않고, 각 경로를 순서대로 시도해보고 "성공한 경로"로 role을 판단한다.
 async function login() {
   error.value = ''
-  try {
-    if (loginId.value.includes('@')) {
-      await loginWithFirebase()
-    } else {
-      await loginWithDb()
+  const attempts = loginId.value.includes('@')
+    ? [loginAsHq, loginWithFirebase]
+    : [loginAsHq, loginWithDb]
+
+  let lastError = null
+  for (const attempt of attempts) {
+    try {
+      await attempt()
+      return
+    } catch (e) {
+      lastError = e
     }
-    router.replace('/branch/dashboard')
-  } catch (e) {
-    console.error(e)
-    error.value = e.response?.data?.message || firebaseMessage(e.code) || '로그인할 수 없습니다.'
   }
+  console.error(lastError)
+  error.value = lastError?.response?.data?.message || firebaseMessage(lastError?.code) || '로그인할 수 없습니다.'
+}
+
+// 본사(HQ_ADMIN/SUPER_ADMIN) 계정이면 여기서 처리하고 끝난다 - 아이디/이메일 둘 다 지원(HqAuthService)
+async function loginAsHq() {
+  const { data } = await http.post('/hq-auth/login', { loginId: loginId.value, password: password.value })
+  localStorage.setItem('hq-session', JSON.stringify(data))
+  router.replace('/admin/dashboard')
 }
 
 // 입력값 자체가 이메일이므로, 로그인 아이디로 이메일을 조회하는 과정 없이 바로 Firebase에 로그인한다
@@ -60,6 +73,7 @@ async function loginWithFirebase() {
     idToken: await credential.user.getIdToken(true)
   })
   localStorage.setItem('branch-session', JSON.stringify(data))
+  router.replace('/branch/dashboard')
 }
 
 // Firebase 서버가 응답하지 않는 상황을 위한 폴백 - DB에 저장된 비밀번호 해시와 직접 대조한다
@@ -69,6 +83,7 @@ async function loginWithDb() {
     password: password.value
   })
   localStorage.setItem('branch-session', JSON.stringify(data))
+  router.replace('/branch/dashboard')
 }
 
 function firebaseMessage(code) {
