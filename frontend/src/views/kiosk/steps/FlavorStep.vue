@@ -122,14 +122,20 @@ const FLAVORS_PER_PAGE = 12 // 4열 x 3행
 const SWIPE_THRESHOLD = 40 // px
 
 const orderFlow = useOrderFlowStore()
-const focusedFlavor = ref(null)
 
 function discountLabel(flavor) {
   return flavor.discountType === 'DISCOUNT_RATE'
     ? `${flavor.discountRate}% 할인`
     : `${(flavor.discountAmount ?? 0).toLocaleString()}원 할인`
 }
-const selectedDescriptionFlavor = computed(() => focusedFlavor.value)
+// 로컬 ref로 "마지막으로 누른 맛"을 따로 들고 있으면 화면을 벗어났다 돌아올 때(리마운트) 초기화되거나,
+// 요약바에서 맛을 제거해도 갱신되지 않아 설명이 그대로 남는 문제가 생긴다. 대신 실제 선택 상태
+// (selectedFlavorIds, 리마운트에도 유지되는 스토어 값)에서 가장 최근에 담긴 맛을 그대로 파생시킨다.
+const selectedDescriptionFlavor = computed(() => {
+  const lastFlavorId = orderFlow.selectedFlavorIds[orderFlow.selectedFlavorIds.length - 1]
+  if (lastFlavorId == null) return null
+  return orderFlow.flavors.find((f) => f.flavorId === lastFlavorId) ?? null
+})
 const selectedDescription = computed(() => {
   if (!orderFlow.selectedProduct?.requiresFlavorSelection) return orderFlow.selectedProduct?.description?.trim() ?? ''
   return selectedDescriptionFlavor.value?.description?.trim() ?? ''
@@ -191,7 +197,6 @@ function onSwipeEnd(e) {
 
 async function onFlavorClick(flavor) {
   if (isDragging.value) return
-  focusedFlavor.value = flavor
   const flavorId = flavor.flavorId
   if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.productName === '싱글레귤러') {
     const canSelect = await orderFlow.offerMonthlyFlavorUpgrade()
