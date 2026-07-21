@@ -58,26 +58,20 @@
                 </div>
                 <small v-if="request.requestReason" class="reason">사유 · {{ request.requestReason }}</small>
                 <small v-if="request.rejectionReason" class="reject">반려 사유 · {{ request.rejectionReason }}</small>
-                <small v-if="request.trackingNumber" class="tracking">
-                  운송장 {{ request.trackingNumber }}<template v-if="request.courierName"> · {{ request.courierName }}</template>
+                <small v-if="request.shipmentNumber" class="tracking">
+                  배송 {{ request.shipmentNumber }}<template v-if="request.driverName"> · {{ request.driverName }}</template>
                 </small>
               </td>
               <td><span class="urgency" :class="request.urgency">{{ urgencyLabel(request.urgency) }}</span></td>
-              <td>
-                {{ formatDate(request.requestedAt) }}
-                <small v-if="request.estimatedArrivalAt" class="sub">도착예정 {{ formatDate(request.estimatedArrivalAt) }}</small>
-              </td>
+              <td>{{ formatDate(request.requestedAt) }}</td>
               <td><span class="status" :class="request.requestStatus">{{ statusLabel(request.requestStatus) }}</span></td>
               <td>
                 <div v-if="request.requestStatus === 'PENDING'" class="row-actions">
                   <button class="approve" type="button" :disabled="busyId === request.stockRequestId" @click="approve(request)">승인</button>
                   <button class="reject-btn" type="button" :disabled="busyId === request.stockRequestId" @click="openReject(request)">반려</button>
                 </div>
-                <button v-else-if="request.requestStatus === 'PREPARING'" class="track" type="button"
-                        :disabled="busyId === request.stockRequestId" @click="openShip(request)">
-                  배송 등록
-                </button>
-                <span v-else-if="request.requestStatus === 'SHIPPING'" class="muted">지점 수령 확인 대기</span>
+                <RouterLink v-else-if="request.requestStatus === 'PREPARING'" class="track" to="/admin/deliveries">출고 처리하러 가기</RouterLink>
+                <span v-else-if="request.requestStatus === 'SHIPPING'" class="muted">배송 중 · 지점 수령 대기</span>
                 <span v-else class="muted">-</span>
               </td>
             </tr>
@@ -110,33 +104,13 @@
       </section>
     </div>
 
-    <!-- 배송 등록 -->
-    <div v-if="shipTarget" class="modal-backdrop" @click.self="shipTarget = null">
-      <section class="modal">
-        <h2>배송 등록</h2>
-        <p class="current">{{ shipTarget.branchName }} · {{ shipTarget.requestNumber }}</p>
-        <label>운송장번호 <em>필수</em><input v-model="shipForm.trackingNumber" type="text" placeholder="1234-5678-9012"></label>
-        <div class="two">
-          <label>택배사<input v-model="shipForm.courierName" type="text" placeholder="CJ대한통운"></label>
-          <label>배송 기사<input v-model="shipForm.driverName" type="text" placeholder="김기사"></label>
-        </div>
-        <label>도착 예정일시<input v-model="shipForm.estimatedArrivalAt" type="datetime-local"></label>
-        <p v-if="modalError" class="form-error">{{ modalError }}</p>
-        <div class="modal-actions">
-          <button type="button" @click="shipTarget = null">취소</button>
-          <button class="primary" type="button" :disabled="submitting" @click="submitShip">
-            {{ submitting ? '처리 중...' : '배송 등록' }}
-          </button>
-        </div>
-      </section>
-    </div>
-
     <div v-if="toast" class="toast">✓ {{ toast }}</div>
   </main>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import http from '../../api/hq'
 import AdminSidebar from '../../components/admin/AdminSidebar.vue'
 import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
@@ -162,8 +136,6 @@ const totalElements = ref(0)
 
 const rejectTarget = ref(null)
 const rejectReason = ref('')
-const shipTarget = ref(null)
-const shipForm = ref({ trackingNumber: '', courierName: '', driverName: '', estimatedArrivalAt: '' })
 const submitting = ref(false)
 const modalError = ref('')
 
@@ -277,45 +249,6 @@ async function submitReject() {
   }
 }
 
-function openShip(request) {
-  shipTarget.value = request
-  shipForm.value = { trackingNumber: '', courierName: '', driverName: '', estimatedArrivalAt: defaultArrival() }
-  modalError.value = ''
-}
-
-/** 도착 예정은 보통 며칠 뒤라 3일 뒤 오후 2시를 기본값으로 채워 둔다. */
-function defaultArrival() {
-  const date = new Date(Date.now() + 3 * 86400000)
-  date.setHours(14, 0, 0, 0)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-async function submitShip() {
-  if (!shipForm.value.trackingNumber.trim()) {
-    modalError.value = '운송장번호를 입력하세요.'
-    return
-  }
-  submitting.value = true
-  modalError.value = ''
-  try {
-    await http.patch(`/hq/stock-requests/${shipTarget.value.stockRequestId}/ship`, {
-      trackingNumber: shipForm.value.trackingNumber.trim(),
-      courierName: shipForm.value.courierName.trim() || null,
-      driverName: shipForm.value.driverName.trim() || null,
-      // datetime-local은 초가 없어서 그대로 보내면 서버의 ISO 파싱에 걸린다.
-      estimatedArrivalAt: shipForm.value.estimatedArrivalAt ? `${shipForm.value.estimatedArrivalAt}:00` : null
-    })
-    shipTarget.value = null
-    showToast('배송 등록했습니다. 지점이 수령 확인을 하면 완료됩니다.')
-    await refreshAll()
-  } catch (e) {
-    modalError.value = e.response?.data?.message || '배송 등록하지 못했습니다.'
-  } finally {
-    submitting.value = false
-  }
-}
-
 onMounted(() => {
   refreshAll()
   loadBranches()
@@ -361,7 +294,7 @@ td strong{display:block}
 .row-actions button:disabled,.track:disabled{opacity:.5;cursor:wait}
 .approve{color:#fff;border:0;background:#0b9654}
 .reject-btn{color:#c63750;border:1px solid #ffc8d1;background:#fff4f6}
-.track{color:#3169c7;border:1px solid #c7dcfa;background:#eef5ff}
+.track{display:inline-block;color:#3169c7;border:1px solid #c7dcfa;background:#eef5ff;text-decoration:none}
 .muted{color:#a8b0bb;font-size:10px}
 .empty{padding:50px;color:#929ba7;text-align:center;font-size:11px}
 .error-text{color:#c63750}
