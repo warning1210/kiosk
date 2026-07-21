@@ -28,6 +28,15 @@ spring:
           preferred_boolean_jdbc_type: TINYINT
     show-sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+app:
+  upload:
+    dir: uploads
+
 firebase:
   credentials:
     path: "C:/Users/seoil/Downloads/firebase.json"
