@@ -61,14 +61,21 @@
 
       <div class="coupon-section">
         <p class="section-title">쿠폰 코드가 있으신가요?</p>
-        <input
-          v-model.trim="couponInput"
-          type="text"
-          class="coupon-input"
-          placeholder="쿠폰 코드 입력"
-          @input="cart.setCouponCode(couponInput || null)"
-        />
-        <p class="coupon-hint">결제 시 유효성을 확인합니다.</p>
+        <div class="coupon-row">
+          <input
+            v-model.trim="couponInput"
+            type="text"
+            class="coupon-input"
+            placeholder="쿠폰 코드 입력"
+            @input="onCouponInputChange"
+          />
+          <button type="button" class="coupon-check-btn" :disabled="!couponInput || couponChecking" @click="checkCoupon">
+            {{ couponChecking ? '확인 중...' : '확인' }}
+          </button>
+        </div>
+        <p v-if="couponSuccess" class="coupon-success">{{ couponSuccess }}</p>
+        <p v-else-if="couponError" class="coupon-error">{{ couponError }}</p>
+        <p v-else class="coupon-hint">쿠폰 코드를 입력하고 확인을 누르면 사용 가능 여부를 미리 확인할 수 있어요.</p>
       </div>
     </div>
 
@@ -147,7 +154,7 @@
         <span>₩ {{ cart.amountBeforeDiscount.toLocaleString() }}</span>
         <span class="dash">-</span>
         <span>총 할인 금액</span>
-        <span>₩ {{ cart.usedPoints.toLocaleString() }}</span>
+        <span>₩ {{ (cart.usedPoints + cart.couponDiscount).toLocaleString() }}</span>
       </div>
     </footer>
 
@@ -203,6 +210,7 @@
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
+import http from '../../../api/http'
 
 import logo from '../../../assets/kiosk/logo.png'
 import clockIcon from '../../../assets/kiosk/icons/clock.png'
@@ -215,6 +223,36 @@ const closeXSvg = closeXRaw
 
 const canUsePoints = computed(() => (orderFlow.customer?.pointBalance ?? 0) >= 100)
 const couponInput = ref(cart.couponCode || '')
+const couponChecking = ref(false)
+const couponSuccess = ref('')
+const couponError = ref('')
+
+// 코드를 고치면 이전 확인 결과(할인 금액)는 더 이상 유효하지 않으므로 되돌리고 다시 확인받게 한다.
+function onCouponInputChange() {
+  cart.setCouponCode(couponInput.value || null)
+  cart.setCouponDiscount(0)
+  couponSuccess.value = ''
+  couponError.value = ''
+}
+
+async function checkCoupon() {
+  if (!couponInput.value || couponChecking.value) return
+  couponChecking.value = true
+  couponSuccess.value = ''
+  couponError.value = ''
+  try {
+    const { data } = await http.get('/coupons/check', {
+      params: { code: couponInput.value, mobileNumber: cart.customerMobileNumber || undefined }
+    })
+    cart.setCouponDiscount(data.discountAmount)
+    couponSuccess.value = `${data.couponName} · ${data.discountAmount.toLocaleString()}원 할인이 적용되었습니다.`
+  } catch (e) {
+    cart.setCouponDiscount(0)
+    couponError.value = e.response?.data?.message || '쿠폰을 확인할 수 없습니다.'
+  } finally {
+    couponChecking.value = false
+  }
+}
 
 // STEP01/STEP02 탭 - QR을 만든 뒤에도 포인트를 다시 조정하러 STEP01로 자유롭게 돌아갈 수 있게 별도 상태로 관리
 const activeTab = ref('points') // 'points' | 'payment'
@@ -466,9 +504,16 @@ const remainingTimeLabel = computed(() => {
   text-align: center;
 }
 
+.coupon-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
 .coupon-input {
-  width: 100%;
-  max-width: 340px;
+  flex: 1;
   padding: 14px;
   border: 1px solid #d2d2d2;
   border-radius: 8px;
@@ -476,10 +521,38 @@ const remainingTimeLabel = computed(() => {
   text-align: center;
 }
 
+.coupon-check-btn {
+  padding: 0 24px;
+  border: 1px solid #f20c93;
+  border-radius: 8px;
+  background: #f20c93;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.coupon-check-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .coupon-hint {
   margin: 8px 0 0;
   font-size: 13px;
   color: #a1a1a1;
+}
+
+.coupon-success {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #0b9654;
+}
+
+.coupon-error {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #f20c0c;
 }
 
 .phone-display {

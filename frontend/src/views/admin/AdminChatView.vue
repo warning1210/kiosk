@@ -3,13 +3,7 @@
     <AdminSidebar active="chat" />
 
     <section class="content">
-      <header>
-        <div>
-          <p>본점 관리</p>
-          <h1>지점 채팅</h1>
-          <span>지점의 상담 요청에 실시간으로 응대하세요.</span>
-        </div>
-      </header>
+      <AdminPageHeader title="채팅 상담" subtitle="지점의 상담 요청에 실시간으로 응대하세요." />
 
       <div class="chat-shell">
         <aside class="room-list">
@@ -53,6 +47,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import http from '../../api/hq'
 import AdminSidebar from '../../components/admin/AdminSidebar.vue'
+import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
 
 const rooms = ref([])
 const messages = ref([])
@@ -116,7 +111,7 @@ function formatTime(value) {
 </script>
 
 <style scoped>
-*{box-sizing:border-box}.page{min-height:100vh;color:#202938;background:#f3f6fa}.content{margin-left:238px;padding:38px 42px}header{display:flex;align-items:flex-end;justify-content:space-between}header p{margin:0 0 7px;color:#666bef;font-size:10px;font-weight:900}h1{margin:0;font-size:27px}header span{display:block;margin-top:7px;color:#7d8796;font-size:11px}
+*{box-sizing:border-box}.page{min-height:100vh;color:#202938;background:#f3f6fa}.content{margin-left:238px;padding:38px 42px}
 .chat-shell{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-top:20px;height:calc(100vh - 220px)}
 .room-list{overflow-y:auto;background:#fff;border:1px solid #e4e8ef;border-radius:16px;padding:10px}
 .room{display:block;width:100%;padding:14px;margin-bottom:6px;text-align:left;border:1px solid transparent;border-radius:10px;background:transparent;cursor:pointer}
