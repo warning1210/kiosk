@@ -21,6 +21,7 @@ const EMPTY_STATE = () => ({
   customerMobileNumber: null,
   usedPoints: 0,
   couponCode: null,
+  couponDiscount: 0,
   items: []
 })
 
@@ -80,7 +81,7 @@ export const useCartStore = defineStore('cart', {
     totalCount: (state) => state.items.reduce((sum, item) => sum + item.quantity, 0),
     amountBeforeDiscount: (state) => state.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     totalAmount() {
-      return Math.max(0, this.amountBeforeDiscount - this.usedPoints)
+      return Math.max(0, this.amountBeforeDiscount - this.usedPoints - this.couponDiscount)
     }
   },
 
@@ -103,6 +104,11 @@ export const useCartStore = defineStore('cart', {
     setCouponCode(code) {
       this.couponCode = code
       persist(this)
+    },
+
+    // 확인 버튼으로 검증된 쿠폰의 할인 금액. 코드 재입력 시 다시 확인받기 전까지는 0으로 되돌린다.
+    setCouponDiscount(amount) {
+      this.couponDiscount = amount || 0
     },
 
     // item: { productId, productName, unitPrice, quantity, containerType, spoonCount, dryIceMinutes, flavors }

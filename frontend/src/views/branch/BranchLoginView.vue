@@ -44,18 +44,27 @@ async function login(){
         // 본점 계정이 아님 - 지점 로그인 흐름 계속 진행
     }
     try{
+        // 아래의 실행에서 1개라도 이상이 생기면 catch로 잡게 된다.
         const identity=(
-            await http.get(`/branch-auth/login-identity/${encodeURIComponent(loginId.value)}`)).data;
+            // id를 이용해서 DB에 저장이 되어 있는 Email을 가져온다.
+            await http.get(`/branch-auth/login-identity/${encodeURIComponent(loginId.value)}`)
+            ).data;
+
+            // 로그인 할 경우 로컬에 저장할 지 & 아니면 세션에 저장을 할 지 결정
             await setPersistence(firebaseAuth,remember.value?browserLocalPersistence:browserSessionPersistence);
-            
+            // 위에서 가져온 email과 입력한 pw를 firebase에 설정한 값과 비교해서 인증이 되는 지를 저장한다.
             const credential=await signInWithEmailAndPassword(firebaseAuth,identity.email,password.value);
+            // 인증된 토큰을 이용해서 토큰값을 받아서 백으로 보낸다
             const{data}=await http.post('/branch-auth/firebase-session',
             {
+                // 인증된것의 토큰키를 idToken으로 저장
                 idToken:await credential.user.getIdToken(true)
             });
 
+            // 백에서 리턴된 값을 son으로 가져온다.
             localStorage.setItem('branch-session',JSON.stringify(data));
 
+            // /branch/dashboard으로 이동한다.
             router.replace('/branch/dashboard')
         }
             
