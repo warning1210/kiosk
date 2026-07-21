@@ -5,6 +5,7 @@ import com.kiosk.branch.stockrequest.dto.StockRequestItemRequest;
 import com.kiosk.branch.stockrequest.dto.StockRequestResponse;
 import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.branch.Branch;
+import com.kiosk.domain.branch.BranchRepository;
 import com.kiosk.domain.flavor.Flavor;
 import com.kiosk.domain.flavor.FlavorRepository;
 import com.kiosk.domain.stockrequest.RequestType;
@@ -55,11 +56,12 @@ public class BranchStockRequestService {
     private final StockRequestRepository stockRequestRepository;
     private final StockRequestItemRepository stockRequestItemRepository;
     private final FlavorRepository flavorRepository;
+    private final BranchRepository branchRepository;
 
     /** 새 재고 신청을 등록한다 (BR-001). */
     @Transactional
     public StockRequestResponse createStockRequest(Admin admin, StockRequestCreateRequest request) {
-        Branch branch = requireBranchOf(admin);
+        Branch branch = requireManagedBranch(admin);
 
         List<Long> flavorIds = request.items().stream().map(StockRequestItemRequest::flavorId).toList();
         // 저장하기 전에 걸러내야 같은 맛이 두 줄로 들어가거나 없는 맛이 저장되는 걸 막을 수 있다.
@@ -76,19 +78,19 @@ public class BranchStockRequestService {
 
     /** 내 지점의 신청 목록을 조회한다 (BR-002). status가 null이면 전체 상태를 본다. */
     public Page<StockRequestResponse> getStockRequests(Admin admin, StockRequestStatus status, Pageable pageable) {
-        Branch branch = requireBranchOf(admin);
+        Long branchId = requireBranchIdOf(admin);
         Page<StockRequest> requests = status == null
-                ? stockRequestRepository.findByBranch_BranchIdOrderByRequestedAtDesc(branch.getBranchId(), pageable)
+                ? stockRequestRepository.findByBranch_BranchIdOrderByRequestedAtDesc(branchId, pageable)
                 : stockRequestRepository.findByBranch_BranchIdAndRequestStatusOrderByRequestedAtDesc(
-                        branch.getBranchId(), status, pageable);
+                        branchId, status, pageable);
         return mapToResponsePage(requests);
     }
 
     /** 본사가 아직 손대지 않은(PENDING) 신청을 지점이 스스로 취소한다. */
     @Transactional
     public void cancelStockRequest(Admin admin, Long stockRequestId) {
-        Branch branch = requireBranchOf(admin);
-        StockRequest stockRequest = findOwnedRequestForUpdate(stockRequestId, branch);
+        Long branchId = requireBranchIdOf(admin);
+        StockRequest stockRequest = findOwnedRequestForUpdate(stockRequestId, branchId);
         requireStatus(stockRequest, StockRequestStatus.PENDING, "대기중인 신청만 취소할 수 있습니다");
         // 조회한 엔티티는 영속 상태라 값만 바꿔 두면 트랜잭션이 끝날 때 UPDATE가 나간다.
         stockRequest.cancel();
@@ -102,8 +104,8 @@ public class BranchStockRequestService {
      */
     @Transactional
     public StockRequestResponse confirmStockReceipt(Admin admin, Long stockRequestId) {
-        Branch branch = requireBranchOf(admin);
-        StockRequest stockRequest = findOwnedRequestForUpdate(stockRequestId, branch);
+        Long branchId = requireBranchIdOf(admin);
+        StockRequest stockRequest = findOwnedRequestForUpdate(stockRequestId, branchId);
         requireStatus(stockRequest, StockRequestStatus.SHIPPING, "배송중인 신청만 수령 확인할 수 있습니다");
 
         stockRequest.confirmReceipt(admin, LocalDateTime.now());
@@ -116,16 +118,32 @@ public class BranchStockRequestService {
     // --- 아래는 위 흐름을 읽기 쉽게 나눈 보조 메서드들 ---
 
     /**
-     * 지점 관리자인지, 소속 지점이 있는지 확인하고 그 지점을 돌려준다.
+     * 로그인한 관리자의 소속 지점 ID를 얻는다.
      *
      * <p>인증 자체는 {@code BranchAccessService}가 이미 마쳤지만, 서비스만 따로 호출되는 경우에도
      * 안전하도록 여기서 한 번 더 확인한다.
+     *
+     * <p>여기서 얻는 Branch는 컨트롤러(트랜잭션 밖)에서 만들어진 지연 로딩 프록시라서,
+     * 식별자인 branchId는 프록시를 열지 않고도 읽을 수 있지만 지점명 같은 다른 값은 읽을 수 없다.
      */
-    private Branch requireBranchOf(Admin admin) {
+    private Long requireBranchIdOf(Admin admin) {
         if (admin.getBranch() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "지점 관리자만 이용할 수 있습니다");
         }
-        return admin.getBranch();
+        return admin.getBranch().getBranchId();
+    }
+
+    /**
+     * 트랜잭션 안에서 쓸 수 있는 Branch를 다시 읽어 온다.
+     *
+     * <p>신청을 저장한 뒤 응답을 만들 때 지점명을 꺼내야 하는데, 인증에서 받은 프록시는 이미 세션이
+     * 닫혀 있어 그 시점에 열리지 않는다(LazyInitializationException). 그래서 저장에 쓸 Branch는
+     * 반드시 이 메서드로 새로 읽은 것을 사용한다.
+     */
+    private Branch requireManagedBranch(Admin admin) {
+        Long branchId = requireBranchIdOf(admin);
+        return branchRepository.findById(branchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "지점 정보를 찾을 수 없습니다"));
     }
 
     private void validateNoDuplicateFlavors(List<Long> flavorIds) {
@@ -190,10 +208,10 @@ public class BranchStockRequestService {
     }
 
     /** 신청 행을 잠근 뒤, 정말 내 지점 것인지 확인한다. 남의 지점 건이면 403. */
-    private StockRequest findOwnedRequestForUpdate(Long stockRequestId, Branch branch) {
+    private StockRequest findOwnedRequestForUpdate(Long stockRequestId, Long branchId) {
         StockRequest stockRequest = stockRequestRepository.findByIdForUpdate(stockRequestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "신청 내역을 찾을 수 없습니다"));
-        if (!stockRequest.getBranch().getBranchId().equals(branch.getBranchId())) {
+        if (!stockRequest.getBranch().getBranchId().equals(branchId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 지점의 신청 건은 처리할 수 없습니다");
         }
         return stockRequest;
