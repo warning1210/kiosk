@@ -72,7 +72,7 @@
             </tr>
           </tbody>
         </table>
-        <div v-if="!orders.length" class="empty">접수된 주문이 없습니다.</div>
+        <div v-if="!sorted.length" class="empty">접수된 주문이 없습니다.</div>
       </section>
     </main>
     <!-- 주문 취소 모달 -->
@@ -115,7 +115,8 @@ const showCancelModal = ref(false);
 const cancelTarget = ref(null);
 const cancelReasonText = ref('');
 const newCount = computed(() => orders.value.filter(o => o.status === 'PAID').length);
-const sorted = computed(() => [...orders.value].sort((a, b) => 
+const activeOrders = computed(() => orders.value.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'));
+const sorted = computed(() => [...activeOrders.value].sort((a, b) => 
   oldest.value ? new Date(a.createdAt) - new Date(b.createdAt) : new Date(b.createdAt) - new Date(a.createdAt)
 ));
 function label(s) {

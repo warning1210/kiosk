@@ -17,6 +17,7 @@ import BranchLoginView from '../views/branch/BranchLoginView.vue'
 import BranchJoinView from '../views/branch/BranchJoinView.vue'
 import DashboardView from '../views/branch/DashboardView.vue'
 import OrdersView from '../views/branch/OrdersView.vue'
+import OrderListView from '../views/branch/OrderListView.vue'
 import InventoryView from '../views/branch/InventoryView.vue'
 import StockRequestsView from '../views/branch/StockRequestsView.vue'
 import SalesView from '../views/branch/SalesView.vue'
@@ -76,6 +77,7 @@ const router = createRouter({
     { path: '/branch/join', name: 'branch-join', component: BranchJoinView },
     { path: '/branch/dashboard', name: 'branch-dashboard', component: DashboardView },
     { path: '/branch/orders', name: 'branch-orders', component: OrdersView },
+    { path: '/branch/orderlist', name: 'branch-orderlist', component: OrderListView },
     { path: '/branch/inventory', name: 'branch-inventory', component: InventoryView },
     { path: '/branch/stock-requests', name: 'branch-stock-requests', component: StockRequestsView },
     { path: '/branch/sales', name: 'branch-sales', component: SalesView },
