@@ -33,7 +33,27 @@ spring:
       max-file-size: 5MB
       max-request-size: 5MB
 
+  # Gmail 등 SMTP 서버를 이용해 지점 초대 메일을 발송한다.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_APP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 app:
+  # 이메일에 들어갈 프론트 주소이며 다른 PC에서 열 수 있는 IP 또는 운영 도메인을 사용한다.
+  frontend:
+    base-url: ${APP_FRONTEND_URL:http://localhost:5173}
+  # MAIL_ENABLED=true일 때만 실제 메일을 보내 개발 환경의 설정 오류를 방지한다.
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
   upload:
     dir: uploads
 
