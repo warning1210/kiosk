@@ -15,6 +15,7 @@ import BranchJoinView from '../views/branch/BranchJoinView.vue'
 import DashboardView from '../views/branch/DashboardView.vue'
 import OrdersView from '../views/branch/OrdersView.vue'
 import InventoryView from '../views/branch/InventoryView.vue'
+import StockRequestsView from '../views/branch/StockRequestsView.vue'
 import SalesView from '../views/branch/SalesView.vue'
 import ChatView from '../views/branch/ChatView.vue'
 import NoticeDetailView from '../views/branch/NoticeDetailView.vue'
@@ -87,6 +88,7 @@ const router = createRouter({
     { path: '/branch/dashboard', name: 'branch-dashboard', component: DashboardView },
     { path: '/branch/orders', name: 'branch-orders', component: OrdersView },
     { path: '/branch/inventory', name: 'branch-inventory', component: InventoryView },
+    { path: '/branch/stock-requests', name: 'branch-stock-requests', component: StockRequestsView },
     { path: '/branch/sales', name: 'branch-sales', component: SalesView },
     { path: '/branch/chat', name: 'branch-chat', component: ChatView },
     { path: '/branch/notices/:type/:id', name: 'branch-notice-detail', component: NoticeDetailView }
