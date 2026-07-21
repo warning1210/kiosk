@@ -12,6 +12,7 @@ import AdminEventsView from '../views/admin/AdminEventsView.vue'
 import AdminCouponsView from '../views/admin/AdminCouponsView.vue'
 import AdminChatView from '../views/admin/AdminChatView.vue'
 import AdminProductsView from '../views/admin/AdminProductsView.vue'
+import AdminReportsView from '../views/admin/AdminReportsView.vue'
 import AdminComingSoonView from '../views/admin/AdminComingSoonView.vue'
 import BranchLoginView from '../views/branch/BranchLoginView.vue'
 import BranchJoinView from '../views/branch/BranchJoinView.vue'
@@ -44,12 +45,7 @@ const router = createRouter({
     },
     { path: '/admin/deliveries', name: 'admin-deliveries', component: AdminDeliveriesView },
     { path: '/admin/branches', name: 'admin-branches', component: AdminBranchesView },
-    {
-      path: '/admin/reports',
-      name: 'admin-reports',
-      component: AdminComingSoonView,
-      meta: { active: 'reports', title: '통계/리포트', subtitle: '전체 매출, 주문, 고객 데이터를 기반으로 전점 현황을 분석할 수 있습니다.' }
-    },
+    { path: '/admin/reports', name: 'admin-reports', component: AdminReportsView },
     { path: '/admin/events', name: 'admin-events', component: AdminEventsView },
     { path: '/admin/products', name: 'admin-products', component: AdminProductsView },
     { path: '/admin/coupons', name: 'admin-coupons', component: AdminCouponsView },
