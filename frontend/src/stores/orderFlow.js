@@ -15,6 +15,22 @@ function isMonthlyFlavor(flavor) {
   return MONTHLY_FLAVOR_NAMES.includes(flavor?.flavorName)
 }
 
+// 담긴 맛 중 할인이 걸린 맛이 있으면 가장 큰 할인 하나만 적용한다 (백엔드 KioskFlavorDiscountService와 동일 규칙).
+// 장바구니에 담기는 순간 이미 할인이 반영된 unitPrice를 저장해야, 장바구니/결제 화면에 보이는 금액과
+// 실제 결제(OrderService.checkout)가 계산하는 금액이 어긋나지 않는다.
+function resolveFlavorDiscount(flavors, flavorIds, baseAmount) {
+  let maxDiscount = 0
+  for (const flavorId of flavorIds ?? []) {
+    const flavor = flavors.find((f) => f.flavorId === flavorId)
+    if (!flavor?.discountType) continue
+    const discount = flavor.discountType === 'DISCOUNT_RATE'
+      ? Math.round((baseAmount * Number(flavor.discountRate)) / 100)
+      : flavor.discountAmount ?? 0
+    maxDiscount = Math.max(maxDiscount, discount)
+  }
+  return maxDiscount
+}
+
 const STEP_LABELS = {
   orderType: '매장/포장 선택',
   product: '상품 선택',
@@ -293,11 +309,14 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         return { flavorId, flavorName: flavor?.flavorName ?? '', selectionOrder: index + 1, quantity: 1 }
       })
 
+      const baseUnitPrice = this.selectedProduct.basePrice + (this.containerType === 'WAFFLE_CONE' ? 500 : 0)
+      const flavorDiscount = resolveFlavorDiscount(this.flavors, this.selectedFlavorIds, baseUnitPrice)
+
       const payload = {
         productId: this.selectedProduct.productId,
         productName: this.selectedProduct.productName,
         imageUrl: this.selectedProduct.imageUrl,
-        unitPrice: this.selectedProduct.basePrice + (this.containerType === 'WAFFLE_CONE' ? 500 : 0),
+        unitPrice: Math.max(0, baseUnitPrice - flavorDiscount),
         monthlyFlavorUpgrade: this.monthlyFlavorUpgrade,
         containerType: this.containerType,
         spoonCount: this.spoonCount,
