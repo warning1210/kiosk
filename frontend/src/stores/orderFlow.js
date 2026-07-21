@@ -4,6 +4,7 @@ import http from '../api/http'
 import { fetchCategories, fetchProducts, fetchFlavors } from '../services/menuService'
 import { useCartStore } from './cart'
 import router from '../router'
+import { getKioskBranchId } from '../utils/kioskSession'
 
 // 등급별 적립률: Friend 3% / Family 5% / VIP 8%
 const EARN_RATE = { FRIEND: 0.03, FAMILY: 0.05, VIP: 0.08 }
@@ -482,7 +483,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.checkoutInProgress = true
       try {
         this.checkoutPayload = {
-          branchId: 1, // 지금은 키오스크 1대 = 지점 1곳으로 가정하고 고정값 사용 (지점/로그인 붙기 전까지 임시)
+          branchId: getKioskBranchId(), // 이 키오스크가 부팅 시 로그인해서 기억해둔 소속 지점
           orderType: cart.orderType,
           customerMobileNumber: cart.customerMobileNumber,
           usedPoints: cart.usedPoints,
