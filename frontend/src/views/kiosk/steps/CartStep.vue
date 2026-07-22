@@ -32,13 +32,20 @@
       <span class="step-title">주문 내역을 확인해주세요</span>
     </div>
 
-    <ul class="cart-list">
+    <p v-if="!cart.items.length" class="empty-cart">장바구니가 비어있습니다. 메뉴를 담아주세요.</p>
+    <ul v-else class="cart-list">
       <li v-for="item in cart.items" :key="item.id" class="cart-row">
         <img v-if="item.imageUrl || productImage(item.productName)" :src="item.imageUrl || productImage(item.productName)" :alt="item.productName" class="cart-thumb" />
         <div v-else class="cart-thumb cart-thumb--placeholder" />
         <div class="cart-item-text">
           <p class="cart-item-name">{{ item.productName }}</p>
           <p class="cart-item-detail">{{ itemDetail(item) }}</p>
+        </div>
+        <div class="cart-item-price">
+          <span v-if="item.originalUnitPrice > item.unitPrice" class="price-original">
+            ₩{{ (item.originalUnitPrice * item.quantity).toLocaleString() }}
+          </span>
+          <span class="price-final">₩{{ (item.unitPrice * item.quantity).toLocaleString() }}</span>
         </div>
         <div class="quantity-control" aria-label="수량 변경">
           <button
@@ -56,7 +63,7 @@
             @click="cart.adjustQuantity(item.id, 1)"
           >+</button>
         </div>
-        <button type="button" class="row-icon-btn" aria-label="수정" @click="orderFlow.editItem(item)">
+        <button v-if="canEditItem(item)" type="button" class="row-icon-btn" aria-label="수정" @click="orderFlow.editItem(item)">
           <span v-html="editPencilSvg"></span>
         </button>
         <button type="button" class="row-icon-btn" aria-label="삭제" @click="orderFlow.removeFromCart(item.id)">
@@ -78,10 +85,10 @@
       </div>
 
       <div class="pay-methods">
-        <button type="button" class="pay-method pay-method--cash" @click="showCashPaymentNotice">
+        <button type="button" class="pay-method pay-method--cash" :disabled="!cart.items.length" @click="showCashPaymentNotice">
           <span>현금</span>
         </button>
-        <button type="button" class="pay-method pay-method--card" @click="orderFlow.step = 'customer'">
+        <button type="button" class="pay-method pay-method--card" :disabled="!cart.items.length" @click="orderFlow.step = 'customer'">
           <span class="card-main">신용카드</span>
           <span class="card-sub">모바일상품권<br />각종PAY<br />APP카드</span>
         </button>
@@ -116,6 +123,14 @@ const stepPillSvg = stepPillRaw
 
 const CONTAINER_LABELS = { CUP: '컵', CONE: '콘', WAFFLE_CONE: '와플콘(+500원)' }
 
+// 맛 선택도, 용기 선택도 필요 없는 상품(아이스크림 케이크/음료/커피 등)은 고칠 옵션 자체가 없다 -
+// ProductStep.vue가 상품 선택 시 이런 상품을 곧장 장바구니에 담는 것과 같은 기준.
+function canEditItem(item) {
+  const product = orderFlow.products.find((p) => p.productId === item.productId)
+  if (!product) return false
+  return product.requiresFlavorSelection || orderFlow.needsContainerStep(product)
+}
+
 async function showCashPaymentNotice() {
   await orderFlow.showNotice('현금으로 결제하시면 카운터에서 결제를 도와드리겠습니다.')
   orderFlow.finishOrder()
@@ -123,6 +138,7 @@ async function showCashPaymentNotice() {
 
 function itemDetail(item) {
   const parts = []
+  if (item.sizeUpApplied) parts.push('사이즈업 적용')
   if (CONTAINER_LABELS[item.containerType]) parts.push(CONTAINER_LABELS[item.containerType])
   if (item.flavors.length) parts.push(item.flavors.map((f) => f.flavorName).join(', '))
   if (item.spoonCount) parts.push(`숟가락 ${item.spoonCount}개`)
@@ -262,6 +278,13 @@ function itemDetail(item) {
   padding: 0;
 }
 
+.empty-cart {
+  padding: 60px 20px;
+  color: #999;
+  font-size: 18px;
+  text-align: center;
+}
+
 .cart-row {
   display: flex;
   align-items: center;
@@ -296,6 +319,25 @@ function itemDetail(item) {
   margin: 4px 0 0;
   font-size: 14px;
   color: #999;
+}
+
+.cart-item-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.price-original {
+  color: #bbb;
+  font-size: 13px;
+  text-decoration: line-through;
+}
+
+.price-final {
+  color: #000;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .cart-item-qty {
@@ -396,6 +438,11 @@ function itemDetail(item) {
   border-radius: 12px;
   cursor: pointer;
   font-size: 45px;
+}
+
+.pay-method:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .pay-method--cash {

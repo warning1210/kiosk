@@ -198,9 +198,8 @@ function onSwipeEnd(e) {
 async function onFlavorClick(flavor) {
   if (isDragging.value) return
   const flavorId = flavor.flavorId
-  if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.sizeUpToProductId) {
-    const canSelect = await orderFlow.offerMonthlyFlavorUpgrade()
-    if (!canSelect) return
+  if (orderFlow.isMonthlyFlavorId(flavorId)) {
+    await orderFlow.offerSizeUp(flavor)
   }
   // 다 채운 상태에서 이미 담은 맛을 다시 누르면, 새로 추가하는 대신 1개 취소한다
   if (!orderFlow.canPickMoreFlavor() && orderFlow.flavorSelectedCount(flavorId) > 0) {
