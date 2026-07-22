@@ -5,7 +5,6 @@
     <main class="content">
       <header class="topbar">
         <div>
-          <p class="eyebrow">BRANCH MANAGEMENT</p>
           <h1>재고 관리</h1>
           <p>맛별 재고를 확인하고 입고·차감·자동 발주를 처리합니다.</p>
         </div>
@@ -43,6 +42,7 @@
             </button>
           </div>
           <div class="tools">
+            <span class="page-info">전체 {{ filteredInventories.length }}개 중 {{ pageStart }}-{{ pageEnd }} 표시</span>
             <label class="search"><span>⌕</span><input v-model="keyword" placeholder="맛 이름 검색"></label>
             <select v-model="sortBy"><option value="low">재고 적은 순</option><option value="name">이름순</option><option value="recent">최근 변경순</option></select>
           </div>
@@ -54,7 +54,7 @@
           <table>
             <thead><tr><th>아이스크림 맛</th><th>현재 재고</th><th>잔여량</th><th>상태</th><th>자동 신청 / 배송</th><th>재고 처리</th></tr></thead>
             <tbody>
-              <tr v-for="item in filteredInventories" :key="item.id">
+              <tr v-for="item in pagedInventories" :key="item.id">
                 <td>
                   <div class="flavor">
                     <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name">
@@ -87,6 +87,12 @@
           </table>
         </div>
       </section>
+
+      <div v-if="filteredInventories.length > 0" class="pagination vertical fixed-pagination">
+        <button type="button" :disabled="page <= 1" @click="page--">▲</button>
+        <button v-for="p in Math.ceil(filteredInventories.length / pageSize)" :key="p" :class="{ active: page === p }" @click="page = p">{{ p }}</button>
+        <button type="button" :disabled="page >= Math.ceil(filteredInventories.length / pageSize)" @click="page++">▼</button>
+      </div>
     </main>
 
     <div v-if="modalItem" class="modal-backdrop" @click.self="closeModal">
@@ -162,7 +168,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import http from '../../api/branch'
 import BranchSidebar from '../../components/branch/BranchSidebar.vue'
 
@@ -187,6 +193,8 @@ const requestUrgency = ref('NORMAL')
 const requestReason = ref('')
 const requestError = ref('')
 const requesting = ref(false)
+const page = ref(1)
+const pageSize = 8
 let refreshTimer
 
 const tabs = [
@@ -218,6 +226,12 @@ const filteredInventories = computed(() => {
   if (filter.value === 'shipping') rows = rows.filter(item => activeRequest(item))
   return [...rows].sort((a, b) => sortBy.value === 'name' ? a.name.localeCompare(b.name, 'ko') : sortBy.value === 'recent' ? b.updatedAt - a.updatedAt : a.remainingG - b.remainingG)
 })
+
+watch([filter, keyword, sortBy], () => { page.value = 1 })
+
+const pageStart = computed(() => filteredInventories.value.length ? (page.value - 1) * pageSize + 1 : 0)
+const pageEnd = computed(() => Math.min(page.value * pageSize, filteredInventories.value.length))
+const pagedInventories = computed(() => filteredInventories.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
 function statusOf(item) {
   if (item.remainingG <= 0) return { key: 'soldout', label: '품절' }
@@ -323,8 +337,26 @@ async function loadServerInventory() {
   } catch (requestError) { console.error(requestError) }
   finally { loading.value = false }
 }
-onMounted(() => { loadServerInventory(); refreshTimer = window.setInterval(loadServerInventory, 3000) })
-onBeforeUnmount(() => window.clearInterval(refreshTimer))
+function handleKeydown(e) {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+  if (e.key === 'PageDown') {
+    e.preventDefault()
+    if (page.value < Math.ceil(filteredInventories.value.length / pageSize)) page.value++
+  } else if (e.key === 'PageUp') {
+    e.preventDefault()
+    if (page.value > 1) page.value--
+  }
+}
+
+onMounted(() => { 
+  loadServerInventory()
+  refreshTimer = window.setInterval(loadServerInventory, 3000)
+  window.addEventListener('keydown', handleKeydown)
+})
+onBeforeUnmount(() => {
+  window.clearInterval(refreshTimer)
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>
@@ -339,8 +371,14 @@ nav { display: grid; gap: 7px; }nav a { display: flex; align-items: center; gap:
 .content { margin-left: 238px; padding: 38px 44px 60px; }.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 27px; }.eyebrow { margin: 0 0 7px !important; color: #ed3c8d !important; font-size: 10px !important; font-weight: 900; letter-spacing: .14em; }.topbar h1 { margin: 0 0 7px; font-size: 30px; letter-spacing: -.05em; }.topbar p { margin: 0; color: #8b8389; font-size: 14px; }.top-actions { display: flex; align-items: center; gap: 10px; }.updated { margin-right: 8px; color: #a39ba1; font-size: 11px; }.icon-button { position: relative; width: 42px; height: 42px; border: 1px solid #e7e1e5; background: #fff; border-radius: 11px; }.icon-button b { position: absolute; top: -5px; right: -5px; display: grid; width: 19px; height: 19px; place-items: center; color: #fff; background: #ef3f91; border: 2px solid #fff; border-radius: 50%; font-size: 9px; }.primary { padding: 12px 18px; color: #fff; border: 0; background: #ef3f91; border-radius: 10px; font-size: 13px; font-weight: 800; box-shadow: 0 8px 20px rgb(239 63 145 / 20%); }
 .auto-order { display: flex; align-items: center; gap: 7px; padding: 11px 14px; color: #615a5f; border: 1px solid #dcebe3; background: #f2fbf6; border-radius: 10px; font-size: 11px; font-weight: 700; }.auto-order i { width: 7px; height: 7px; background: #38a970; border-radius: 50%; box-shadow: 0 0 0 4px rgb(56 169 112 / 12%); }.auto-order strong { color: #218654; }
 .summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; margin-bottom: 20px; }.summary-grid article { display: flex; align-items: center; gap: 15px; padding: 20px; border: 1px solid #ece8eb; background: #fff; border-radius: 15px; box-shadow: 0 4px 14px rgb(55 39 47 / 3%); }.summary-icon { display: grid; flex: 0 0 43px; height: 43px; place-items: center; border-radius: 12px; font-weight: 900; }.summary-icon.pink { color: #eb3d8c; background: #fff0f6; }.summary-icon.blue { color: #4384db; background: #edf5ff; }.summary-icon.orange { color: #e7892b; background: #fff5e9; }.summary-icon.green { color: #34a56f; background: #edf9f3; }.summary-grid span,.summary-grid strong,.summary-grid small { display: block; }.summary-grid span { color: #8e868b; font-size: 11px; }.summary-grid strong { margin: 4px 0 3px; font-size: 21px; }.summary-grid small { color: #aaa2a7; font-size: 10px; }
-.inventory-panel { overflow: hidden; border: 1px solid #ebe6e9; background: #fff; border-radius: 16px; box-shadow: 0 6px 20px rgb(55 39 47 / 4%); }.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 19px; border-bottom: 1px solid #eee9ec; }.tabs { display: flex; gap: 3px; }.tabs button { padding: 8px 11px; color: #8a8287; border: 0; background: transparent; border-radius: 8px; font-size: 12px; font-weight: 700; }.tabs button span { padding: 2px 5px; background: #f1eef0; border-radius: 6px; font-size: 9px; }.tabs button.active { color: #e93685; background: #fff0f6; }.tabs button.active span { background: #ffdce9; }.tools { display: flex; gap: 8px; }.search { display: flex; align-items: center; gap: 7px; width: 190px; padding: 0 10px; border: 1px solid #e4dfe2; border-radius: 9px; }.search input { width: 100%; padding: 9px 0; border: 0; outline: 0; font-size: 11px; }.tools select { padding: 0 28px 0 10px; color: #686166; border: 1px solid #e4dfe2; background: #fff; border-radius: 9px; font-size: 11px; }
+.inventory-panel { overflow: hidden; border: 1px solid #ebe6e9; background: #fff; border-radius: 16px; box-shadow: 0 6px 20px rgb(55 39 47 / 4%); }.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 19px; border-bottom: 1px solid #eee9ec; }.tabs { display: flex; gap: 3px; }.tabs button { padding: 8px 11px; color: #8a8287; border: 0; background: transparent; border-radius: 8px; font-size: 12px; font-weight: 700; }.tabs button span { padding: 2px 5px; background: #f1eef0; border-radius: 6px; font-size: 9px; }.tabs button.active { color: #e93685; background: #fff0f6; }.tabs button.active span { background: #ffdce9; }.tools { display: flex; align-items: center; gap: 12px; }.search { display: flex; align-items: center; gap: 7px; width: 190px; padding: 0 10px; border: 1px solid #e4dfe2; border-radius: 9px; }.search input { width: 100%; padding: 9px 0; border: 0; outline: 0; font-size: 11px; }.tools select { padding: 0 28px 0 10px; color: #686166; border: 1px solid #e4dfe2; background: #fff; border-radius: 9px; font-size: 11px; }
 .table-wrap { overflow-x: auto; }table { width: 100%; border-collapse: collapse; }th { padding: 12px 16px; color: #9d969b; background: #fbfafb; font-size: 10px; font-weight: 700; text-align: left; }td { padding: 14px 16px; border-top: 1px solid #f1edf0; font-size: 12px; vertical-align: middle; }tbody tr:hover { background: #fffbfd; }.flavor { display: flex; align-items: center; gap: 10px; min-width: 180px; }.flavor img,.flavor-placeholder { width: 42px; height: 42px; object-fit: contain; background: #fff5f9; border-radius: 11px; }.flavor-placeholder { display: grid; place-items: center; color: #ef3f91; font-weight: 900; }.flavor strong,.flavor span,.stock-number,.tub-count { display: block; }.flavor strong { margin-bottom: 4px; font-size: 12px; }.flavor span { color: #afa7ac; font-size: 9px; }.stock-number { font-size: 13px; }.tub-count { margin-top: 4px; color: #9d959a; font-size: 10px; }.progress { overflow: hidden; width: 105px; height: 6px; margin-bottom: 5px; background: #eee9ec; border-radius: 10px; }.progress span { display: block; height: 100%; border-radius: 10px; }.progress span.normal { background: #4db37e; }.progress span.low { background: #f0a13e; }.progress span.soldout { background: #e65161; }td small { color: #aaa2a7; font-size: 9px; }.status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; }.status i { width: 5px; height: 5px; border-radius: 50%; }.status.normal { color: #268b5d; background: #eaf8f1; }.status.normal i { background: #39a970; }.status.low { color: #c2741d; background: #fff3e2; }.status.low i { background: #e79635; }.status.soldout { color: #c74454; background: #ffeaed; }.status.soldout i { background: #df4d5e; }.delivery strong,.delivery span { display: block; }.delivery strong { color: #397bc7; font-size: 11px; }.delivery span { margin-top: 3px; color: #91898e; font-size: 9px; }.delivery.pending strong { color: #ca7b22; }.delivery.done strong { color: #268b5d; }.muted { color: #b0a9ad; font-size: 10px; }.row-actions { display: flex; gap: 5px; }.row-actions button { white-space: nowrap; padding: 7px 9px; border: 1px solid #dfd9dd; background: #fff; border-radius: 7px; font-size: 9px; font-weight: 700; }.row-actions .request { color: #e93685; border-color: #f4b8d3; }.row-actions .receive { color: #fff; border-color: #397bc7; background: #397bc7; }.empty { padding: 70px; color: #999197; text-align: center; }
+.tools .page-info { color: #8c95a2; font-size: 11px; margin-right: 4px; font-weight: 600; }
+.fixed-pagination { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); z-index: 50; }
+.pagination.vertical { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; background: #fff; border-radius: 12px; box-shadow: 0 6px 18px rgba(55, 39, 47, 0.07); border: 1px solid #ebe6e9; }
+.pagination.vertical button { min-width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; color: #746c72; border: 1px solid #dfd9dd; background: #fff; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.pagination.vertical button.active { color: #e93685; border-color: #f4b8d3; background: #fff0f6; }
+.pagination.vertical button:disabled { opacity: 0.4; cursor: default; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; padding: 24px; place-items: center; background: rgb(28 22 25 / 46%); backdrop-filter: blur(3px); }.modal { position: relative; width: min(480px,100%); padding: 30px; background: #fff; border-radius: 19px; box-shadow: 0 25px 70px rgb(32 17 24 / 25%); }.close { position: absolute; top: 15px; right: 16px; border: 0; background: transparent; font-size: 25px; }.modal h2 { margin: 0 0 8px; font-size: 22px; }.current { margin: 0 0 20px; color: #898187; font-size: 12px; }.type-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 16px; }.type-buttons button { padding: 10px; color: #746c71; border: 1px solid #e3dde1; background: #fff; border-radius: 9px; font-size: 11px; font-weight: 700; }.type-buttons button.active { color: #e93685; border-color: #ef82b3; background: #fff2f7; }.modal label { display: grid; gap: 7px; margin-top: 13px; color: #665f63; font-size: 11px; font-weight: 800; }.modal input { padding: 11px 12px; border: 1px solid #dfd9dd; border-radius: 9px; outline: 0; }.modal input:focus { border-color: #ef6ba7; }.quick-grams { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }.quick-grams button { padding: 6px 8px; color: #756d72; border: 1px solid #e5dfe3; background: #faf9fa; border-radius: 7px; font-size: 9px; }.preview { display: flex; align-items: center; gap: 7px; margin-top: 18px; padding: 13px; background: #faf7f9; border-radius: 10px; color: #7e767b; font-size: 11px; }.preview strong { color: #29252a; }.preview span { margin-left: auto; color: #cb751b; font-weight: 800; }.modal-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 19px; }.modal-actions button { padding: 10px 16px; border: 1px solid #ded7dc; background: #fff; border-radius: 9px; font-size: 11px; font-weight: 800; }.modal-actions .primary { color: #fff; border-color: #ef3f91; background: #ef3f91; }.toast { position: fixed; right: 25px; bottom: 25px; z-index: 30; padding: 14px 18px; color: #fff; background: #272329; border-radius: 11px; box-shadow: 0 12px 35px rgb(24 16 20 / 25%); font-size: 12px; font-weight: 700; }
 .qty { display: flex; align-items: center; gap: 6px; }
 .qty button { width: 30px; height: 30px; color: #6d656b; border: 1px solid #e0dade; background: #fff; border-radius: 8px; font-size: 14px; }
