@@ -91,34 +91,29 @@ public class HqEventService {
         }
     }
 
-    // "사이즈업 후 상품"은 본점이 직접 고른다 - 인접한 다음 사이즈로 자동 계산하면 "이달의 더블주니어"처럼
-    // 중간 단계(싱글킹)를 건너뛰는 프로모션을 만들 수 없기 때문이다. 같은 카테고리 안이라면 임의의 상품을 골라도 된다.
+    // "사이즈업 후 상품"만 본점이 고른다 - "전 상품"은 스쿱 수가 하나 적은 상품 중 가장 싼 것으로 자동
+    // 결정한다 (예: 더블주니어(2스쿱) -> 싱글레귤러(1스쿱 중 최저가)). 관리자가 매번 두 상품을 다 고를
+    // 필요 없이 "이 상품으로 사이즈업" 한 번만 정하면 되게 한다.
     private void applySizeUp(Event.EventBuilder builder, HqEventCreateRequest request) {
-        if (request.sizeUpFromProductId() == null || request.sizeUpToProductId() == null) {
-            throw new IllegalArgumentException("사이즈업 전/후 상품을 모두 선택해주세요.");
-        }
-        if (request.sizeUpFromProductId().equals(request.sizeUpToProductId())) {
-            throw new IllegalArgumentException("사이즈업 전/후 상품은 서로 달라야 합니다.");
+        if (request.sizeUpToProductId() == null) {
+            throw new IllegalArgumentException("사이즈업 후 상품을 선택해주세요.");
         }
         if (request.additionalPayment() == null || request.additionalPayment() < 0) {
             throw new IllegalArgumentException("추가 금액을 올바르게 입력해주세요.");
         }
-        Product fromProduct = productRepository.findById(request.sizeUpFromProductId())
-                .orElseThrow(() -> new IllegalArgumentException("사이즈업 적용 상품을 찾을 수 없습니다."));
         Product toProduct = productRepository.findById(request.sizeUpToProductId())
                 .orElseThrow(() -> new IllegalArgumentException("사이즈업 후 상품을 찾을 수 없습니다."));
 
         // 파인트 이상 대용량(스쿱 3개 이상) 상품은 사이즈업 대상이 아니다 - 싱글레귤러/싱글킹/더블주니어/더블레귤러까지만.
-        if (isTooLargeForSizeUp(fromProduct) || isTooLargeForSizeUp(toProduct)) {
+        if (isTooLargeForSizeUp(toProduct)) {
             throw new IllegalArgumentException("사이즈업은 싱글레귤러/싱글킹/더블주니어/더블레귤러 사이에서만 가능합니다.");
         }
+
+        Product fromProduct = resolveSizeUpFromProduct(toProduct);
 
         // 실제 정가 차이 이상을 추가금액으로 받으면 사이즈업이 아니라 그냥 큰 사이즈를 따로 사는 것과 같거나
         // 더 비싸진다 - 그러면 "사이즈업 할인" 자체가 의미 없으므로 반드시 정가 차이보다 싸야 한다.
         int priceGap = toProduct.getBasePrice() - fromProduct.getBasePrice();
-        if (priceGap <= 0) {
-            throw new IllegalArgumentException("사이즈업 후 상품은 적용 상품보다 정가가 더 비싸야 합니다.");
-        }
         if (request.additionalPayment() >= priceGap) {
             throw new IllegalArgumentException(
                     "추가 금액은 정가 차이(" + priceGap + "원)보다 작아야 합니다. " + toProduct.getProductName()
@@ -128,6 +123,19 @@ public class HqEventService {
         builder.sizeUpFromProduct(fromProduct)
                 .sizeUpToProduct(toProduct)
                 .additionalPayment(request.additionalPayment());
+    }
+
+    private Product resolveSizeUpFromProduct(Product toProduct) {
+        if (toProduct.getCategory() == null || toProduct.getSelectableFlavorCount() == null) {
+            throw new IllegalArgumentException("사이즈업 이전 상품을 자동으로 찾을 수 없습니다.");
+        }
+        int fromScoopCount = toProduct.getSelectableFlavorCount() - 1;
+        return productRepository.findAll().stream()
+                .filter(p -> p.getCategory() != null
+                        && p.getCategory().getCategoryId().equals(toProduct.getCategory().getCategoryId()))
+                .filter(p -> p.getSelectableFlavorCount() != null && p.getSelectableFlavorCount() == fromScoopCount)
+                .min(Comparator.comparing(Product::getBasePrice))
+                .orElseThrow(() -> new IllegalArgumentException("사이즈업 이전 상품을 찾을 수 없습니다."));
     }
 
     private boolean isTooLargeForSizeUp(Product product) {

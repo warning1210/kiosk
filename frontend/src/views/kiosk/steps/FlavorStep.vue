@@ -42,7 +42,9 @@
                   </span>
                 </span>
                 <span class="flavor-name">{{ flavor.flavorName }}</span>
-                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">이달의 맛</span>
+                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">
+                  이달의 맛 · {{ flavor.sizeUpToProductName ? `${flavor.sizeUpToProductName} 사이즈업` : '사이즈업 가능' }}
+                </span>
                 <span v-if="flavor.discountType" class="discount-badge">{{ discountLabel(flavor) }}</span>
               </button>
             </li>

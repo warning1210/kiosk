@@ -40,12 +40,6 @@ const router = createRouter({
     { path: '/admin/login', redirect: '/branch/login' },
     { path: '/admin/dashboard', name: 'admin-dashboard', component: AdminDashboardView },
     { path: '/admin/stock-requests', name: 'admin-stock-requests', component: AdminStockRequestsView },
-    {
-      path: '/admin/inventory',
-      name: 'admin-inventory',
-      component: AdminComingSoonView,
-      meta: { active: 'inventory', title: '재고 현황', subtitle: '지점별 재고 현황을 실시간으로 확인하고 관리할 수 있습니다.' }
-    },
     { path: '/admin/deliveries', name: 'admin-deliveries', component: AdminDeliveriesView },
     { path: '/admin/branches', name: 'admin-branches', component: AdminBranchesView },
     { path: '/admin/reports', name: 'admin-reports', component: AdminReportsView },

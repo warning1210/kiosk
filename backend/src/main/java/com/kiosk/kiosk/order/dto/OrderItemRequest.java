@@ -8,7 +8,6 @@ public record OrderItemRequest(
         ContainerType containerType,
         Integer spoonCount,
         Integer dryIceMinutes,
-        List<Long> flavorIds,
-        Boolean sizeUpApplied
+        List<Long> flavorIds
 ) {
 }

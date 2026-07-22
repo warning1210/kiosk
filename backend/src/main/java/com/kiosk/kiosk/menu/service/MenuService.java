@@ -52,14 +52,20 @@ public class MenuService {
     }
 
     // 본점이 직접 지정한 이달의 맛(MONTHLY_FLAVOR, 전 지점 자동 적용) + 지점이 선택한 맛 할인(FLAVOR_DISCOUNT)을
-    // 같이 실어 보내고, 할인이 붙은 맛을 화면 목록 맨 앞에 오도록 정렬한다(그 안에서는 기존처럼 이름순 유지).
+    // 같이 실어 보내고, 이달의 맛 -> 할인 맛 -> 나머지 순으로 정렬한다(각 구간 안에서는 기존처럼 이름순 유지).
     public List<FlavorResponse> getFlavors(Long branchId) {
         Map<Long, Event> activeDiscounts = kioskFlavorDiscountService.activeDiscountsByFlavor(branchId);
 
         List<Flavor> flavors = flavorRepository.findByIsVisibleTrueAndSaleStatusOrderByFlavorNameAsc(SaleStatus.ON_SALE);
         return flavors.stream()
                 .map(flavor -> FlavorResponse.from(flavor, activeDiscounts.get(flavor.getFlavorId())))
-                .sorted(Comparator.comparing((FlavorResponse response) -> response.discountType() == null))
+                .sorted(Comparator.comparing(MenuService::flavorSortRank))
                 .toList();
+    }
+
+    private static int flavorSortRank(FlavorResponse response) {
+        if (Boolean.TRUE.equals(response.isMonthly())) return 0;
+        if (response.discountType() != null) return 1;
+        return 2;
     }
 }
