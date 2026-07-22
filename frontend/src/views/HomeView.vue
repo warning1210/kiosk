@@ -4,6 +4,7 @@
     <form class="setup-form" @submit.prevent="loginKiosk">
       <h1>키오스크 지점 등록</h1>
       <p>이 키오스크가 소속된 지점의 관리자 계정으로 로그인해주세요. 최초 1회만 하면 됩니다.</p>
+      <p>admin/admin1234</p>
       <label>아이디 또는 이메일<input v-model="loginId" required placeholder="아이디 또는 이메일 입력"></label>
       <label>비밀번호<input v-model="password" required type="password" placeholder="비밀번호 입력"></label>
       <button :disabled="loggingIn" type="submit">{{ loggingIn ? '확인 중...' : '등록' }}</button>
