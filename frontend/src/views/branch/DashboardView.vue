@@ -19,7 +19,7 @@
     </section>
     <section class="dashboard-grid">
       <article class="orders-card"><div class="card-head"><h2>실시간 주문</h2><RouterLink to="/branch/orders">주문 관리 →</RouterLink></div>
-        <div v-if="!orders.length" class="empty">접수된 주문이 없습니다.</div>
+        <div v-if="!recentOrders.length" class="empty">접수된 주문이 없습니다.</div>
         <div v-for="order in recentOrders.slice(0,4)" :key="order.orderId" class="order-row"><span class="ice">🍨</span><div><strong>#{{ order.waitingNumber }} · {{ order.orderType==='TAKEOUT'?'포장':'매장' }}</strong><p>{{ order.menuSummary }}</p></div><em :class="order.status.toLowerCase()">{{ statusLabel(order.status) }}</em><small>{{ order.elapsedMinutes }}분 전</small></div>
       </article>
       <div class="right-column"><article><h2>재고 부족 알림</h2><div v-for="item in lowItems.slice(0,3)" :key="item.flavorId" class="stock-row"><i :class="item.remainingGrams===0?'red':'amber'"></i><strong>{{ item.flavorName }}</strong><span>{{ item.remainingGrams===0?'품절':`${item.remainingGrams.toLocaleString()}g` }}</span></div></article>
