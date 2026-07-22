@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch, onBeforeUnmount } from 'vue'
 import http from '../../api/hq'
 import AdminSidebar from '../../components/admin/AdminSidebar.vue'
 import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
@@ -184,7 +184,7 @@ const loading = ref(true)
 const keyword = ref('')
 const statusFilter = ref('')
 const page = ref(1)
-const pageSize = 6
+const pageSize = 8
 
 const statusTabs = [
   { label: '전체', value: '' }, { label: '판매중', value: 'ON_SALE' },
@@ -221,10 +221,27 @@ watch(entityTab, () => {
   page.value = 1
 })
 
+function handleKeydown(e) {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+  const totalPages = Math.ceil(filteredList.value.length / pageSize)
+  if (e.key === 'PageDown') {
+    e.preventDefault()
+    if (page.value < totalPages) page.value++
+  } else if (e.key === 'PageUp') {
+    e.preventDefault()
+    if (page.value > 1) page.value--
+  }
+}
+
 onMounted(() => {
   loadCategories()
   loadProducts()
   loadFlavors()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 async function loadCategories() {
