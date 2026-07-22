@@ -38,15 +38,25 @@ public class HqChatService {
                             room.getConsultationStatus().name(),
                             room.getStartedAt(),
                             last != null ? last.getMessageContent() : null,
-                            last != null ? last.getCreatedAt() : null
+                            last != null ? last.getCreatedAt() : null,
+                            chatMessageRepository.countByChatRoom_ChatRoomIdAndReadAtIsNullAndSenderAdmin_Role(
+                                    room.getChatRoomId(), AdminRole.BRANCH_MANAGER)
                     );
                 })
                 .toList();
     }
 
-    @Transactional(readOnly = true)
     public List<HqChatMessageResponse> listMessages(Long chatRoomId) {
-        return chatMessageRepository.findByChatRoom_ChatRoomIdOrderByCreatedAtAsc(chatRoomId).stream()
+        List<ChatMessage> messages = chatMessageRepository
+                .findByChatRoom_ChatRoomIdOrderByCreatedAtAsc(chatRoomId);
+        // 본점이 상담방을 열면 현재 보이는 지점 메시지를 읽음으로 저장해 배지를 즉시 줄인다.
+        java.time.LocalDateTime readAt = java.time.LocalDateTime.now();
+        messages.stream()
+                .filter(message -> message.getSenderAdmin().getRole() == AdminRole.BRANCH_MANAGER)
+                .filter(message -> message.getReadAt() == null)
+                .forEach(message -> message.setReadAt(readAt));
+        chatMessageRepository.saveAll(messages);
+        return messages.stream()
                 .map(this::toResponse)
                 .toList();
     }

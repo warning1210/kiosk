@@ -16,6 +16,8 @@ import AdminReportsView from '../views/admin/AdminReportsView.vue'
 import AdminComingSoonView from '../views/admin/AdminComingSoonView.vue'
 import BranchLoginView from '../views/branch/BranchLoginView.vue'
 import BranchJoinView from '../views/branch/BranchJoinView.vue'
+// 이메일 링크에서 열리는 예비 지점장 전용 신청서 화면을 가져온다.
+import BranchApplicationFormView from '../views/branch/BranchApplicationFormView.vue'
 import DashboardView from '../views/branch/DashboardView.vue'
 import OrdersView from '../views/branch/OrdersView.vue'
 import OrderListView from '../views/branch/OrderListView.vue'
@@ -59,7 +61,8 @@ const router = createRouter({
     {
       path: '/admin/accounts',
       name: 'admin-accounts',
-      component: AdminComingSoonView,
+      // 준비 중 화면 대신 실제 지점장 계정 관리 화면을 연결한다.
+      component: AdminAccountsView,
       meta: { active: 'accounts', title: '계정 관리', subtitle: '본사·지점 관리자 계정 권한을 관리할 수 있습니다.' }
     },
     {
@@ -71,6 +74,8 @@ const router = createRouter({
     { path: '/admin/branch-invites', name: 'admin-branch-invites', component: AdminAccountsView },
     { path: '/branch/login', name: 'branch-login', component: BranchLoginView },
     { path: '/branch/join', name: 'branch-join', component: BranchJoinView },
+    // 본점이 발송한 토큰 URL로만 접근하는 지점 개설 신청서 경로다.
+    { path: '/branch/application', name: 'branch-application', component: BranchApplicationFormView },
     { path: '/branch/dashboard', name: 'branch-dashboard', component: DashboardView },
     { path: '/branch/orders', name: 'branch-orders', component: OrdersView },
     { path: '/branch/orderlist', name: 'branch-orderlist', component: OrderListView },
@@ -81,6 +86,18 @@ const router = createRouter({
     { path: '/branch/events', name: 'branch-events', component: EventsView },
     { path: '/branch/notices/:type/:id', name: 'branch-notice-detail', component: NoticeDetailView }
   ]
+})
+
+// 본점 주소를 직접 입력해도 본점 로그인 토큰이 없는 사용자는 로그인 화면으로 보낸다.
+router.beforeEach((to) => {
+  // /admin/login은 실제 공용 로그인 화면으로 이동시키는 경로이므로 검사 대상에서 제외한다.
+  if (!to.path.startsWith('/admin/') || to.path === '/admin/login') return true
+  // 본점 로그인 응답에 저장된 서명 토큰이 있는지 확인한다.
+  const session = JSON.parse(localStorage.getItem('hq-session') || 'null')
+  // 토큰이 있으면 요청한 본점 화면으로 정상 진입시킨다.
+  if (session?.token) return true
+  // 토큰이 없으면 공용 로그인 화면으로 이동시킨다.
+  return { path: '/branch/login', query: { redirect: to.fullPath } }
 })
 
 export default router
