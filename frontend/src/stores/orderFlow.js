@@ -66,7 +66,6 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     containerType: 'NONE',
     spoonCount: 0,
     dryIceMinutes: null,
-    sizeUpApplied: false,
 
     mobileNumberInput: '',
     customer: null,
@@ -115,13 +114,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     canConfirmFlavor: (state) => {
       if (!state.selectedProduct) return false
       if (state.selectedProduct.requiresFlavorSelection) {
-        const correctCount = state.selectedFlavorIds.length === state.selectedProduct.selectableFlavorCount
-        // 사이즈업은 "이 맛을 고르면"이 조건이라, 사이즈업을 적용한 채로 그 맛을 요약바 등에서 빼버리면
-        // 안 된다 - 반드시 이달의 맛이 선택 목록에 남아있어야 확정할 수 있다.
-        const includesMonthlyFlavor = state.selectedFlavorIds.some((flavorId) =>
-          isMonthlyFlavor(state.flavors.find((flavor) => flavor.flavorId === flavorId))
-        )
-        return correctCount && (!state.sizeUpApplied || includesMonthlyFlavor)
+        return state.selectedFlavorIds.length === state.selectedProduct.selectableFlavorCount
       }
       return true
     },
@@ -173,7 +166,6 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = 'NONE'
       this.spoonCount = 0
       this.dryIceMinutes = null
-      this.sizeUpApplied = false
       this.mobileNumberInput = ''
       this.customer = null
       this.customerLookupDone = false
@@ -231,7 +223,6 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = product.containerPolicy === 'NONE' ? 'NONE' : 'CUP'
       this.spoonCount = 0
       this.dryIceMinutes = null
-      this.sizeUpApplied = false
     },
 
     // 컵/콘 선택(용기 둘 다 가능한 상품) 또는 테이크아웃 대용량 상품(숟가락/드라이아이스)은
@@ -254,11 +245,13 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     },
 
     // 이달의 맛(MONTHLY_FLAVOR)을 고르는 순간, 그 이벤트가 사이즈업 정보(flavor.sizeUpToProductId)까지
-    // 갖고 있고 지금 고른 상품이 그 사이즈업의 "전" 상품과 같으면 제안한다 - 실제 배스킨라빈스의
-    // "이 맛 고르면 싱글레귤러를 더블주니어로 사이즈업" 프로모션과 동일한 규칙.
+    // 갖고 있고 지금 고른 상품이 그 사이즈업의 "전" 상품과 같으면 상품 업그레이드를 제안한다 - 실제
+    // 배스킨라빈스의 "이 맛 고르면 싱글레귤러를 더블주니어로 사이즈업" 프로모션과 동일한 규칙.
+    // (가격 자체는 addCurrentSelectionToCart에서 상품+맛 조합만 보고 다시 계산하므로, 여기서는 상품만 바꾼다 -
+    // 더블주니어를 처음부터 바로 고르고 이 맛을 담아도 addCurrentSelectionToCart가 같은 가격을 매긴다.)
     async offerSizeUp(flavor) {
-      if (this.sizeUpApplied) return
-      if (!flavor?.sizeUpToProductId || this.selectedProduct?.productId !== flavor.sizeUpFromProductId) return
+      if (!flavor?.sizeUpToProductId) return
+      if (this.selectedProduct?.productId !== flavor.sizeUpFromProductId) return
       const toProduct = this.products.find((product) => product.productId === flavor.sizeUpToProductId)
       if (!toProduct) return
       const additionalPayment = flavor.sizeUpAdditionalPayment ?? 0
@@ -268,8 +261,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         { cancelLabel: fromProductName, confirmLabel: toProduct.productName }
       )
       if (!accepted) return
-      this.selectedProduct = { ...toProduct, basePrice: this.selectedProduct.basePrice + additionalPayment }
-      this.sizeUpApplied = true
+      this.selectedProduct = toProduct
     },
 
     proceedPastContainer() {
@@ -292,7 +284,6 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.containerType = item.containerType
       this.spoonCount = item.spoonCount
       this.dryIceMinutes = item.dryIceMinutes
-      this.sizeUpApplied = Boolean(item.sizeUpApplied)
       this.step = this.needsContainerStep(product) ? 'container' : 'flavor'
     },
 
@@ -315,7 +306,24 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         return { flavorId, flavorName: flavor?.flavorName ?? '', selectionOrder: index + 1, quantity: 1 }
       })
 
-      const baseUnitPrice = this.selectedProduct.basePrice + (this.containerType === 'WAFFLE_CONE' ? 500 : 0)
+      const containerAddOn = this.containerType === 'WAFFLE_CONE' ? 500 : 0
+
+      // 지금 상품이 어떤 이달의 맛(사이즈업) 이벤트의 "후" 상품이고, 그 맛을 실제로 담았다면 - 싱글레귤러에서
+      // 업그레이드해왔든 처음부터 이 상품을 골라 그 맛을 담았든 상관없이 같은 사이즈업 가격을 매긴다
+      // (백엔드 OrderService.resolveItemBasePrice와 동일한 규칙).
+      const sizeUpFlavor = this.selectedFlavorIds
+        .map((flavorId) => this.flavors.find((f) => f.flavorId === flavorId))
+        .find((flavor) => flavor?.sizeUpToProductId === this.selectedProduct.productId)
+
+      let baseUnitPrice
+      if (sizeUpFlavor) {
+        const fromProduct = this.products.find((p) => p.productId === sizeUpFlavor.sizeUpFromProductId)
+        baseUnitPrice = (fromProduct?.basePrice ?? this.selectedProduct.basePrice) + (sizeUpFlavor.sizeUpAdditionalPayment ?? 0)
+      } else {
+        baseUnitPrice = this.selectedProduct.basePrice
+      }
+      baseUnitPrice += containerAddOn
+
       const flavorDiscount = resolveFlavorDiscount(this.flavors, this.selectedFlavorIds, baseUnitPrice)
 
       const payload = {
@@ -323,8 +331,8 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         productName: this.selectedProduct.productName,
         imageUrl: this.selectedProduct.imageUrl,
         unitPrice: Math.max(0, baseUnitPrice - flavorDiscount),
-        originalUnitPrice: baseUnitPrice, // 할인 전 가격 - 장바구니에서 취소선으로 같이 보여주기 위함
-        sizeUpApplied: this.sizeUpApplied,
+        originalUnitPrice: this.selectedProduct.basePrice + containerAddOn, // 할인/사이즈업 전 정가 - 취소선용
+        sizeUpApplied: Boolean(sizeUpFlavor),
         containerType: this.containerType,
         spoonCount: this.spoonCount,
         dryIceMinutes: this.dryIceMinutes,
@@ -520,8 +528,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
               containerType: item.containerType,
               spoonCount: item.spoonCount,
               dryIceMinutes: item.dryIceMinutes,
-              flavorIds: item.flavors.map((f) => f.flavorId),
-              sizeUpApplied: Boolean(item.sizeUpApplied)
+              flavorIds: item.flavors.map((f) => f.flavorId)
             }))
           )
         }

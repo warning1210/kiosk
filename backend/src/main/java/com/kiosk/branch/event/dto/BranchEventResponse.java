@@ -7,6 +7,7 @@ import java.util.List;
 public record BranchEventResponse(
         Long eventId,
         String eventName,
+        String eventType,
         String benefitType,
         BigDecimal discountRate,
         Integer discountAmount,

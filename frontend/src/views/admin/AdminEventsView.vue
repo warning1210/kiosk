@@ -41,10 +41,6 @@
             <option v-for="flavor in flavors" :key="flavor.flavorId" :value="flavor.flavorId">{{ flavor.flavorName }}</option>
           </select>
           <template v-if="form.eventType === 'MONTHLY_FLAVOR'">
-            <select v-model="form.sizeUpFromProductId" required>
-              <option value="" disabled>사이즈업 적용 상품</option>
-              <option v-for="product in sizeUpProducts" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
-            </select>
             <select v-model="form.sizeUpToProductId" required>
               <option value="" disabled>사이즈업 후 상품</option>
               <option v-for="product in sizeUpProducts" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
@@ -56,7 +52,7 @@
           <textarea v-model.trim="form.description" placeholder="설명 (지점 공지사항에 그대로 노출됩니다)" rows="2"></textarea>
           <button :disabled="creating" type="submit">{{ creating ? '생성 중' : '이벤트 생성' }}</button>
         </form>
-        <p v-if="form.eventType === 'MONTHLY_FLAVOR'" class="hint">본점이 지정한 맛을 고르면 지정한 사이즈업이 전 지점에 자동으로 함께 적용됩니다 (실제 배스킨라빈스 이달의 맛 프로모션과 동일).</p>
+        <p v-if="form.eventType === 'MONTHLY_FLAVOR'" class="hint">본점이 지정한 맛을 고르면 사이즈업 후 상품으로 자동 업그레이드됩니다 (사이즈업 전 상품은 스쿱 수가 하나 적은 상품 중 가장 싼 것으로 자동 결정됩니다. 예: 더블주니어 지정 시 싱글레귤러).</p>
         <p v-if="form.eventType === 'HQ_FLAVOR_DISCOUNT'" class="hint">본점이 맛과 할인을 둘 다 정해서 전 지점에 자동으로 적용됩니다 (지점이 따로 고를 필요 없음).</p>
         <p v-if="form.eventType === 'FLAVOR_DISCOUNT'" class="hint">실제로 어느 맛에 할인을 붙일지는 각 지점이 지점의 "이벤트 관리" 화면에서 선택합니다.</p>
         <p v-if="formError" class="alert">{{ formError }}</p>
@@ -128,7 +124,7 @@ const formError = ref('')
 const form = reactive({
   eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
   discountRate: null, discountAmount: null, flavorId: '',
-  sizeUpFromProductId: '', sizeUpToProductId: '', additionalPayment: null,
+  sizeUpToProductId: '', additionalPayment: null,
   startAt: '', endAt: '', description: ''
 })
 const keyword = ref('')
@@ -176,9 +172,10 @@ async function loadProducts() {
 
 // 사이즈업은 "아이스크림" 사이즈 라인업 중 싱글레귤러/싱글킹/더블주니어/더블레귤러(스쿱 2개 이하)까지만
 // 해당된다 - 파인트 이상 대용량 상품은 사이즈업 대상이 아니다. 가격 오름차순으로 정렬해서 보여준다.
+// "사이즈업 후 상품"으로 고를 수 있는 건 스쿱 2개짜리만 - 스쿱 1개짜리는 자동으로 찾을 "이전 상품"이 없다.
 const sizeUpProducts = computed(() =>
   products.value
-    .filter((product) => product.categoryName === '아이스크림' && product.selectableFlavorCount <= 2)
+    .filter((product) => product.categoryName === '아이스크림' && product.selectableFlavorCount === 2)
     .sort((a, b) => a.basePrice - b.basePrice)
 )
 
@@ -201,7 +198,6 @@ async function createEvent() {
     const { data } = await http.post('/hq/events', {
       ...form,
       flavorId: form.flavorId || null,
-      sizeUpFromProductId: form.sizeUpFromProductId || null,
       sizeUpToProductId: form.sizeUpToProductId || null,
       startAt: toStartOfDay(form.startAt),
       endAt: toExclusiveEndOfDay(form.endAt)
@@ -210,7 +206,7 @@ async function createEvent() {
     Object.assign(form, {
       eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
       discountRate: null, discountAmount: null, flavorId: '',
-      sizeUpFromProductId: '', sizeUpToProductId: '', additionalPayment: null,
+      sizeUpToProductId: '', additionalPayment: null,
       startAt: '', endAt: '', description: ''
     })
   } catch (e) {

@@ -5,7 +5,6 @@
     <nav>
       <RouterLink :class="{ active: active === 'dashboard' }" to="/admin/dashboard"><i>▦</i>대시보드</RouterLink>
       <RouterLink :class="{ active: active === 'stock-requests' }" to="/admin/stock-requests"><i>▤</i>재고 신청</RouterLink>
-      <RouterLink :class="{ active: active === 'inventory' }" to="/admin/inventory"><i>◒</i>재고 현황</RouterLink>
       <RouterLink :class="{ active: active === 'deliveries' }" to="/admin/deliveries"><i>⇢</i>배송 관리</RouterLink>
       <RouterLink :class="{ active: active === 'branches' }" to="/admin/branches"><i>⌂</i>지점 관리</RouterLink>
       <RouterLink :class="{ active: active === 'reports' }" to="/admin/reports"><i>▥</i>통계/리포트</RouterLink>

@@ -20,12 +20,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-// 본점이 만든 "상품(맛) 할인"(FLAVOR_DISCOUNT) 이벤트에 대해, 실제로 어느 맛에 그 할인을 붙일지는
-// 지점이 고른다 (event_branch_flavor). 쿠폰형(COUPON) 이벤트는 지점이 관여할 게 없어서 목록에 나오지 않는다.
+// 본점이 만든 "상품(맛) 할인"(FLAVOR_DISCOUNT) 이벤트는 실제로 어느 맛에 그 할인을 붙일지 지점이 고른다
+// (event_branch_flavor). "본점 지정 할인"(HQ_FLAVOR_DISCOUNT)은 본점이 맛까지 이미 정해서 지점이 고를 건
+// 없지만, 어떤 할인이 진행 중인지는 지점도 볼 수 있어야 하므로 목록엔 같이 나온다(읽기 전용).
+// 이달의 맛(MONTHLY_FLAVOR)은 사이즈업 이벤트라 지점 화면과 무관하다.
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class BranchEventService {
+
+    private static final List<EventType> BRANCH_VISIBLE_EVENT_TYPES = List.of(
+            EventType.FLAVOR_DISCOUNT, EventType.HQ_FLAVOR_DISCOUNT);
 
     private final EventRepository eventRepository;
     private final EventBranchFlavorRepository eventBranchFlavorRepository;
@@ -35,7 +40,7 @@ public class BranchEventService {
     @Transactional(readOnly = true)
     public List<BranchEventResponse> list(Long branchId) {
         List<FlavorOptionResponse> flavorOptions = flavorOptionsOf(branchId);
-        return eventRepository.findByEventTypeAndStatus(EventType.FLAVOR_DISCOUNT, EventStatus.ACTIVE).stream()
+        return eventRepository.findByEventTypeInAndStatus(BRANCH_VISIBLE_EVENT_TYPES, EventStatus.ACTIVE).stream()
                 .map(event -> toResponse(event, branchId, flavorOptions))
                 .toList();
     }
@@ -69,12 +74,30 @@ public class BranchEventService {
     }
 
     private BranchEventResponse toResponse(Event event, Long branchId, List<FlavorOptionResponse> flavorOptions) {
+        // HQ_FLAVOR_DISCOUNT는 본점이 이미 맛을 정해뒀다 - 지점이 고를 게 없으니 읽기 전용으로 그 맛만 보여준다.
+        if (event.getEventType() == EventType.HQ_FLAVOR_DISCOUNT) {
+            return new BranchEventResponse(
+                    event.getEventId(),
+                    event.getEventName(),
+                    event.getEventType().name(),
+                    event.getBenefitType() != null ? event.getBenefitType().name() : null,
+                    event.getDiscountRate(),
+                    event.getDiscountAmount(),
+                    event.getStartAt(),
+                    event.getEndAt(),
+                    event.getFlavor() != null ? event.getFlavor().getFlavorId() : null,
+                    event.getFlavor() != null ? event.getFlavor().getFlavorName() : null,
+                    List.of()
+            );
+        }
+
         EventBranchFlavor selected = eventBranchFlavorRepository
                 .findByEvent_EventIdAndBranch_BranchId(event.getEventId(), branchId)
                 .orElse(null);
         return new BranchEventResponse(
                 event.getEventId(),
                 event.getEventName(),
+                event.getEventType().name(),
                 event.getBenefitType() != null ? event.getBenefitType().name() : null,
                 event.getDiscountRate(),
                 event.getDiscountAmount(),
