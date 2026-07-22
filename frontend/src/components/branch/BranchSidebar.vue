@@ -25,6 +25,7 @@
       <RouterLink :class="{ active: active === 'dashboard' }" to="/branch/dashboard"><i>▦</i>대시보드</RouterLink>
       <RouterLink :class="{ active: active === 'orders' }" to="/branch/orders"><i>▤</i>주문 관리<b v-if="newOrders">{{ newOrders }}</b></RouterLink>
       <RouterLink :class="{ active: active === 'orderlist' }" to="/branch/orderlist"><i>▤</i>주문 내역</RouterLink>
+      <RouterLink :class="{ active: active === 'products' }" to="/branch/products"><i>▤</i>상품 관리</RouterLink>
       <RouterLink :class="{ active: active === 'inventory' }" to="/branch/inventory"><i>▣</i>재고 현황</RouterLink>
       <RouterLink :class="{ active: active === 'stock-requests' }" to="/branch/stock-requests"><i>♧</i>입고 신청 현황</RouterLink><RouterLink :class="{ active: active === 'events' }" to="/branch/events"><i>□</i>이벤트 관리</RouterLink><RouterLink :class="{ active: active === 'sales' }" to="/branch/sales"><i>⌁</i>판매 통계</RouterLink><RouterLink :class="{ active: active === 'chat' }" to="/branch/chat"><i>✉</i>본점 채팅</RouterLink>
     </nav>

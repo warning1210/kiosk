@@ -27,6 +27,7 @@ import SalesView from '../views/branch/SalesView.vue'
 import ChatView from '../views/branch/ChatView.vue'
 import EventsView from '../views/branch/EventsView.vue'
 import NoticeDetailView from '../views/branch/NoticeDetailView.vue'
+import BranchProductView from '../views/branch/BranchProductView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -84,6 +85,7 @@ const router = createRouter({
     { path: '/branch/sales', name: 'branch-sales', component: SalesView },
     { path: '/branch/chat', name: 'branch-chat', component: ChatView },
     { path: '/branch/events', name: 'branch-events', component: EventsView },
+    { path: '/branch/products', name: 'branch-products', component: BranchProductView },
     { path: '/branch/notices/:type/:id', name: 'branch-notice-detail', component: NoticeDetailView }
   ]
 })
