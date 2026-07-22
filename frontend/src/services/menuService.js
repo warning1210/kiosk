@@ -5,8 +5,8 @@ export async function fetchCategories() {
   return (await http.get('/categories')).data
 }
 
-export async function fetchProducts() {
-  return (await http.get('/products')).data
+export async function fetchProducts(branchId) {
+  return (await http.get('/products', { params: { branchId } })).data
 }
 
 export async function fetchFlavors(branchId) {

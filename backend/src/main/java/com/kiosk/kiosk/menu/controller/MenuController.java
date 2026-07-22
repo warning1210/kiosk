@@ -19,8 +19,8 @@ public class MenuController {
     private final MenuService menuService;
 
     @GetMapping("/products")
-    public List<ProductResponse> getProducts() {
-        return menuService.getProducts();
+    public List<ProductResponse> getProducts(@RequestParam(required = false) Long branchId) {
+        return menuService.getProducts(branchId);
     }
 
     @GetMapping("/flavors")

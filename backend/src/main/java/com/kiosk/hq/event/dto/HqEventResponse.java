@@ -30,8 +30,8 @@ public record HqEventResponse(
         return new HqEventResponse(
                 event.getEventId(),
                 event.getEventName(),
-                event.getEventType().name(),
-                event.getBenefitType().name(),
+                event.getEventType() != null ? event.getEventType().name() : null,
+                event.getBenefitType() != null ? event.getBenefitType().name() : null,
                 event.getDescription(),
                 event.getImageUrl(),
                 event.getDiscountRate(),
@@ -45,8 +45,8 @@ public record HqEventResponse(
                 event.getAdditionalPayment(),
                 event.getStartAt(),
                 event.getEndAt(),
-                event.getStatus().name(),
-                event.getCreatorAdmin().getName(),
+                event.getStatus() != null ? event.getStatus().name() : null,
+                event.getCreatorAdmin() != null ? event.getCreatorAdmin().getName() : null,
                 event.getCreatedAt()
         );
     }

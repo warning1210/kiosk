@@ -46,4 +46,12 @@ public class BranchOrderController {
         BranchOrderDetailResponse response = branchOrderService.getBranchOrderDetail(branchId, orderId);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/dates")
+    public ResponseEntity<List<String>> getAvailableOrderDates(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        Long branchId = branchAccessService.requireBranchId(authorization);
+        List<String> dates = branchOrderService.getAvailableOrderDates(branchId);
+        return ResponseEntity.ok(dates);
+    }
 }
