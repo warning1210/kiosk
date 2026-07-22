@@ -106,7 +106,7 @@
         </div>
         <label>처리 중량(g)<input v-model.number="adjustGram" min="1" step="1" type="number"></label>
         <div class="quick-grams">
-          <button v-for="size in quickSizes" :key="size.g" type="button" @click="adjustGram = size.g">{{ size.name }} {{ size.g }}g</button>
+          <button v-for="size in quickSizes" :key="size.g" type="button" @click="adjustGram = (Number(adjustGram) || 0) + size.g">{{ size.name }} {{ size.g }}g</button>
         </div>
         <label>처리 메모<input v-model="adjustMemo" type="text" placeholder="예: 폐기, 실사 조정, 수동 입고"></label>
         <div class="preview">처리 후 예상 재고 <strong>{{ formatGram(previewGram) }}</strong><span v-if="previewGram <= 3000 && !activeRequest(modalItem)">자동 발주 대상</span></div>
@@ -247,12 +247,16 @@ function tabCount(value) {
   if (value === 'soldout') return inventories.value.filter(i => i.remainingG === 0).length
   return inventories.value.filter(activeRequest).length
 }
+function showToast(message) {
+  toast.value = message
+  window.clearTimeout(showToast.timer)
+  showToast.timer = window.setTimeout(() => { toast.value = '' }, 2000)
+}
+
 function save(message) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(inventories.value))
   lastSaved.value = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-  toast.value = message
-  window.clearTimeout(save.timer)
-  save.timer = window.setTimeout(() => { toast.value = '' }, 2600)
+  showToast(message)
 }
 function autoRequestStock(item) {
   if (activeRequest(item)) return
@@ -267,7 +271,7 @@ function autoRequestStock(item) {
 }
 async function completeDelivery(item) {
   await http.post(`/inventory/${item.inventoryId}/receive`)
-  toast.value = `${item.name} 입고를 완료했습니다.`
+  showToast(`${item.name} 입고를 완료했습니다.`)
   await loadServerInventory()
 }
 // 재고가 부족한 걸 확인한 자리에서 바로 신청할 수 있게, 해당 맛을 미리 채운 채로 창을 연다.
@@ -297,7 +301,7 @@ async function submitRequest() {
       items: [{ flavorId: item.id, requestedQuantity: requestTubs.value }]
     })
     closeRequest()
-    toast.value = `${item.name} ${requestTubs.value}통을 본점에 신청했습니다.`
+    showToast(`${item.name} ${requestTubs.value}통을 본점에 신청했습니다.`)
     await loadServerInventory()
   } catch (e) {
     requestError.value = e.response?.data?.message || '재고 신청에 실패했습니다.'
@@ -306,13 +310,13 @@ async function submitRequest() {
   }
 }
 
-function openAdjust(item) { modalItem.value = item; adjustType.value = 'OUT'; adjustGram.value = 115; adjustMemo.value = '' }
+function openAdjust(item) { modalItem.value = item; adjustType.value = 'OUT'; adjustGram.value = 0; adjustMemo.value = '' }
 function closeModal() { modalItem.value = null }
 async function applyAdjustment() {
   const item = modalItem.value
   if (!item || Number(adjustGram.value) <= 0) return
   await http.patch(`/inventory/${item.inventoryId}`, { type: adjustType.value, grams: String(adjustGram.value) })
-  toast.value = `${item.name} 재고를 반영했습니다.`
+  showToast(`${item.name} 재고를 반영했습니다.`)
   closeModal()
   await loadServerInventory()
 }
