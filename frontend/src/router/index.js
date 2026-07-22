@@ -14,6 +14,7 @@ import AdminChatView from '../views/admin/AdminChatView.vue'
 import AdminProductsView from '../views/admin/AdminProductsView.vue'
 import AdminReportsView from '../views/admin/AdminReportsView.vue'
 import AdminComingSoonView from '../views/admin/AdminComingSoonView.vue'
+import AdminNoticesView from '../views/admin/AdminNoticesView.vue'
 import BranchLoginView from '../views/branch/BranchLoginView.vue'
 import BranchJoinView from '../views/branch/BranchJoinView.vue'
 // 이메일 링크에서 열리는 예비 지점장 전용 신청서 화면을 가져온다.
@@ -50,7 +51,7 @@ const router = createRouter({
     {
       path: '/admin/notices',
       name: 'admin-notices',
-      component: AdminComingSoonView,
+      component: AdminNoticesView,
       meta: { active: 'notices', title: '공지사항', subtitle: '본사 공지사항을 작성하고 지점 노출 여부를 관리할 수 있습니다.' }
     },
     {
