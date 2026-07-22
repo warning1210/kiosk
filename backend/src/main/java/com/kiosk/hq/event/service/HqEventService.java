@@ -48,40 +48,51 @@ public class HqEventService {
                 .status(EventStatus.ACTIVE)
                 .creatorAdmin(creator);
 
-        if (eventType == EventType.SIZE_UP) {
-            applySizeUp(builder, request);
-        } else {
-            // MONTHLY_FLAVOR(본점 직접 지정 할인 맛) / FLAVOR_DISCOUNT(지점이 나중에 맛을 고름) 공통 -
-            // 할인값(율/금액)은 이벤트가 직접 갖는다.
-            BenefitType benefitType = parseEnum(BenefitType.class, request.benefitType(), "혜택 유형");
-            if (benefitType == BenefitType.DISCOUNT_RATE) {
-                if (request.discountRate() == null || request.discountRate().compareTo(BigDecimal.ZERO) <= 0
-                        || request.discountRate().compareTo(BigDecimal.valueOf(100)) > 0) {
-                    throw new IllegalArgumentException("할인율은 0보다 크고 100 이하여야 합니다.");
-                }
-                builder.benefitType(benefitType).discountRate(request.discountRate());
-            } else if (benefitType == BenefitType.DISCOUNT_AMOUNT) {
-                if (request.discountAmount() == null || request.discountAmount() <= 0) {
-                    throw new IllegalArgumentException("할인 금액을 올바르게 입력해주세요.");
-                }
-                builder.benefitType(benefitType).discountAmount(request.discountAmount());
-            } else {
-                throw new IllegalArgumentException("상품(맛) 할인 이벤트는 할인율 또는 할인 금액 중 하나여야 합니다.");
+        switch (eventType) {
+            case MONTHLY_FLAVOR -> {
+                // 할인이 없는 대신 사이즈업이 곧 그 혜택이다 - 아무 혜택 없이 "이달의 맛" 표시만 하는 건
+                // 이벤트라고 할 수 없으므로, 이 맛을 고르면 반드시 사이즈업이 같이 걸리게 한다.
+                builder.flavor(requireFlavor(request));
+                applySizeUp(builder, request);
             }
-
-            if (eventType == EventType.MONTHLY_FLAVOR) {
-                if (request.flavorId() == null) {
-                    throw new IllegalArgumentException("할인을 붙일 맛을 선택해주세요.");
-                }
-                Flavor flavor = flavorRepository.findById(request.flavorId())
-                        .orElseThrow(() -> new IllegalArgumentException("맛을 찾을 수 없습니다."));
-                builder.flavor(flavor);
+            case HQ_FLAVOR_DISCOUNT -> {
+                // 본점이 맛과 할인값을 둘 다 직접 정한다 - 지점이 고를 게 없다는 점만 FLAVOR_DISCOUNT와 다르다.
+                builder.flavor(requireFlavor(request));
+                applyDiscount(builder, request);
             }
+            case FLAVOR_DISCOUNT -> applyDiscount(builder, request);
         }
 
         return HqEventResponse.from(eventRepository.save(builder.build()));
     }
 
+    private Flavor requireFlavor(HqEventCreateRequest request) {
+        if (request.flavorId() == null) {
+            throw new IllegalArgumentException("맛을 선택해주세요.");
+        }
+        return flavorRepository.findById(request.flavorId())
+                .orElseThrow(() -> new IllegalArgumentException("맛을 찾을 수 없습니다."));
+    }
+
+    private void applyDiscount(Event.EventBuilder builder, HqEventCreateRequest request) {
+        BenefitType benefitType = parseEnum(BenefitType.class, request.benefitType(), "혜택 유형");
+        builder.benefitType(benefitType);
+        if (benefitType == BenefitType.DISCOUNT_RATE) {
+            if (request.discountRate() == null || request.discountRate().compareTo(BigDecimal.ZERO) <= 0
+                    || request.discountRate().compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new IllegalArgumentException("할인율은 0보다 크고 100 이하여야 합니다.");
+            }
+            builder.discountRate(request.discountRate());
+        } else {
+            if (request.discountAmount() == null || request.discountAmount() <= 0) {
+                throw new IllegalArgumentException("할인 금액을 올바르게 입력해주세요.");
+            }
+            builder.discountAmount(request.discountAmount());
+        }
+    }
+
+    // "사이즈업 후 상품"은 본점이 직접 고른다 - 인접한 다음 사이즈로 자동 계산하면 "이달의 더블주니어"처럼
+    // 중간 단계(싱글킹)를 건너뛰는 프로모션을 만들 수 없기 때문이다. 같은 카테고리 안이라면 임의의 상품을 골라도 된다.
     private void applySizeUp(Event.EventBuilder builder, HqEventCreateRequest request) {
         if (request.sizeUpFromProductId() == null || request.sizeUpToProductId() == null) {
             throw new IllegalArgumentException("사이즈업 전/후 상품을 모두 선택해주세요.");
@@ -93,13 +104,34 @@ public class HqEventService {
             throw new IllegalArgumentException("추가 금액을 올바르게 입력해주세요.");
         }
         Product fromProduct = productRepository.findById(request.sizeUpFromProductId())
-                .orElseThrow(() -> new IllegalArgumentException("사이즈업 전 상품을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("사이즈업 적용 상품을 찾을 수 없습니다."));
         Product toProduct = productRepository.findById(request.sizeUpToProductId())
                 .orElseThrow(() -> new IllegalArgumentException("사이즈업 후 상품을 찾을 수 없습니다."));
-        builder.benefitType(BenefitType.SIZE_UP)
-                .sizeUpFromProduct(fromProduct)
+
+        // 파인트 이상 대용량(스쿱 3개 이상) 상품은 사이즈업 대상이 아니다 - 싱글레귤러/싱글킹/더블주니어/더블레귤러까지만.
+        if (isTooLargeForSizeUp(fromProduct) || isTooLargeForSizeUp(toProduct)) {
+            throw new IllegalArgumentException("사이즈업은 싱글레귤러/싱글킹/더블주니어/더블레귤러 사이에서만 가능합니다.");
+        }
+
+        // 실제 정가 차이 이상을 추가금액으로 받으면 사이즈업이 아니라 그냥 큰 사이즈를 따로 사는 것과 같거나
+        // 더 비싸진다 - 그러면 "사이즈업 할인" 자체가 의미 없으므로 반드시 정가 차이보다 싸야 한다.
+        int priceGap = toProduct.getBasePrice() - fromProduct.getBasePrice();
+        if (priceGap <= 0) {
+            throw new IllegalArgumentException("사이즈업 후 상품은 적용 상품보다 정가가 더 비싸야 합니다.");
+        }
+        if (request.additionalPayment() >= priceGap) {
+            throw new IllegalArgumentException(
+                    "추가 금액은 정가 차이(" + priceGap + "원)보다 작아야 합니다. " + toProduct.getProductName()
+                            + " 정가가 " + fromProduct.getProductName() + "보다 " + priceGap + "원 더 비쌉니다.");
+        }
+
+        builder.sizeUpFromProduct(fromProduct)
                 .sizeUpToProduct(toProduct)
                 .additionalPayment(request.additionalPayment());
+    }
+
+    private boolean isTooLargeForSizeUp(Product product) {
+        return product.getSelectableFlavorCount() == null || product.getSelectableFlavorCount() > 2;
     }
 
     @Transactional(readOnly = true)
