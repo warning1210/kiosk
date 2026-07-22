@@ -10,7 +10,13 @@
           <img :src="chevron" alt="" class="lang-chevron" />
         </button>
         <button type="button" class="easy-mode-pill">쉬운 모드</button>
-        <button type="button" class="icon-btn notif-btn" aria-label="알림">
+        <button
+          type="button"
+          class="icon-btn notif-btn"
+          :disabled="calling || justCalled"
+          aria-label="직원 호출"
+          @click="callStaff"
+        >
           <span class="notif-circle" v-html="notifCircleSvg"></span>
           <img :src="bell" class="bell-icon" alt="" />
         </button>
@@ -19,6 +25,10 @@
         </button>
       </div>
     </header>
+
+    <Transition name="staff-call-toast-fade">
+      <p v-if="justCalled" class="staff-call-toast">직원을 호출했어요. 잠시만 기다려주세요.</p>
+    </Transition>
 
     <!-- 카테고리 탭 -->
     <nav class="category-tabs">
@@ -104,6 +114,7 @@
 import { computed, ref, watch } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
+import { useStaffCall } from '../../../composables/useStaffCall'
 
 import logo from '../../../assets/kiosk/logo.png'
 import globe from '../../../assets/kiosk/icons/globe.png'
@@ -118,6 +129,7 @@ import { productImage } from '../../../data/productImages'
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 const focusedProduct = ref(null)
+const { calling, justCalled, callStaff } = useStaffCall()
 
 const closeXSvg = closeXRaw
 const cartSvg = cartRaw
@@ -283,6 +295,35 @@ function addFocusedProduct() {
   width: 24px;
   height: 24px;
   object-fit: contain;
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.staff-call-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  z-index: 60;
+  padding: 14px 22px;
+  color: #fff;
+  background: rgb(20 20 20 / 85%);
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+.staff-call-toast-fade-enter-active,
+.staff-call-toast-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.staff-call-toast-fade-enter-from,
+.staff-call-toast-fade-leave-to {
+  opacity: 0;
 }
 
 .close-btn :deep(svg) {

@@ -1,5 +1,9 @@
 <template>
   <section class="order">
+    <div v-if="isBusy" class="busy-banner">
+      현재 매장이 혼잡하여 주문이 지연될 수 있습니다 (약 {{ estimatedWaitMinutes }}분)
+    </div>
+
     <p>단계: {{ orderFlow.stepLabel }}</p>
 
     <OrderTypeStep v-if="orderFlow.step === 'orderType'" />
@@ -39,6 +43,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrderFlowStore } from '../../stores/orderFlow'
 import { useCartStore } from '../../stores/cart'
+import { useBranchBusyBanner } from '../../composables/useBranchBusyBanner'
 import OrderTypeStep from './steps/OrderTypeStep.vue'
 import ProductStep from './steps/ProductStep.vue'
 import ContainerStep from './steps/ContainerStep.vue'
@@ -50,6 +55,7 @@ import ReceiptStep from './steps/ReceiptStep.vue'
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 const router = useRouter()
+const { isBusy, estimatedWaitMinutes } = useBranchBusyBanner()
 
 const IDLE_TIMEOUT_MS = 60_000
 const IDLE_WARNING_SECONDS = 10
@@ -119,6 +125,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.busy-banner {
+  padding: 14px 20px;
+  margin-bottom: 12px;
+  color: #fff;
+  background: rgb(220 30 30 / 92%);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

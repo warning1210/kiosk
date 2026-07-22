@@ -2,7 +2,7 @@
 <main class="auth"><aside><div class="brand">♙　배스킨라빈스</div><div><h1>다시 오신 것을<br>환영합니다.</h1><p>오늘 하루도 성공적으로 함께 시작하세요.</p></div></aside><section>
     <form @submit.prevent="login">
         <p style="font-size:16px;font-weight:800;color:#c52f47;background:#ffecef;padding:12px;border-radius:8px;margin-bottom:16px;">
-            테스트 id/pw는 admin/admin1234 입니다!!
+            테스트 id/pw는 admin/admin1234 입니다!!<br>
             본점 id/pw는 hadmin/hadmin1234 입니다!!
         </p><h2>로그인</h2><p>계정 정보를 입력하세요</p>
 <label>아이디 또는 이메일
