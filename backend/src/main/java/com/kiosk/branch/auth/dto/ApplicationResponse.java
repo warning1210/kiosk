@@ -14,6 +14,7 @@ public record ApplicationResponse(
         String loginId,
         String accountStatus,
         String status,
+        String rejectionReason,
         LocalDateTime appliedAt,
         String inviteUrl
 ) {
@@ -29,6 +30,7 @@ public record ApplicationResponse(
                 loginId,
                 accountStatus,
                 application.getApprovalStatus().name(),
+                application.getRejectionReason(),
                 application.getAppliedAt(),
                 inviteUrl
         );

@@ -55,13 +55,32 @@ public class BranchInventoryService {
     private final StockRequestItemRepository stockRequestItemRepository;
     private final OrderItemFlavorRepository orderItemFlavorRepository;
 
-    @Transactional(readOnly = true)
+    // 기존 재고 수량은 유지하면서 신규 지점 또는 새로 추가된 맛의 재고 행만 만재 상태로 보충한다.
     public List<InventoryResponse> getInventory(Long branchId) {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new IllegalArgumentException("지점을 찾을 수 없습니다."));
+        initializeMissingInventory(branch);
         return inventoryRepository.findByBranch_BranchIdOrderByFlavor_FlavorNameAsc(branch.getBranchId()).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    // 판매 중인 맛을 각각 2통(6kg)으로 시작하게 하며, 이미 주문으로 차감된 행은 절대 초기화하지 않는다.
+    public void initializeMissingInventory(Branch branch) {
+        List<BranchInventory> missingInventories = flavorRepository
+                .findByIsVisibleTrueAndSaleStatusOrderByFlavorNameAsc(com.kiosk.domain.common.SaleStatus.ON_SALE).stream()
+                .filter(flavor -> inventoryRepository
+                        .findByBranch_BranchIdAndFlavor_FlavorId(branch.getBranchId(), flavor.getFlavorId()).isEmpty())
+                .map(flavor -> BranchInventory.builder()
+                        .branch(branch)
+                        .flavor(flavor)
+                        .currentQuantity(TARGET_GRAMS)
+                        .safetyQuantity(TUB_GRAMS)
+                        .inventoryStatus(InventoryStatus.NORMAL)
+                        .isKioskVisible(true)
+                        .build())
+                .toList();
+        inventoryRepository.saveAll(missingInventories);
     }
 
     public void adjustInventory(Long inventoryId, InventoryAdjustRequest request, Long branchId) {

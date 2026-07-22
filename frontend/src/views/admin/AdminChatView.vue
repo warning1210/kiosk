@@ -18,6 +18,7 @@
           >
             <strong>{{ room.branchName }}</strong>
             <span :class="['status', room.consultationStatus === 'OPEN' ? 'approved' : 'pending']">{{ room.consultationStatus === 'OPEN' ? '진행중' : '종료' }}</span>
+            <b v-if="room.unreadCount" class="unread">{{ room.unreadCount }}</b>
             <p>{{ room.lastMessagePreview || '메시지가 없습니다.' }}</p>
           </button>
         </aside>
@@ -76,7 +77,8 @@ async function loadRooms() {
 
 function selectRoom(roomId) {
   selectedRoomId.value = roomId
-  loadMessages(roomId)
+  // 방을 여는 요청이 읽음 처리까지 하므로 완료 후 숫자도 바로 갱신한다.
+  loadMessages(roomId).then(loadRooms)
 }
 
 async function loadMessages(roomId) {
@@ -133,4 +135,5 @@ function formatTime(value) {
 .composer button:disabled{opacity:.55}
 .empty{padding:50px;color:#929ba7;text-align:center;font-size:11px}
 @media(max-width:980px){.content{margin-left:0;padding:25px 16px}.chat-shell{grid-template-columns:1fr;height:auto}.room-list{max-height:200px}.thread{height:60vh}}
+.unread{float:right;margin-right:7px;min-width:18px;padding:3px 6px;color:#fff;background:#fa4854;border-radius:10px;font-size:9px;text-align:center}
 </style>

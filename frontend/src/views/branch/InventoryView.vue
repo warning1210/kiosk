@@ -332,7 +332,7 @@ onBeforeUnmount(() => window.clearInterval(refreshTimer))
 button, input, select { font: inherit; }
 button { cursor: pointer; }
 .admin-shell { min-height: 100vh; }
-.sidebar { position: fixed; inset: 0 auto 0 0; z-index: 5; display: flex; flex-direction: column; width: 238px; padding: 30px 18px 22px; border-right: 1px solid #eee9ed; background: #fff; }
+/* 사이드바 모양은 공통 BranchSidebar에서만 관리해 다른 지점 화면과 동일하게 유지한다. */
 .logo { padding: 0 13px 36px; color: #2e2930; font-size: 20px; font-weight: 900; letter-spacing: -.03em; }.logo span { display: inline-grid; width: 39px; height: 39px; margin-right: 8px; place-items: center; color: #fff; background: #ef3f91; border-radius: 12px; }
 nav { display: grid; gap: 7px; }nav a { display: flex; align-items: center; gap: 13px; padding: 13px 14px; color: #746c72; border-radius: 11px; font-size: 14px; font-weight: 700; text-decoration: none; }nav a i { width: 20px; color: #aaa1a7; font-style: normal; text-align: center; }nav a.active { color: #e93685; background: #fff0f6; }nav a.active i { color: #e93685; }
 .manager { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 15px 8px 0; border-top: 1px solid #f0ecef; }.avatar { display: grid; flex: 0 0 38px; height: 38px; place-items: center; color: #fff; background: #2e2930; border-radius: 50%; font-weight: 800; }.manager strong,.manager span { display: block; }.manager strong { font-size: 13px; }.manager span { margin-top: 3px; color: #a19aa0; font-size: 11px; }.manager button { margin-left: auto; border: 0; background: transparent; }
@@ -348,6 +348,6 @@ nav { display: grid; gap: 7px; }nav a { display: flex; align-items: center; gap:
 .qty .unit { color: #918990; font-size: 10px; font-weight: 700; }
 .form-error { margin: 14px 0 0; padding: 10px 12px; color: #c52f47; background: #ffecef; border-radius: 8px; font-size: 11px; }
 .modal-actions .primary:disabled { opacity: .55; cursor: wait; }
-@media (max-width: 1100px) { .sidebar { width: 190px; }.content { margin-left: 190px; padding: 30px 24px; }.summary-grid { grid-template-columns: repeat(2,1fr); }.updated { display: none; } }
-@media (max-width: 760px) { .sidebar { display: none; }.content { margin-left: 0; padding: 22px 14px; }.topbar,.panel-head { align-items: flex-start; flex-direction: column; gap: 14px; }.top-actions { width: 100%; }.summary-grid { grid-template-columns: 1fr 1fr; }.tools,.search { width: 100%; }.panel-head { overflow: hidden; }.tabs { overflow-x: auto; width: 100%; }.top-actions .primary { margin-left: auto; } }
+@media (max-width: 1100px) { .content { margin-left: 238px; padding: 30px 24px; }.summary-grid { grid-template-columns: repeat(2,1fr); }.updated { display: none; } }
+@media (max-width: 760px) { .content { margin-left: 0; padding: 22px 14px; }.topbar,.panel-head { align-items: flex-start; flex-direction: column; gap: 14px; }.top-actions { width: 100%; }.summary-grid { grid-template-columns: 1fr 1fr; }.tools,.search { width: 100%; }.panel-head { overflow: hidden; }.tabs { overflow-x: auto; width: 100%; }.top-actions .primary { margin-left: auto; } }
 </style>

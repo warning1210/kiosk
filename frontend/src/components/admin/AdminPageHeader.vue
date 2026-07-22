@@ -6,7 +6,7 @@
       <span>{{ subtitle }}</span>
     </div>
     <div class="tools">
-      <label class="range"><i>📅</i>{{ dateRange }}</label>
+      <label class="range"><i>📅</i>{{ displayedDate }}</label>
       <button class="bell" type="button">🔔</button>
       <div class="profile"><span>{{ nameInitial }}</span>{{ session.name }}</div>
     </div>
@@ -14,18 +14,41 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   eyebrow: { type: String, default: '본점 관리' },
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
-  dateRange: { type: String, default: '2024.04.01 ~ 2024.04.30' }
+  // 특정 화면이 직접 날짜를 넘기지 않으면 현재 한국 날짜와 시간을 표시한다.
+  dateRange: { type: String, default: '' }
 })
 
 const session = JSON.parse(localStorage.getItem('hq-session') || '{}')
 if (!session.name) session.name = '본점 관리자'
 const nameInitial = computed(() => session.name.slice(0, 1))
+const currentTime = ref(new Date())
+let clockTimer
+
+// 브라우저 PC의 시간대와 관계없이 본점 화면은 한국 표준시로 표시한다.
+const koreanTime = computed(() => new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  weekday: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false
+}).format(currentTime.value))
+const displayedDate = computed(() => props.dateRange || koreanTime.value)
+
+onMounted(() => {
+  // 실제 시계처럼 보이도록 1초마다 현재 시각을 다시 계산한다.
+  clockTimer = window.setInterval(() => { currentTime.value = new Date() }, 1000)
+})
+onBeforeUnmount(() => window.clearInterval(clockTimer))
 </script>
 
 <style scoped>
