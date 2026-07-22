@@ -69,7 +69,7 @@ function itemSignature(item) {
     containerType: item.containerType ?? 'NONE',
     spoonCount: item.spoonCount ?? 0,
     dryIceMinutes: item.dryIceMinutes ?? null,
-    monthlyFlavorUpgrade: Boolean(item.monthlyFlavorUpgrade),
+    sizeUpApplied: Boolean(item.sizeUpApplied),
     flavorIds
   })
 }

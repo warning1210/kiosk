@@ -9,6 +9,6 @@ public record OrderItemRequest(
         Integer spoonCount,
         Integer dryIceMinutes,
         List<Long> flavorIds,
-        Boolean monthlyFlavorUpgrade
+        Boolean sizeUpApplied
 ) {
 }

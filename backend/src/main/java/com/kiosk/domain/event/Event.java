@@ -46,10 +46,10 @@ public class Event {
     @Column(name = "event_type", nullable = false)
     private EventType eventType;
 
+    // FLAVOR_DISCOUNT 전용 - 본점이 지점에 넘길 할인 유형(율/금액). MONTHLY_FLAVOR는 할인이 없으므로 null.
     @Enumerated(EnumType.STRING)
-    @Column(name = "benefit_type", nullable = false)
-    @Builder.Default
-    private BenefitType benefitType = BenefitType.DISCOUNT_AMOUNT;
+    @Column(name = "benefit_type")
+    private BenefitType benefitType;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
