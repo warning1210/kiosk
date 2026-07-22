@@ -43,13 +43,15 @@ public class PaymentService {
     public PaymentQrResponse createQr(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."));
-
+        // 절대 중복되지 않는 고유한 토큰(UUID) 생성
         String qrToken = UUID.randomUUID().toString();
+        // QR코드의 유효시간은 현재 시간으로부터 5분으로 설정
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(QR_VALID_MINUTES);
 
         // CU-009-1: 결제 실패 시 QR코드를 재생성하여 다시 시도 - 기존 Payment가 있으면 토큰만 갱신
         Payment payment = paymentRepository.findByOrder_OrderId(orderId).orElse(null);
         if (payment == null) {
+            // 처음 결제 시도하는 경우 새 Payment 정보 생성 (초기 상태: QR_CREATED)
             payment = Payment.builder()
                     .order(order)
                     .paymentMethod(PaymentMethod.QR)
@@ -59,6 +61,7 @@ public class PaymentService {
                     .requestedAmount(order.getFinalAmount())
                     .build();
         } else {
+            // 결제 실패 후 다시 시도하는 경우 토큰과 시간만 갱신
             payment.setQrToken(qrToken);
             payment.setQrExpiresAt(expiresAt);
             payment.setPaymentStatus(PaymentStatus.QR_CREATED);
