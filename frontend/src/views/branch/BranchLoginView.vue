@@ -6,11 +6,13 @@
             본점 id/pw는 hadmin/hadmin1234 입니다!!
         </p><h2>로그인</h2><p>계정 정보를 입력하세요</p>
 <label>아이디 또는 이메일
-    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력">
+    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력" @focus="openKeypad('id')">
 </label>
+<VirtualKeypad v-if="activeKeypad === 'id'" v-model="loginId" @close="activeKeypad = null" />
 <label>비밀번호
-    <input v-model="password" required type="password" placeholder="비밀번호 입력">
+    <input v-model="password" required type="password" placeholder="비밀번호 입력" @focus="openKeypad('password')">
 </label>
+<VirtualKeypad v-if="activeKeypad === 'password'" v-model="password" @close="activeKeypad = null" />
 <div class="options">
     <label>
         <input v-model="remember" type="checkbox"> 로그인 상태 유지
@@ -31,14 +33,20 @@ import{useRoute,useRouter}from'vue-router';
 import{setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword}from'firebase/auth';
 import{firebaseAuth}from'../../firebase';
 import http from'../../api/http';
+import VirtualKeypad from'../../components/common/VirtualKeypad.vue';
 
 const router = useRouter()
 // 로그인 전에 사용자가 열려고 했던 본점 주소를 확인하기 위해 현재 경로 정보를 받는다.
 const route = useRoute()
 const loginId = ref('')
 const password = ref('')
-const remember = ref(true)
+const remember = ref(false)
 const error = ref('')
+// 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
+const activeKeypad = ref(null)
+function openKeypad(name) {
+  activeKeypad.value = name
+}
 
 // 본사/지점 로그인 페이지를 하나로 합친 것 - 아이디가 본사 계정인지 지점 계정인지는
 // 미리 나누지 않고, 각 경로를 순서대로 시도해보고 "성공한 경로"로 role을 판단한다.

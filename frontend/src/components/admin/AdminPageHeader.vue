@@ -7,7 +7,7 @@
     </div>
     <div class="tools">
       <label class="range"><i>📅</i>{{ displayedDate }}</label>
-      <button class="bell" type="button">🔔</button>
+      <!-- <button class="bell" type="button">🔔</button> -->
       <div class="profile"><span>{{ nameInitial }}</span>{{ session.name }}</div>
     </div>
   </header>
