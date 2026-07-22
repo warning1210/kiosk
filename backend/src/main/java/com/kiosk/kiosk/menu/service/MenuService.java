@@ -37,7 +37,7 @@ public class MenuService {
                 .toList();
     }
 
-    // 지점별 노출 여부(BranchProduct)로 필터링하고, 상품에 진행 중인 SIZE_UP 이벤트가 있으면 같이 실어 보낸다.
+    // 지점별 노출 여부(BranchProduct)로 필터링한다. 사이즈업 정보는 이제 상품이 아니라 맛(FlavorResponse)에 실린다.
     public List<ProductResponse> getProducts(Long branchId) {
         Map<Long, Boolean> branchVisibilityMap = branchId == null ? Map.of() :
                 branchProductRepository.findByBranch_BranchId(branchId).stream()
@@ -47,8 +47,7 @@ public class MenuService {
                 .filter(p -> p.getSaleStatus() == SaleStatus.ON_SALE)
                 .filter(p -> branchVisibilityMap.getOrDefault(p.getProductId(), p.getIsVisible()))
                 .sorted(Comparator.comparing(com.kiosk.domain.product.Product::getProductName))
-                .map(product -> ProductResponse.from(product,
-                        kioskFlavorDiscountService.activeSizeUpEventFrom(product.getProductId()).orElse(null)))
+                .map(ProductResponse::from)
                 .toList();
     }
 
