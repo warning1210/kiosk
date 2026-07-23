@@ -63,6 +63,7 @@ app:
 firebase:
   credentials:
     path: ${FIREBASE_CREDENTIALS_PATH:}
+ develop3.0
 
 logging:
   level:
