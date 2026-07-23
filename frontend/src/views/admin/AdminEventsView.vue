@@ -20,7 +20,7 @@
             <option value="" disabled>이벤트 유형</option>
             <option v-for="type in eventTypes" :key="type" :value="type">{{ eventTypeLabel(type) }}</option>
           </select>
-          <template v-if="form.eventType === 'MONTHLY_FLAVOR' || form.eventType === 'FLAVOR_DISCOUNT'">
+          <template v-if="form.eventType === 'FLAVOR_DISCOUNT' || form.eventType === 'HQ_FLAVOR_DISCOUNT'">
             <select v-model="form.benefitType">
               <option value="DISCOUNT_AMOUNT">정액 할인(원)</option>
               <option value="DISCOUNT_RATE">정률 할인(%)</option>
@@ -36,18 +36,14 @@
               type="number" min="1" required placeholder="할인 금액(원)"
             >
           </template>
-          <select v-if="form.eventType === 'MONTHLY_FLAVOR'" v-model="form.flavorId" required>
-            <option value="" disabled>할인 맛 선택</option>
+          <select v-if="form.eventType === 'MONTHLY_FLAVOR' || form.eventType === 'HQ_FLAVOR_DISCOUNT'" v-model="form.flavorId" required>
+            <option value="" disabled>{{ form.eventType === 'MONTHLY_FLAVOR' ? '이달의 맛 선택' : '할인 맛 선택' }}</option>
             <option v-for="flavor in flavors" :key="flavor.flavorId" :value="flavor.flavorId">{{ flavor.flavorName }}</option>
           </select>
-          <template v-if="form.eventType === 'SIZE_UP'">
-            <select v-model="form.sizeUpFromProductId" required>
-              <option value="" disabled>사이즈업 전 상품</option>
-              <option v-for="product in products" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
-            </select>
+          <template v-if="form.eventType === 'MONTHLY_FLAVOR'">
             <select v-model="form.sizeUpToProductId" required>
               <option value="" disabled>사이즈업 후 상품</option>
-              <option v-for="product in products" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
+              <option v-for="product in sizeUpProducts" :key="product.productId" :value="product.productId">{{ product.productName }}</option>
             </select>
             <input v-model.number="form.additionalPayment" type="number" min="0" required placeholder="추가 금액(원)">
           </template>
@@ -56,9 +52,9 @@
           <textarea v-model.trim="form.description" placeholder="설명 (지점 공지사항에 그대로 노출됩니다)" rows="2"></textarea>
           <button :disabled="creating" type="submit">{{ creating ? '생성 중' : '이벤트 생성' }}</button>
         </form>
-        <p v-if="form.eventType === 'MONTHLY_FLAVOR'" class="hint">본점이 지정한 맛에 전 지점 자동으로 할인이 적용됩니다 (지점이 따로 고를 필요 없음).</p>
+        <p v-if="form.eventType === 'MONTHLY_FLAVOR'" class="hint">본점이 지정한 맛을 고르면 사이즈업 후 상품으로 자동 업그레이드됩니다 (사이즈업 전 상품은 스쿱 수가 하나 적은 상품 중 가장 싼 것으로 자동 결정됩니다. 예: 더블주니어 지정 시 싱글레귤러).</p>
+        <p v-if="form.eventType === 'HQ_FLAVOR_DISCOUNT'" class="hint">본점이 맛과 할인을 둘 다 정해서 전 지점에 자동으로 적용됩니다 (지점이 따로 고를 필요 없음).</p>
         <p v-if="form.eventType === 'FLAVOR_DISCOUNT'" class="hint">실제로 어느 맛에 할인을 붙일지는 각 지점이 지점의 "이벤트 관리" 화면에서 선택합니다.</p>
-        <p v-if="form.eventType === 'SIZE_UP'" class="hint">전 지점에 자동 적용됩니다. "사이즈업 후 상품" 선택 화면에서 이달의 맛을 고르면 추가 금액만 결제합니다.</p>
         <p v-if="formError" class="alert">{{ formError }}</p>
       </section>
 
@@ -114,10 +110,10 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader.vue'
 import AdminStatCard from '../../components/admin/AdminStatCard.vue'
 import AdminPagination from '../../components/admin/AdminPagination.vue'
 
-// 이벤트는 크게 3가지: 본점이 할인 맛을 직접 지정해 전 지점에 자동 적용하는 것(MONTHLY_FLAVOR) /
-// 본점은 할인값만 정하고 어느 맛에 붙일지는 지점이 고르는 것(FLAVOR_DISCOUNT) /
-// 본점이 상품 사이즈업(상품A->상품B, 추가금액)을 지정해 전 지점에 자동 적용하는 것(SIZE_UP).
-const eventTypes = ['MONTHLY_FLAVOR', 'FLAVOR_DISCOUNT', 'SIZE_UP']
+// 이벤트는 크게 3가지: 본점이 맛을 직접 지정하고 할인 없이 사이즈업이 반드시 같이 걸리는 것(MONTHLY_FLAVOR,
+// 실제 배스킨라빈스식 "이 맛 고르면 사이즈업" 프로모션) / 본점이 맛과 할인을 둘 다 직접 지정하는 것
+// (HQ_FLAVOR_DISCOUNT) / 본점은 할인값만 정하고 어느 맛에 붙일지는 지점이 고르는 것(FLAVOR_DISCOUNT).
+const eventTypes = ['MONTHLY_FLAVOR', 'HQ_FLAVOR_DISCOUNT', 'FLAVOR_DISCOUNT']
 
 const events = ref([])
 const flavors = ref([])
@@ -128,7 +124,7 @@ const formError = ref('')
 const form = reactive({
   eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
   discountRate: null, discountAmount: null, flavorId: '',
-  sizeUpFromProductId: '', sizeUpToProductId: '', additionalPayment: null,
+  sizeUpToProductId: '', additionalPayment: null,
   startAt: '', endAt: '', description: ''
 })
 const keyword = ref('')
@@ -174,6 +170,15 @@ async function loadProducts() {
   }
 }
 
+// 사이즈업은 "아이스크림" 사이즈 라인업 중 싱글레귤러/싱글킹/더블주니어/더블레귤러(스쿱 2개 이하)까지만
+// 해당된다 - 파인트 이상 대용량 상품은 사이즈업 대상이 아니다. 가격 오름차순으로 정렬해서 보여준다.
+// "사이즈업 후 상품"으로 고를 수 있는 건 스쿱 2개짜리만 - 스쿱 1개짜리는 자동으로 찾을 "이전 상품"이 없다.
+const sizeUpProducts = computed(() =>
+  products.value
+    .filter((product) => product.categoryName === '아이스크림' && product.selectableFlavorCount === 2)
+    .sort((a, b) => a.basePrice - b.basePrice)
+)
+
 // 날짜만 입력받되, 시간 기준은 항상 자정(00:00)이다. 종료일은 그 날짜까지 포함되도록
 // "종료일 다음날 자정"을 실제 endAt으로 보낸다 - 그래야 시작일=종료일(하루짜리 이벤트)도 만들 수 있다.
 function toStartOfDay(dateStr) {
@@ -193,7 +198,6 @@ async function createEvent() {
     const { data } = await http.post('/hq/events', {
       ...form,
       flavorId: form.flavorId || null,
-      sizeUpFromProductId: form.sizeUpFromProductId || null,
       sizeUpToProductId: form.sizeUpToProductId || null,
       startAt: toStartOfDay(form.startAt),
       endAt: toExclusiveEndOfDay(form.endAt)
@@ -202,7 +206,7 @@ async function createEvent() {
     Object.assign(form, {
       eventName: '', eventType: '', benefitType: 'DISCOUNT_AMOUNT',
       discountRate: null, discountAmount: null, flavorId: '',
-      sizeUpFromProductId: '', sizeUpToProductId: '', additionalPayment: null,
+      sizeUpToProductId: '', additionalPayment: null,
       startAt: '', endAt: '', description: ''
     })
   } catch (e) {
@@ -213,7 +217,7 @@ async function createEvent() {
 }
 
 async function endEarly(event) {
-  if (!window.confirm(`"${event.eventName}" 이벤트를 지금 종료할까요?\nFLAVOR_DISCOUNT 이벤트는 즉시 할인이 중단됩니다.`)) return
+  if (!window.confirm(`"${event.eventName}" 이벤트를 지금 종료할까요?\n할인(및 사이즈업)이 즉시 중단됩니다.`)) return
   try {
     const { data } = await http.patch(`/hq/events/${event.eventId}/end`)
     const index = events.value.findIndex(e => e.eventId === event.eventId)
@@ -259,14 +263,22 @@ const pageEnd = computed(() => Math.min(page.value * pageSize, filteredEvents.va
 const pagedEvents = computed(() => filteredEvents.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 
 function eventTypeLabel(type) {
-  return { MONTHLY_FLAVOR: '이달의 맛(본점 지정)', FLAVOR_DISCOUNT: '상품(맛) 할인(지점 선택)', SIZE_UP: '사이즈업' }[type] || type
+  return {
+    MONTHLY_FLAVOR: '이달의 맛(본점 지정 사이즈업)',
+    HQ_FLAVOR_DISCOUNT: '본점 지정 할인',
+    FLAVOR_DISCOUNT: '지점 지정 할인'
+  }[type] || type
 }
 function discountLabel(event) {
-  if (event.eventType === 'SIZE_UP') {
-    return `+₩${(event.additionalPayment ?? 0).toLocaleString()} (${event.sizeUpFromProductName} → ${event.sizeUpToProductName})`
+  if (event.eventType === 'FLAVOR_DISCOUNT') {
+    return event.benefitType === 'DISCOUNT_RATE' ? `${event.discountRate}%` : `₩${(event.discountAmount ?? 0).toLocaleString()}`
   }
-  const value = event.benefitType === 'DISCOUNT_RATE' ? `${event.discountRate}%` : `₩${(event.discountAmount ?? 0).toLocaleString()}`
-  return event.eventType === 'MONTHLY_FLAVOR' ? `${value} (${event.flavorName})` : value
+  if (event.eventType === 'HQ_FLAVOR_DISCOUNT') {
+    const value = event.benefitType === 'DISCOUNT_RATE' ? `${event.discountRate}%` : `₩${(event.discountAmount ?? 0).toLocaleString()}`
+    return `${value} (${event.flavorName})`
+  }
+  const sizeUp = event.sizeUpToProductId ? ` · 사이즈업 ₩${(event.additionalPayment ?? 0).toLocaleString()}(${event.sizeUpFromProductName}→${event.sizeUpToProductName})` : ''
+  return `${event.flavorName}${sizeUp}`
 }
 function formatDate(value) {
   return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))

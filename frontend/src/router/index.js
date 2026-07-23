@@ -14,6 +14,7 @@ import AdminChatView from '../views/admin/AdminChatView.vue'
 import AdminProductsView from '../views/admin/AdminProductsView.vue'
 import AdminReportsView from '../views/admin/AdminReportsView.vue'
 import AdminComingSoonView from '../views/admin/AdminComingSoonView.vue'
+import AdminNoticesView from '../views/admin/AdminNoticesView.vue'
 import BranchLoginView from '../views/branch/BranchLoginView.vue'
 import BranchJoinView from '../views/branch/BranchJoinView.vue'
 // 이메일 링크에서 열리는 예비 지점장 전용 신청서 화면을 가져온다.
@@ -40,12 +41,6 @@ const router = createRouter({
     { path: '/admin/login', redirect: '/branch/login' },
     { path: '/admin/dashboard', name: 'admin-dashboard', component: AdminDashboardView },
     { path: '/admin/stock-requests', name: 'admin-stock-requests', component: AdminStockRequestsView },
-    {
-      path: '/admin/inventory',
-      name: 'admin-inventory',
-      component: AdminComingSoonView,
-      meta: { active: 'inventory', title: '재고 현황', subtitle: '지점별 재고 현황을 실시간으로 확인하고 관리할 수 있습니다.' }
-    },
     { path: '/admin/deliveries', name: 'admin-deliveries', component: AdminDeliveriesView },
     { path: '/admin/branches', name: 'admin-branches', component: AdminBranchesView },
     { path: '/admin/reports', name: 'admin-reports', component: AdminReportsView },
@@ -56,7 +51,7 @@ const router = createRouter({
     {
       path: '/admin/notices',
       name: 'admin-notices',
-      component: AdminComingSoonView,
+      component: AdminNoticesView,
       meta: { active: 'notices', title: '공지사항', subtitle: '본사 공지사항을 작성하고 지점 노출 여부를 관리할 수 있습니다.' }
     },
     {

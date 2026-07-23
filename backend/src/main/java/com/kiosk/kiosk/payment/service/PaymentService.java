@@ -65,7 +65,8 @@ public class PaymentService {
         }
         payment = paymentRepository.save(payment);
 
-        return new PaymentQrResponse(order.getOrderId(), payment.getQrToken(), payment.getQrExpiresAt(), payment.getRequestedAmount());
+        return new PaymentQrResponse(order.getOrderId(), payment.getQrToken(), payment.getQrExpiresAt(),
+                payment.getRequestedAmount(), tossProperties.getLanBaseUrl());
     }
 
     @Transactional(readOnly = true)

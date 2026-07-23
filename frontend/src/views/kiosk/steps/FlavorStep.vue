@@ -42,7 +42,9 @@
                   </span>
                 </span>
                 <span class="flavor-name">{{ flavor.flavorName }}</span>
-                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">이달의 맛</span>
+                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">
+                  이달의 맛 · {{ flavor.sizeUpToProductName ? `${flavor.sizeUpToProductName} 사이즈업` : '사이즈업 가능' }}
+                </span>
                 <span v-if="flavor.discountType" class="discount-badge">{{ discountLabel(flavor) }}</span>
               </button>
             </li>
@@ -198,9 +200,8 @@ function onSwipeEnd(e) {
 async function onFlavorClick(flavor) {
   if (isDragging.value) return
   const flavorId = flavor.flavorId
-  if (orderFlow.isMonthlyFlavorId(flavorId) && orderFlow.selectedProduct?.sizeUpToProductId) {
-    const canSelect = await orderFlow.offerMonthlyFlavorUpgrade()
-    if (!canSelect) return
+  if (orderFlow.isMonthlyFlavorId(flavorId)) {
+    await orderFlow.offerSizeUp(flavor)
   }
   // 다 채운 상태에서 이미 담은 맛을 다시 누르면, 새로 추가하는 대신 1개 취소한다
   if (!orderFlow.canPickMoreFlavor() && orderFlow.flavorSelectedCount(flavorId) > 0) {

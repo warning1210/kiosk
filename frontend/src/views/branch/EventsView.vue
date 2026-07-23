@@ -1,6 +1,6 @@
 <template>
   <div class="shell"><BranchSidebar active="events" /><main>
-    <header><div><h1>이벤트 관리</h1><p>본점이 만든 상품(맛) 할인 이벤트에 어느 맛을 적용할지 선택하세요.</p></div></header>
+    <header><div><h1>이벤트 관리</h1><p>진행 중인 상품(맛) 할인 이벤트입니다. 지점이 맛을 직접 골라야 하는 이벤트는 아래에서 적용하세요.</p></div></header>
 
     <div v-if="error" class="alert">{{ error }}</div>
     <div v-if="!loading && !events.length" class="empty">진행 중인 상품(맛) 할인 이벤트가 없습니다.</div>
@@ -14,18 +14,23 @@
         <span class="discount">{{ discountLabel(event) }}</span>
       </div>
 
-      <div class="flavor-row">
-        <select v-model="selections[event.eventId]" :disabled="!event.flavorOptions.length">
-          <option value="" disabled>{{ event.flavorOptions.length ? '맛을 선택하세요' : '우리 지점에 등록된 맛이 없습니다' }}</option>
-          <option v-for="flavor in event.flavorOptions" :key="flavor.flavorId" :value="flavor.flavorId">{{ flavor.flavorName }}</option>
-        </select>
-        <button
-          type="button"
-          :disabled="saving === event.eventId || !selections[event.eventId]"
-          @click="saveSelection(event)"
-        >{{ saving === event.eventId ? '저장 중...' : '적용' }}</button>
-      </div>
-      <p v-if="event.selectedFlavorName" class="current">현재 적용 중: <strong>{{ event.selectedFlavorName }}</strong></p>
+      <template v-if="event.eventType === 'HQ_FLAVOR_DISCOUNT'">
+        <p class="current">본점이 지정한 맛: <strong>{{ event.selectedFlavorName }}</strong> (본점 지정 · 지점에서 변경 불가)</p>
+      </template>
+      <template v-else>
+        <div class="flavor-row">
+          <select v-model="selections[event.eventId]" :disabled="!event.flavorOptions.length">
+            <option value="" disabled>{{ event.flavorOptions.length ? '맛을 선택하세요' : '우리 지점에 등록된 맛이 없습니다' }}</option>
+            <option v-for="flavor in event.flavorOptions" :key="flavor.flavorId" :value="flavor.flavorId">{{ flavor.flavorName }}</option>
+          </select>
+          <button
+            type="button"
+            :disabled="saving === event.eventId || !selections[event.eventId]"
+            @click="saveSelection(event)"
+          >{{ saving === event.eventId ? '저장 중...' : '적용' }}</button>
+        </div>
+        <p v-if="event.selectedFlavorName" class="current">현재 적용 중: <strong>{{ event.selectedFlavorName }}</strong></p>
+      </template>
     </section>
   </main></div>
 </template>
