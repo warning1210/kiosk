@@ -1,20 +1,20 @@
 <template>
   <!-- 5단계: 맛 선택 (CU-006) -->
   <div class="page">
-    <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+    <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
       <span v-html="closeXSvg"></span>
     </button>
 
     <!-- 상품정보/플레이버 탭: 컵/콘을 고르거나(용기 선택 화면을 거친) 테이크아웃 대용량 상품(숟가락/드라이아이스)만 '상품정보'로 되돌아갈 수 있다 -->
     <nav class="tab-bar">
-      <button v-if="showProductInfoTab" type="button" class="tab" @click="orderFlow.step = 'container'">상품정보</button>
-      <button type="button" class="tab active">플레이버</button>
+      <button v-if="showProductInfoTab" type="button" class="tab" @click="orderFlow.step = 'container'">{{ t('productInfo') }}</button>
+      <button type="button" class="tab active">{{ t('flavor') }}</button>
     </nav>
 
     <div v-if="orderFlow.selectedProduct.requiresFlavorSelection" class="content">
       <p class="progress-text">
-        맛 선택 ({{ orderFlow.selectedFlavorIds.length }} / {{ orderFlow.selectedProduct.selectableFlavorCount }})
-        <span class="progress-hint">같은 맛을 여러 번 선택할 수 있어요</span>
+        {{ t('flavorSelection') }} ({{ orderFlow.selectedFlavorIds.length }} / {{ orderFlow.selectedProduct.selectableFlavorCount }})
+        <span class="progress-hint">{{ t('sameFlavorHint') }}</span>
       </p>
 
       <div
@@ -35,14 +35,14 @@
                 @click="onFlavorClick(flavor)"
               >
                 <span class="flavor-thumb">
-                  <img v-if="flavor.imageUrl" :src="flavor.imageUrl" :alt="flavor.flavorName" />
+                  <img v-if="flavor.imageUrl" :src="flavor.imageUrl" :alt="flavorName(flavor.flavorName)" />
                   <span v-else class="flavor-thumb--empty" />
                   <span v-if="orderFlow.flavorSelectedCount(flavor.flavorId) > 0" class="flavor-count-badge">
                     {{ orderFlow.flavorSelectedCount(flavor.flavorId) }}
                   </span>
                 </span>
-                <span class="flavor-name">{{ flavor.flavorName }}</span>
-                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">이달의 맛</span>
+                <span class="flavor-name">{{ flavorName(flavor.flavorName) }}</span>
+                <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">{{ t('monthlyFlavor') }}</span>
               </button>
             </li>
           </ul>
@@ -75,21 +75,21 @@
       <img v-if="selectedDescriptionFlavor?.imageUrl" :src="selectedDescriptionFlavor.imageUrl" :alt="selectedDescriptionTitle" />
       <div>
         <strong>{{ selectedDescriptionTitle }}</strong>
-        <p>{{ selectedDescription || '부드럽고 달콤한 배스킨라빈스 메뉴입니다.' }}</p>
-        <small v-if="selectedDescriptionFlavor?.allergyInfo">알레르기 성분 · {{ selectedDescriptionFlavor.allergyInfo }}</small>
+        <p>{{ selectedDescription || t('defaultFlavorDescription') }}</p>
+        <small v-if="selectedDescriptionFlavor?.allergyInfo">{{ t('allergy') }} · {{ selectedDescriptionFlavor.allergyInfo }}</small>
       </div>
     </aside>
 
     <!-- 담은 맛을 화면 하단에 실시간 표시 -->
     <footer v-if="orderFlow.selectedFlavorSummary.length" class="flavor-summary-bar">
-      <p class="summary-label">선택한 맛</p>
+      <p class="summary-label">{{ t('selectedFlavors') }}</p>
       <ul class="summary-circles">
         <li v-for="entry in orderFlow.selectedFlavorSummary" :key="entry.flavorId" class="summary-circle-wrap">
           <button type="button" class="summary-circle" @click="orderFlow.removeOneFlavor(entry.flavorId)">
-            <img v-if="flavorImage(entry.flavorId)" :src="flavorImage(entry.flavorId)" :alt="entry.flavorName" />
+            <img v-if="flavorImage(entry.flavorId)" :src="flavorImage(entry.flavorId)" :alt="flavorName(entry.flavorName)" />
             <span v-if="entry.count > 1" class="summary-count-badge">{{ entry.count }}</span>
           </button>
-          <span class="summary-name">{{ entry.flavorName }}</span>
+          <span class="summary-name">{{ flavorName(entry.flavorName) }}</span>
         </li>
         <li v-for="n in emptySlotCount" :key="`empty-${n}`" class="summary-circle-wrap">
           <span class="summary-circle summary-circle--empty" />
@@ -100,10 +100,10 @@
     <div class="bottom-bar">
       <button type="button" class="prev-btn" @click="orderFlow.step = 'product'">
         <img :src="arrowForwardIos" alt="" class="prev-arrow" />
-        <span>이전</span>
+        <span>{{ t('previous') }}</span>
       </button>
       <button type="button" class="confirm-btn" :disabled="!orderFlow.canConfirmFlavor" @click="orderFlow.confirmAddToCart">
-        {{ orderFlow.editingItemId ? '수정 완료' : orderFlow.selectedProduct.requiresFlavorSelection ? '플레이버(맛) 선택' : '장바구니 담기' }}
+        {{ orderFlow.editingItemId ? t('editComplete') : orderFlow.selectedProduct.requiresFlavorSelection ? t('selectFlavor') : t('addToCart') }}
       </button>
     </div>
   </div>
@@ -114,6 +114,7 @@ import { computed, ref } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.svg'
 import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
+import { useKioskI18n } from '../../../composables/useKioskI18n'
 
 const closeXSvg = closeXRaw
 
@@ -121,6 +122,8 @@ const FLAVORS_PER_PAGE = 12 // 4열 x 3행
 const SWIPE_THRESHOLD = 40 // px
 
 const orderFlow = useOrderFlowStore()
+// 언어 선택값은 단계가 바뀌어도 이 공통 composable을 통해 유지됩니다.
+const { t, flavorName } = useKioskI18n()
 const focusedFlavor = ref(null)
 const selectedDescriptionFlavor = computed(() => focusedFlavor.value)
 const selectedDescription = computed(() => {
@@ -129,7 +132,7 @@ const selectedDescription = computed(() => {
 })
 const selectedDescriptionTitle = computed(() =>
   orderFlow.selectedProduct?.requiresFlavorSelection
-    ? selectedDescriptionFlavor.value?.flavorName ?? ''
+    ? flavorName(selectedDescriptionFlavor.value?.flavorName ?? '')
     : orderFlow.selectedProduct?.productName ?? ''
 )
 

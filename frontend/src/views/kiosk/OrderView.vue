@@ -12,11 +12,11 @@
 
     <div v-if="showIdleWarning" class="modal-backdrop idle-backdrop">
       <div class="modal idle-modal" role="dialog" aria-modal="true" aria-labelledby="idle-title">
-        <p id="idle-title" class="idle-title">주문 시간을 연장하시겠습니까?</p>
-        <p class="idle-message">{{ idleCountdown }}초 후 광고 화면으로 돌아갑니다.</p>
+        <p id="idle-title" class="idle-title">{{ t('extendOrderTitle') }}</p>
+        <p class="idle-message">{{ t('returnToAds').replace('{seconds}', idleCountdown) }}</p>
         <div class="confirm-actions">
-          <button type="button" class="confirm-cancel" @click="returnToAdvertisement">아니요</button>
-          <button type="button" class="confirm-ok" @click="extendOrderTime">연장하기</button>
+          <button type="button" class="confirm-cancel" @click="returnToAdvertisement">{{ t('no') }}</button>
+          <button type="button" class="confirm-ok" @click="extendOrderTime">{{ t('extend') }}</button>
         </div>
       </div>
     </div>
@@ -46,10 +46,13 @@ import FlavorStep from './steps/FlavorStep.vue'
 import CartStep from './steps/CartStep.vue'
 import CustomerPaymentStep from './steps/CustomerPaymentStep.vue'
 import ReceiptStep from './steps/ReceiptStep.vue'
+import { useKioskI18n } from '../../composables/useKioskI18n'
 
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 const router = useRouter()
+// 주문 연장 팝업도 상품 화면에서 선택한 언어를 그대로 사용합니다.
+const { t } = useKioskI18n()
 
 const IDLE_TIMEOUT_MS = 60_000
 const IDLE_WARNING_SECONDS = 10

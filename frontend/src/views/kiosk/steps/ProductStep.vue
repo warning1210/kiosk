@@ -4,17 +4,18 @@
     <header class="top-bar">
       <img class="logo" :src="logo" alt="배스킨라빈스" />
       <div class="top-actions">
-        <button type="button" class="lang-pill">
+        <!-- 언어 버튼을 누르면 아래 언어 선택 팝업을 엽니다. -->
+        <button type="button" class="lang-pill" @click="showLanguageModal = true">
           <img :src="globe" alt="" class="lang-globe" />
-          <span>한국어</span>
+          <span>{{ currentLanguage.nativeLabel }}</span>
           <img :src="chevron" alt="" class="lang-chevron" />
         </button>
-        <button type="button" class="easy-mode-pill">쉬운 모드</button>
-        <button type="button" class="icon-btn notif-btn" aria-label="알림">
+        <button type="button" class="easy-mode-pill">{{ t('easyMode') }}</button>
+        <button type="button" class="icon-btn notif-btn" :aria-label="t('notification')">
           <span class="notif-circle" v-html="notifCircleSvg"></span>
           <img :src="bell" class="bell-icon" alt="" />
         </button>
-        <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+        <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
           <span v-html="closeXSvg"></span>
         </button>
       </div>
@@ -30,13 +31,13 @@
         :class="{ active: orderFlow.selectedCategory?.categoryId === category.categoryId }"
         @click="orderFlow.selectedCategory = category"
       >
-        {{ category.categoryName }}
+        {{ menuName(category.categoryName) }}
       </button>
     </nav>
 
     <!-- 상품 그리드: 맛 선택 화면과 동일하게 페이지 단위로 좌우 스와이프 -->
-    <p v-if="orderFlow.loading" class="status-text">불러오는 중...</p>
-    <p v-else-if="orderFlow.loadError" class="status-text">상품을 불러오지 못했습니다.</p>
+    <p v-if="orderFlow.loading" class="status-text">{{ t('loading') }}</p>
+    <p v-else-if="orderFlow.loadError" class="status-text">{{ t('loadError') }}</p>
     <template v-else>
       <div
         class="product-viewport"
@@ -57,7 +58,7 @@
             >
               <img v-if="product.imageUrl || productImage(product.productName)" :src="product.imageUrl || productImage(product.productName)" :alt="product.productName" class="product-image" />
               <div v-else class="product-image product-image--placeholder" />
-              <p class="product-name">{{ product.productName }}</p>
+              <p class="product-name">{{ menuName(product.productName) }}</p>
               <p class="product-price">₩{{ product.basePrice.toLocaleString() }}</p>
             </button>
           </div>
@@ -72,7 +73,7 @@
           type="button"
           class="page-dot"
           :class="{ active: currentPage === page - 1 }"
-          :aria-label="`${page}페이지`"
+          :aria-label="`${page} ${t('page')}`"
           @click="currentPage = page - 1"
         ></button>
       </div>
@@ -80,23 +81,44 @@
 
     <aside v-if="focusedProduct" class="product-description" :class="{ 'has-cart': cart.items.length }">
       <div>
-        <strong>{{ focusedProduct.productName }}</strong>
-        <p>{{ focusedProduct.description || '달콤하고 맛있는 배스킨라빈스 메뉴입니다.' }}</p>
+        <strong>{{ menuName(focusedProduct.productName) }}</strong>
+        <p>{{ locale === 'ko' && focusedProduct.description ? focusedProduct.description : t('defaultProductDescription') }}</p>
       </div>
-      <button type="button" @click="addFocusedProduct">장바구니 담기</button>
+      <button type="button" @click="addFocusedProduct">{{ t('addToCart') }}</button>
     </aside>
 
     <!-- 하단 바: 장바구니 / 결제 - 담긴 상품이 있을 때만 노출 -->
     <footer v-if="cart.items.length" class="bottom-bar">
-      <button type="button" class="cart-btn" aria-label="장바구니" @click="goToCart">
+      <button type="button" class="cart-btn" :aria-label="t('cart')" @click="goToCart">
         <span v-html="cartSvg"></span>
         <span class="cart-count-badge">{{ cart.totalCount }}</span>
       </button>
       <button type="button" class="checkout-btn" @click="goToCheckout">
-        <span>결제하기</span>
+        <span>{{ t('checkout') }}</span>
         <img :src="arrowForwardIos" alt="" class="checkout-arrow" />
       </button>
     </footer>
+
+    <!-- 언어 선택 팝업: 목록을 수정하려면 useKioskI18n.js의 KIOSK_LANGUAGES만 바꾸면 됩니다. -->
+    <div v-if="showLanguageModal" class="language-backdrop" @click.self="showLanguageModal = false">
+      <section class="language-modal" role="dialog" aria-modal="true" :aria-label="t('selectLanguage')">
+        <h2>{{ t('selectLanguage') }}</h2>
+        <div class="language-options">
+          <button
+            v-for="language in KIOSK_LANGUAGES"
+            :key="language.locale"
+            type="button"
+            class="language-option"
+            :class="{ selected: locale === language.locale }"
+            @click="selectLanguage(language.locale)"
+          >
+            <span>{{ language.nativeLabel }}</span>
+            <small>{{ language.label }}</small>
+          </button>
+        </div>
+        <button type="button" class="language-close" @click="showLanguageModal = false">{{ t('close') }}</button>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -114,10 +136,21 @@ import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
 import cartRaw from '../../../assets/kiosk/icons/cart.svg?raw'
 import notifCircleRaw from '../../../assets/kiosk/icons/notif-circle.svg?raw'
 import { productImage } from '../../../data/productImages'
+import { KIOSK_LANGUAGES, useKioskI18n } from '../../../composables/useKioskI18n'
 
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 const focusedProduct = ref(null)
+const showLanguageModal = ref(false)
+
+// 번역 함수와 현재 언어는 공통 composable에서 가져옵니다.
+const { locale, currentLanguage, setLocale, t, menuName } = useKioskI18n()
+
+// 언어를 고르면 즉시 문구를 바꾸고 팝업을 닫습니다.
+function selectLanguage(nextLocale) {
+  setLocale(nextLocale)
+  showLanguageModal.value = false
+}
 
 const closeXSvg = closeXRaw
 const cartSvg = cartRaw
@@ -500,5 +533,74 @@ function addFocusedProduct() {
 .checkout-arrow {
   width: 14px;
   height: 24px;
+}
+
+/* 언어 선택 팝업은 키오스크의 다른 확인 팝업과 같은 느낌으로 구성합니다. */
+.language-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 45%);
+}
+
+.language-modal {
+  width: min(620px, 92vw);
+  padding: 34px;
+  border-radius: 26px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 18px 55px rgb(0 0 0 / 18%);
+}
+
+.language-modal h2 {
+  margin: 0 0 24px;
+  font-size: 28px;
+  color: #222;
+}
+
+.language-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.language-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 20px 16px;
+  border: 2px solid #dedede;
+  border-radius: 16px;
+  background: #fff;
+  color: #222;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.language-option small {
+  color: #969696;
+  font-size: 13px;
+}
+
+.language-option.selected {
+  border-color: #f20c93;
+  background: #fff5fa;
+  color: #f20c93;
+}
+
+.language-close {
+  width: 100%;
+  height: 58px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #f20c93;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
 }
 </style>
