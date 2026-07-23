@@ -62,7 +62,8 @@ const messages = {
     regenerateQr: 'QR코드 재생성', cancelPayment: '결제 취소',
     extendOrderTitle: '주문 시간을 연장하시겠습니까?',
     returnToAds: '{seconds}초 후 광고 화면으로 돌아갑니다.',
-    no: '아니요', extend: '연장하기'
+    no: '아니요', extend: '연장하기',
+    sizeUp: '사이즈업', sizeUpAvailable: '사이즈업 가능', sizeUpApplied: '사이즈업 적용'
   },
   en: {
     language: 'English',
@@ -110,7 +111,8 @@ const messages = {
     regenerateQr: 'Generate New QR', cancelPayment: 'Cancel Payment',
     extendOrderTitle: 'Would you like more time?',
     returnToAds: 'Returning to the advertisement in {seconds} seconds.',
-    no: 'No', extend: 'Extend'
+    no: 'No', extend: 'Extend',
+    sizeUp: 'Size Up', sizeUpAvailable: 'Size Up Available', sizeUpApplied: 'Size Up Applied'
   },
   zh: {
     language: '中文',
@@ -158,7 +160,8 @@ const messages = {
     regenerateQr: '重新生成二维码', cancelPayment: '取消付款',
     extendOrderTitle: '要延长点餐时间吗？',
     returnToAds: '{seconds}秒后返回广告画面。',
-    no: '否', extend: '延长时间'
+    no: '否', extend: '延长时间',
+    sizeUp: '升级尺寸', sizeUpAvailable: '可升级尺寸', sizeUpApplied: '已升级尺寸'
   },
   ja: {
     language: '日本語',
@@ -206,7 +209,8 @@ const messages = {
     regenerateQr: 'QRコードを再生成', cancelPayment: '支払いをキャンセル',
     extendOrderTitle: '注文時間を延長しますか？',
     returnToAds: '{seconds}秒後に広告画面へ戻ります。',
-    no: 'いいえ', extend: '延長する'
+    no: 'いいえ', extend: '延長する',
+    sizeUp: 'サイズアップ', sizeUpAvailable: 'サイズアップ可能', sizeUpApplied: 'サイズアップ適用'
   }
 }
 

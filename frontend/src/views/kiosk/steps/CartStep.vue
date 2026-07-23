@@ -141,7 +141,7 @@ async function showCashPaymentNotice() {
 
 function itemDetail(item) {
   const parts = []
-  if (item.sizeUpApplied) parts.push('사이즈업 적용')
+  if (item.sizeUpApplied) parts.push(t('sizeUpApplied'))
   if (item.containerType === 'CUP') parts.push(t('cup'))
   if (item.containerType === 'CONE') parts.push(t('cone'))
   if (item.containerType === 'WAFFLE_CONE') parts.push(t('waffleCone'))
