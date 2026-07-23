@@ -1,13 +1,13 @@
 <template>
   <!-- 4단계: 상품정보 (컵/콘 둘 다 가능한 상품 → 컵/콘 선택, 테이크아웃 대용량 상품 → 숟가락/드라이아이스 선택) -->
   <div class="page">
-    <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+    <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
       <span v-html="closeXSvg"></span>
     </button>
 
     <nav class="tab-bar">
-      <button type="button" class="tab active">상품정보</button>
-      <button type="button" class="tab" @click="orderFlow.proceedPastContainer">플레이버</button>
+      <button type="button" class="tab active">{{ t('productInfo') }}</button>
+      <button type="button" class="tab" @click="orderFlow.proceedPastContainer">{{ t('flavor') }}</button>
     </nav>
 
     <div class="content">
@@ -19,15 +19,15 @@
         <img v-else-if="orderFlow.selectedProduct.imageUrl || productImage(orderFlow.selectedProduct.productName)" :src="orderFlow.selectedProduct.imageUrl || productImage(orderFlow.selectedProduct.productName)" alt="" class="preview-single" />
         <div class="product-text">
           <p class="product-name">
-            {{ orderFlow.selectedProduct.productName }}<br />
-            <template v-if="isCupConeMode">(콘/컵)</template>
+            {{ menuName(orderFlow.selectedProduct.productName) }}<br />
+            <template v-if="isCupConeMode">({{ t('cone') }}/{{ t('cup') }})</template>
           </p>
         </div>
         <p class="product-price">₩{{ displayPrice.toLocaleString() }}</p>
       </div>
-      <p class="product-desc">원하는 맛의 아이스크림을 {{ orderFlow.selectedProduct.productName }}로 즐기세요!</p>
+      <p class="product-desc">{{ t('enjoyProduct').replace('{product}', menuName(orderFlow.selectedProduct.productName)) }}</p>
 
-      <p v-if="isCupConeMode && cart.orderType === 'TAKEOUT'" class="warning-text">★★ 콘 제품은 포장이 불가합니다 ★★</p>
+      <p v-if="isCupConeMode && cart.orderType === 'TAKEOUT'" class="warning-text">★★ {{ t('coneTakeoutWarning') }} ★★</p>
 
       <div v-if="isCupConeMode" class="options">
         <button
@@ -37,7 +37,7 @@
           @click="orderFlow.containerType = 'CUP'"
         >
           <img :src="containerCup" alt="" class="option-img" />
-          <span class="option-label">컵</span>
+          <span class="option-label">{{ t('cup') }}</span>
         </button>
         <button
           type="button"
@@ -46,7 +46,7 @@
           @click="orderFlow.containerType = 'CONE'"
         >
           <img :src="containerCone" alt="" class="option-img" />
-          <span class="option-label">콘</span>
+          <span class="option-label">{{ t('cone') }}</span>
         </button>
         <button
           type="button"
@@ -55,14 +55,14 @@
           @click="orderFlow.containerType = 'WAFFLE_CONE'"
         >
           <img :src="containerWaffleCone" alt="와플콘" class="option-img" />
-          <span class="option-label">와플콘(+500원)</span>
+          <span class="option-label">{{ t('waffleCone') }}</span>
         </button>
       </div>
 
       <!-- 포장(테이크아웃) 대용량 상품: 숟가락 개수 / 드라이아이스 시간 -->
       <div v-else class="spoon-dryice-options">
         <div class="option-group">
-          <p class="option-group-title">숟가락 개수</p>
+          <p class="option-group-title">{{ t('spoonCount') }}</p>
           <div class="stepper">
             <button type="button" @click="orderFlow.spoonCount = Math.max(0, orderFlow.spoonCount - 1)">−</button>
             <span class="stepper-value">{{ orderFlow.spoonCount }}</span>
@@ -70,7 +70,7 @@
           </div>
         </div>
         <div class="option-group">
-          <p class="option-group-title">드라이아이스 시간</p>
+          <p class="option-group-title">{{ t('dryIceTime') }}</p>
           <div class="dryice-choices">
             <button
               v-for="choice in DRY_ICE_CHOICES"
@@ -80,7 +80,7 @@
               :class="{ selected: orderFlow.dryIceMinutes === choice.value }"
               @click="orderFlow.dryIceMinutes = choice.value"
             >
-              {{ choice.label }}
+              {{ choice.value === null ? t('notUsed') : `${choice.value}${t('minute')}` }}
             </button>
           </div>
         </div>
@@ -90,9 +90,9 @@
     <div class="bottom-bar">
       <button type="button" class="prev-btn" @click="orderFlow.step = 'product'">
         <img :src="arrowForwardIos" alt="" class="prev-arrow" />
-        <span>이전</span>
+        <span>{{ t('previous') }}</span>
       </button>
-      <button type="button" class="confirm-btn" @click="orderFlow.proceedPastContainer">플레이버(맛) 선택</button>
+      <button type="button" class="confirm-btn" @click="orderFlow.proceedPastContainer">{{ t('selectFlavor') }}</button>
     </div>
   </div>
 </template>
@@ -107,10 +107,13 @@ import containerCone from '../../../assets/kiosk/icons/container-cone.png'
 import containerWaffleCone from '../../../assets/kiosk/icons/container-waffle-cone.png'
 import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.svg'
 import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
+import { useKioskI18n } from '../../../composables/useKioskI18n'
 
 const closeXSvg = closeXRaw
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
+// 키오스크 공통 번역과 메뉴명 번역을 사용합니다.
+const { t, menuName } = useKioskI18n()
 
 const isCupConeMode = computed(() => orderFlow.selectedProduct?.containerPolicy === 'CUP_OR_CONE')
 

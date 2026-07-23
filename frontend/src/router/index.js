@@ -29,6 +29,7 @@ import ChatView from '../views/branch/ChatView.vue'
 import EventsView from '../views/branch/EventsView.vue'
 import NoticeDetailView from '../views/branch/NoticeDetailView.vue'
 import BranchProductView from '../views/branch/BranchProductView.vue'
+import { resetKioskLocale } from '../composables/useKioskI18n'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -95,6 +96,12 @@ router.beforeEach((to) => {
   if (session?.token) return true
   // 토큰이 없으면 공용 로그인 화면으로 이동시킨다.
   return { path: '/branch/login', query: { redirect: to.fullPath } }
+})
+
+// 주문 완료·취소·시간 초과 등 어떤 경로로든 광고 화면에 돌아오면
+// 다음 고객은 항상 한국어에서 새 주문을 시작합니다.
+router.afterEach((to) => {
+  if (to.path === '/') resetKioskLocale()
 })
 
 export default router
