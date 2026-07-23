@@ -43,10 +43,10 @@ const password = ref('')
 const remember = ref(false)
 const error = ref('')
 // 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
-const activeKeypad = ref(null)
-function openKeypad(name) {
-  activeKeypad.value = name
-}
+// const activeKeypad = ref(null)
+// function openKeypad(name) {
+//   activeKeypad.value = name
+// }
 
 // 본사/지점 로그인 페이지를 하나로 합친 것 - 아이디가 본사 계정인지 지점 계정인지는
 // 미리 나누지 않고, 각 경로를 순서대로 시도해보고 "성공한 경로"로 role을 판단한다.

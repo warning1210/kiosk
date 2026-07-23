@@ -76,10 +76,10 @@ const loginId = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
 // 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
-const activeKeypad = ref(null)
-function openKeypad(name) {
-  activeKeypad.value = name
-}
+// const activeKeypad = ref(null)
+// function openKeypad(name) {
+//   activeKeypad.value = name
+// }
 
 onMounted(async () => {
   try {
