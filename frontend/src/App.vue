@@ -1,9 +1,14 @@
 <template>
   <router-view v-slot="{ Component, route }">
-    <component :is="Component" v-if="route.path === '/'" />
-    <div v-else class="app-scale">
+    <!-- 키오스크 주문·결제 화면만 80% 배율을 사용합니다. -->
+    <div
+      v-if="route.path.startsWith('/kiosk/') || route.path.startsWith('/pay/') || route.path.startsWith('/payment/')"
+      class="app-scale"
+    >
       <component :is="Component" />
     </div>
+    <!-- 광고, 본점(/admin), 분점(/branch) 화면은 원래 100% 크기로 표시합니다. -->
+    <component :is="Component" v-else />
   </router-view>
 </template>
 
