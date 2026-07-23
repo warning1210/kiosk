@@ -3,7 +3,7 @@
   <div class="page" :class="{ 'page--no-actions': activeTab === 'payment' }">
     <header class="top-bar">
       <img class="logo" :src="logo" alt="배스킨라빈스" />
-      <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+      <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
         <span v-html="closeXSvg"></span>
       </button>
     </header>
@@ -13,7 +13,7 @@
     <nav class="tab-bar">
       <button type="button" class="tab" :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
         <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'main' }">STEP01</span>
-        <span>쿠폰/포인트</span>
+        <span>{{ t('pointsDiscount') }}</span>
       </button>
       <button
         type="button"
@@ -23,22 +23,22 @@
         @click="activeTab = 'payment'"
       >
         <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'payment' }">STEP02</span>
-        <span>결제</span>
+        <span>{{ t('couponPayment') }}</span>
       </button>
     </nav>
 
     <div v-if="activeTab === 'main'" class="content">
       <template v-if="!orderFlow.customerLookupDone">
-        <p class="section-title">쿠폰・포인트 조회</p>
-        <p class="coupon-hint">휴대폰 번호를 입력하면 사용 가능한 쿠폰과 포인트 정보를 확인할 수 있어요.</p>
-        <button type="button" class="lookup-btn" @click="openLookup">휴대폰 번호로 조회하기</button>
+        <p class="section-title">{{ t('pointsDiscount') }}</p>
+        <p class="coupon-hint">{{ t('enterPhone') }}</p>
+        <button type="button" class="lookup-btn" @click="openLookup">{{ t('enterPhone') }}</button>
       </template>
 
       <template v-else>
         <!-- 번호를 잘못 입력했거나 다른 회원으로 바꾸고 싶을 때 다시 입력할 수 있게 함 -->
         <div class="phone-recheck">
           <span class="phone-recheck-value">{{ phoneDisplay }}</span>
-          <button type="button" class="phone-recheck-btn" @click="openLookup">번호 재입력</button>
+          <button type="button" class="phone-recheck-btn" @click="openLookup">{{ t('enterPhone') }}</button>
         </div>
 
         <p class="section-title">사용 가능한 쿠폰</p>
@@ -69,10 +69,10 @@
 
         <div class="point-options">
           <button type="button" class="point-card" :class="{ selected: pointsMode === 'earn' }" @click="openPointFlow('earn')">
-            <span class="point-label">적립하기</span>
+            <span class="point-label">{{ t('earnPoints') }}</span>
           </button>
           <button type="button" class="point-card" :class="{ selected: pointsMode === 'use' }" @click="openPointFlow('use')">
-            <span class="point-label">사용하기</span>
+            <span class="point-label">{{ t('usePoints') }}</span>
           </button>
         </div>
 
@@ -101,13 +101,13 @@
     <!-- 조회하기/해피포인트 카드를 누르면 뜨는 휴대폰 번호 입력 팝업. 조회 후 '사용하기'면 이어서 포인트 입력 단계로 넘어간다 -->
     <div v-if="showKeypad" class="modal-backdrop">
       <div class="modal">
-        <button type="button" class="modal-close" aria-label="닫기" @click="showKeypad = false">
+        <button type="button" class="modal-close" :aria-label="t('close')" @click="showKeypad = false">
           <span v-html="closeXSvg"></span>
         </button>
 
         <template v-if="phoneStage === 'phone'">
-          <h3 class="modal-title">휴대폰 번호 입력</h3>
-          <p class="modal-subtitle">쿠폰・포인트 조회를 위해 번호를 입력해주세요.</p>
+          <h3 class="modal-title">{{ t('enterPhone') }}</h3>
+          <p class="modal-subtitle">{{ t('enterPhoneHint').replace('{mode}', t('pointsDiscount')) }}</p>
 
           <div class="phone-display">
             <span v-if="orderFlow.mobileNumberInput" class="phone-value">{{ phoneDisplay }}</span>
@@ -124,7 +124,7 @@
             >
               {{ n }}
             </button>
-            <button type="button" class="keypad-key keypad-key--text" @click="clearPhone">지우기</button>
+            <button type="button" class="keypad-key keypad-key--text" @click="clearPhone">{{ t('clear') }}</button>
             <button type="button" class="keypad-key" @click="appendPhoneDigit('0')">0</button>
             <button type="button" class="keypad-key keypad-key--text" aria-label="한 글자 지우기" @click="backspacePhone">⌫</button>
           </div>
@@ -135,44 +135,44 @@
             :disabled="orderFlow.mobileNumberInput.length < PHONE_DIGITS"
             @click="confirmPhoneEntry"
           >
-            확인
+            {{ t('confirm') }}
           </button>
         </template>
 
         <template v-else-if="phoneStage === 'points'">
-          <h3 class="modal-title">사용할 포인트</h3>
+          <h3 class="modal-title">{{ t('pointsToUse') }}</h3>
           <p v-if="orderFlow.customer" class="modal-subtitle">
-            보유 포인트 {{ orderFlow.customer.pointBalance.toLocaleString() }}P
+            {{ t('availablePoints') }} {{ orderFlow.customer.pointBalance.toLocaleString() }}P
           </p>
-          <p v-else class="modal-subtitle">회원 정보를 찾을 수 없어요.</p>
+          <p v-else class="modal-subtitle">{{ t('memberNotFound') }}</p>
 
           <template v-if="canUsePoints">
-            <p class="used-points">사용 포인트: {{ cart.usedPoints.toLocaleString() }}P</p>
+            <p class="used-points">{{ t('usedPoints') }}: {{ cart.usedPoints.toLocaleString() }}P</p>
             <div class="point-adjust-buttons">
               <button type="button" @click="orderFlow.adjustUsedPoints(-1000)">-1000</button>
               <button type="button" @click="orderFlow.adjustUsedPoints(-100)">-100</button>
               <button type="button" @click="orderFlow.adjustUsedPoints(100)">+100</button>
               <button type="button" @click="orderFlow.adjustUsedPoints(1000)">+1000</button>
-              <button type="button" @click="orderFlow.useMaxPoints">최대금액사용</button>
+              <button type="button" @click="orderFlow.useMaxPoints">{{ t('useMaximum') }}</button>
             </div>
           </template>
-          <p v-else class="point-desc">100P 이상 보유 시 사용 가능합니다.</p>
+          <p v-else class="point-desc">{{ t('pointsMinimum') }}</p>
 
-          <button type="button" class="confirm-btn keypad-confirm" @click="showKeypad = false">완료</button>
+          <button type="button" class="confirm-btn keypad-confirm" @click="showKeypad = false">{{ t('done') }}</button>
         </template>
       </div>
     </div>
 
     <footer class="summary-bar" :class="{ 'summary-bar--no-actions': activeTab === 'payment' }">
       <div class="summary-final">
-        <span>최종 결제금액</span>
+        <span>{{ t('finalAmount') }}</span>
         <span>₩ {{ cart.totalAmount.toLocaleString() }}</span>
       </div>
       <div class="summary-breakdown">
-        <span>총 주문 금액</span>
+        <span>{{ t('orderAmount') }}</span>
         <span>₩ {{ cart.amountBeforeDiscount.toLocaleString() }}</span>
         <span class="dash">-</span>
-        <span>총 할인 금액</span>
+        <span>{{ t('discountAmount') }}</span>
         <span>₩ {{ (cart.usedPoints + cart.couponDiscount).toLocaleString() }}</span>
       </div>
     </footer>
@@ -180,18 +180,18 @@
     <div v-if="activeTab !== 'payment'" class="bottom-bar">
       <button type="button" class="prev-btn" @click="orderFlow.step = 'cart'">
         <img :src="arrowForwardIos" alt="" class="prev-arrow" />
-        <span>이전</span>
+        <span>{{ t('previous') }}</span>
       </button>
       <button type="button" class="confirm-btn" :disabled="orderFlow.checkoutInProgress" @click="goToPayment">
-        다음단계(결제하기)
+        {{ t('nextPayment') }}
       </button>
     </div>
     <p v-if="orderFlow.checkoutError" class="checkout-error">{{ orderFlow.checkoutError }}</p>
 
     <!-- CU-009: STEP02 - 결제하기를 누르면 팝업이 아니라 이 화면(결제 탭) 안에서 그대로 진행된다 -->
     <div v-if="activeTab === 'payment'" class="content step2-content">
-      <h3 class="modal-title">QR 결제</h3>
-      <p class="modal-subtitle">휴대폰으로 QR코드를 스캔해주세요.</p>
+      <h3 class="modal-title">{{ t('qrPayment') }}</h3>
+      <p class="modal-subtitle">{{ t('scanQr') }}</p>
       <div class="qr-frame">
         <img :src="orderFlow.qrDataUrl" alt="결제 QR코드" width="280" height="280" />
       </div>
@@ -201,20 +201,20 @@
 
       <div class="timer-badge">
         <img :src="clockIcon" alt="" class="clock-icon" />
-        <span>결제 유효 시간</span>
+        <span>{{ t('paymentTime') }}</span>
       </div>
       <p class="timer-value">{{ remainingTimeLabel }}</p>
-      <p class="timer-note">시간 내 결제가 완료되지 않으면<br />자동 취소됩니다.</p>
+      <p class="timer-note">{{ t('paymentExpiry') }}</p>
 
-      <p class="status-line">상태: {{ orderFlow.paymentStatusLabel }}</p>
-      <p v-if="orderFlow.paymentStatus === 'PAID'" class="paid-message">결제가 완료되었습니다. 감사합니다!</p>
+      <p class="status-line">{{ t('status') }}: {{ orderFlow.paymentStatusLabel }}</p>
+      <p v-if="orderFlow.paymentStatus === 'PAID'" class="paid-message">{{ t('paymentComplete') }}</p>
       <p v-if="orderFlow.paymentStatus === 'PAID' && !cart.customerMobileNumber" class="paid-message">
         포인트를 적립하지 않으셨습니다. 다음 방문 시 휴대폰 번호를 입력하시면 적립 혜택을 받으실 수 있습니다.
       </p>
       <button v-if="orderFlow.paymentStatus !== 'PAID'" type="button" class="regen-btn" @click="orderFlow.regenerateQr">
-        QR코드 재생성
+        {{ t('regenerateQr') }}
       </button>
-      <button type="button" class="cancel-btn" @click="orderFlow.closeQrModal">결제 취소</button>
+      <button type="button" class="cancel-btn" @click="orderFlow.closeQrModal">{{ t('cancelPayment') }}</button>
 
       <details class="debug-json">
         <summary>결제 요청 JSON</summary>
@@ -230,6 +230,7 @@ import { ref, computed, onUnmounted, watch } from 'vue'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
 import http from '../../../api/http'
+import { useKioskI18n } from '../../../composables/useKioskI18n'
 
 import logo from '../../../assets/kiosk/logo.png'
 import clockIcon from '../../../assets/kiosk/icons/clock.png'
@@ -237,6 +238,8 @@ import arrowForwardIos from '../../../assets/kiosk/icons/arrow-forward-ios-pink.
 import closeXRaw from '../../../assets/kiosk/icons/close-x.svg?raw'
 
 const orderFlow = useOrderFlowStore()
+// 현금/신용카드 선택 이후의 포인트·쿠폰·QR 화면도 선택 언어를 공유합니다.
+const { t } = useKioskI18n()
 const cart = useCartStore()
 const closeXSvg = closeXRaw
 

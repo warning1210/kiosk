@@ -8,13 +8,13 @@
           type="button"
           class="icon-btn notif-btn"
           :disabled="calling || justCalled"
-          aria-label="직원 호출"
+          :aria-label="t('notification')"
           @click="callStaff"
         >
           <span class="notif-circle" v-html="notifCircleSvg"></span>
           <img :src="bell" class="bell-icon" alt="" />
         </button>
-        <button type="button" class="icon-btn close-btn" aria-label="처음으로" @click="orderFlow.goHome">
+        <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
           <span v-html="closeXSvg"></span>
         </button>
       </div>
@@ -29,7 +29,7 @@
         <span v-html="stepPillSvg"></span>
         <span class="step-pill-text">STEP01</span>
       </span>
-      <span class="step-title">주문 내역을 확인해주세요</span>
+      <span class="step-title">{{ t('reviewOrder') }}</span>
     </div>
 
     <p v-if="!cart.items.length" class="empty-cart">장바구니가 비어있습니다. 메뉴를 담아주세요.</p>
@@ -38,7 +38,7 @@
         <img v-if="item.imageUrl || productImage(item.productName)" :src="item.imageUrl || productImage(item.productName)" :alt="item.productName" class="cart-thumb" />
         <div v-else class="cart-thumb cart-thumb--placeholder" />
         <div class="cart-item-text">
-          <p class="cart-item-name">{{ item.productName }}</p>
+          <p class="cart-item-name">{{ menuName(item.productName) }}</p>
           <p class="cart-item-detail">{{ itemDetail(item) }}</p>
         </div>
         <div class="cart-item-price">
@@ -47,7 +47,7 @@
           </span>
           <span class="price-final">₩{{ (item.unitPrice * item.quantity).toLocaleString() }}</span>
         </div>
-        <div class="quantity-control" aria-label="수량 변경">
+        <div class="quantity-control" :aria-label="t('quantity')">
           <button
             type="button"
             class="quantity-btn"
@@ -63,16 +63,16 @@
             @click="cart.adjustQuantity(item.id, 1)"
           >+</button>
         </div>
-        <button v-if="canEditItem(item)" type="button" class="row-icon-btn" aria-label="수정" @click="orderFlow.editItem(item)">
+        <button v-if="canEditItem(item)" type="button" class="row-icon-btn" :aria-label="t('edit')" @click="orderFlow.editItem(item)">
           <span v-html="editPencilSvg"></span>
         </button>
-        <button type="button" class="row-icon-btn" aria-label="삭제" @click="orderFlow.removeFromCart(item.id)">
+        <button type="button" class="row-icon-btn" :aria-label="t('delete')" @click="orderFlow.removeFromCart(item.id)">
           <span v-html="deleteXSvg"></span>
         </button>
       </li>
     </ul>
 
-    <button type="button" class="add-more-btn" @click="orderFlow.step = 'product'">메뉴 더 담으러 가기</button>
+    <button type="button" class="add-more-btn" @click="orderFlow.step = 'product'">{{ t('addMore') }}</button>
 
     <footer class="pay-section">
       <div class="pay-header">
@@ -80,17 +80,17 @@
           <span v-html="stepPillSvg"></span>
           <span class="step-pill-text">STEP02</span>
         </span>
-        <span class="step-title">결제 방법을 선택해주세요</span>
+        <span class="step-title">{{ t('selectPayment') }}</span>
         <span class="pay-total">₩{{ cart.amountBeforeDiscount.toLocaleString() }}</span>
       </div>
 
       <div class="pay-methods">
         <button type="button" class="pay-method pay-method--cash" :disabled="!cart.items.length" @click="showCashPaymentNotice">
-          <span>현금</span>
+          <span>{{ t('cash') }}</span>
         </button>
         <button type="button" class="pay-method pay-method--card" :disabled="!cart.items.length" @click="orderFlow.step = 'customer'">
-          <span class="card-main">신용카드</span>
-          <span class="card-sub">모바일상품권<br />각종PAY<br />APP카드</span>
+          <span class="card-main">{{ t('creditCard') }}</span>
+          <span class="card-sub">{{ t('cardExtras') }}</span>
         </button>
       </div>
     </footer>
@@ -102,6 +102,7 @@ import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
 import { useStaffCall } from '../../../composables/useStaffCall'
 import { productImage } from '../../../data/productImages'
+import { useKioskI18n } from '../../../composables/useKioskI18n'
 
 import logo from '../../../assets/kiosk/logo.png'
 import bell from '../../../assets/kiosk/icons/bell.png'
@@ -114,6 +115,8 @@ import stepPillRaw from '../../../assets/kiosk/icons/step-pill.svg?raw'
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
 const { calling, justCalled, callStaff } = useStaffCall()
+// 장바구니와 결제수단 영역도 상품 화면에서 선택한 언어를 그대로 사용합니다.
+const { t, menuName, flavorName } = useKioskI18n()
 
 const closeXSvg = closeXRaw
 const notifCircleSvg = notifCircleRaw
@@ -132,17 +135,19 @@ function canEditItem(item) {
 }
 
 async function showCashPaymentNotice() {
-  await orderFlow.showNotice('현금으로 결제하시면 카운터에서 결제를 도와드리겠습니다.')
+  await orderFlow.showNotice(t('cashNotice'))
   orderFlow.finishOrder()
 }
 
 function itemDetail(item) {
   const parts = []
   if (item.sizeUpApplied) parts.push('사이즈업 적용')
-  if (CONTAINER_LABELS[item.containerType]) parts.push(CONTAINER_LABELS[item.containerType])
-  if (item.flavors.length) parts.push(item.flavors.map((f) => f.flavorName).join(', '))
-  if (item.spoonCount) parts.push(`숟가락 ${item.spoonCount}개`)
-  if (item.dryIceMinutes) parts.push(`드라이아이스 ${item.dryIceMinutes}분`)
+  if (item.containerType === 'CUP') parts.push(t('cup'))
+  if (item.containerType === 'CONE') parts.push(t('cone'))
+  if (item.containerType === 'WAFFLE_CONE') parts.push(t('waffleCone'))
+  if (item.flavors.length) parts.push(item.flavors.map((f) => flavorName(f.flavorName)).join(', '))
+  if (item.spoonCount) parts.push(`${t('spoon')} ${item.spoonCount}${t('piece')}`)
+  if (item.dryIceMinutes) parts.push(`${t('dryIce')} ${item.dryIceMinutes}${t('minute')}`)
   return parts.join(' · ')
 }
 </script>
@@ -465,5 +470,6 @@ function itemDetail(item) {
   font-size: 18px;
   line-height: 1.4;
   text-align: left;
+  white-space: pre-line;
 }
 </style>
