@@ -29,12 +29,14 @@
           <strong>로그인 계정</strong>
           <span>앞으로 로그인할 때 사용할 지점 계정을 입력하세요.</span>
         </div>
-        <label>아이디<input v-model.trim="loginId" required minlength="4" autocomplete="username" placeholder="영문·숫자 4자 이상"></label>
+        <label>아이디<input v-model.trim="loginId" required minlength="4" autocomplete="username" placeholder="영문·숫자 4자 이상" @focus="openKeypad('id')"></label>
+        <VirtualKeypad v-if="activeKeypad === 'id'" v-model="loginId" @close="activeKeypad = null" />
         <div class="two">
           <!-- 기존 Firebase 계정이 있는 이메일은 현재 비밀번호를 입력하고, 신규 계정은 새 비밀번호를 입력한다. -->
-          <label>비밀번호<input v-model="password" required minlength="8" type="password" autocomplete="current-password" placeholder="기존 계정은 현재 비밀번호, 신규는 8자 이상"></label>
+          <label>비밀번호<input v-model="password" required minlength="8" type="password" autocomplete="current-password" placeholder="기존 계정은 현재 비밀번호, 신규는 8자 이상" @focus="openKeypad('password')"></label>
           <label>비밀번호 확인<input v-model="passwordConfirm" required minlength="8" type="password" autocomplete="new-password" placeholder="비밀번호 다시 입력"></label>
         </div>
+        <VirtualKeypad v-if="activeKeypad === 'password'" v-model="password" @close="activeKeypad = null" />
 
         <button>가입 완료</button>
         <p v-if="error" class="error">{{ error }}</p>
@@ -53,6 +55,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import http from '../../api/http'
+import VirtualKeypad from '../../components/common/VirtualKeypad.vue'
 
 const KAKAO_POSTCODE_SCRIPT = 'https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
 const route = useRoute()
@@ -72,6 +75,11 @@ const businessNumber = ref('')
 const loginId = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
+// 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
+// const activeKeypad = ref(null)
+// function openKeypad(name) {
+//   activeKeypad.value = name
+// }
 
 onMounted(async () => {
   try {

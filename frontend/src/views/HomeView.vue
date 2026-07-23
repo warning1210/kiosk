@@ -5,8 +5,10 @@
       <h1>키오스크 지점 등록</h1>
       <p>이 키오스크가 소속된 지점의 관리자 계정으로 로그인해주세요. 최초 1회만 하면 됩니다.</p>
       <p>admin/admin1234</p>
-      <label>아이디 또는 이메일<input v-model="loginId" required placeholder="아이디 또는 이메일 입력"></label>
-      <label>비밀번호<input v-model="password" required type="password" placeholder="비밀번호 입력"></label>
+      <label>아이디 또는 이메일<input v-model="loginId" required placeholder="아이디 또는 이메일 입력" @focus="openKeypad('id')"></label>
+      <VirtualKeypad v-if="activeKeypad === 'id'" v-model="loginId" @close="activeKeypad = null" />
+      <label>비밀번호<input v-model="password" required type="password" placeholder="비밀번호 입력" @focus="openKeypad('password')"></label>
+      <VirtualKeypad v-if="activeKeypad === 'password'" v-model="password" @close="activeKeypad = null" />
       <button :disabled="loggingIn" type="submit">{{ loggingIn ? '확인 중...' : '등록' }}</button>
       <p v-if="error" class="error">{{ error }}</p>
     </form>
@@ -49,6 +51,7 @@ import http from '../api/http'
 import { useCartStore } from '../stores/cart'
 import { getKioskSession, setKioskSession } from '../utils/kioskSession'
 import { useBranchBusyBanner } from '../composables/useBranchBusyBanner'
+import VirtualKeypad from '../components/common/VirtualKeypad.vue'
 import ad1 from '../assets/kiosk/ads/ad-1.png'
 import ad2 from '../assets/kiosk/ads/ad-2.png'
 import ad3 from '../assets/kiosk/ads/ad-3.png'
@@ -74,6 +77,11 @@ const loginId = ref('')
 const password = ref('')
 const loggingIn = ref(false)
 const error = ref('')
+// 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
+const activeKeypad = ref(null)
+function openKeypad(name) {
+  activeKeypad.value = name
+}
 
 onMounted(() => {
   rotationTimer = window.setInterval(() => {
