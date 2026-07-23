@@ -12,7 +12,6 @@ public record HqEventCreateRequest(
         BigDecimal discountRate,
         Integer discountAmount,
         Long flavorId,
-        Long sizeUpFromProductId,
         Long sizeUpToProductId,
         Integer additionalPayment,
         LocalDateTime startAt,

@@ -48,58 +48,98 @@ public class HqEventService {
                 .status(EventStatus.ACTIVE)
                 .creatorAdmin(creator);
 
-        if (eventType == EventType.SIZE_UP) {
-            applySizeUp(builder, request);
-        } else {
-            // MONTHLY_FLAVOR(본점 직접 지정 할인 맛) / FLAVOR_DISCOUNT(지점이 나중에 맛을 고름) 공통 -
-            // 할인값(율/금액)은 이벤트가 직접 갖는다.
-            BenefitType benefitType = parseEnum(BenefitType.class, request.benefitType(), "혜택 유형");
-            if (benefitType == BenefitType.DISCOUNT_RATE) {
-                if (request.discountRate() == null || request.discountRate().compareTo(BigDecimal.ZERO) <= 0
-                        || request.discountRate().compareTo(BigDecimal.valueOf(100)) > 0) {
-                    throw new IllegalArgumentException("할인율은 0보다 크고 100 이하여야 합니다.");
-                }
-                builder.benefitType(benefitType).discountRate(request.discountRate());
-            } else if (benefitType == BenefitType.DISCOUNT_AMOUNT) {
-                if (request.discountAmount() == null || request.discountAmount() <= 0) {
-                    throw new IllegalArgumentException("할인 금액을 올바르게 입력해주세요.");
-                }
-                builder.benefitType(benefitType).discountAmount(request.discountAmount());
-            } else {
-                throw new IllegalArgumentException("상품(맛) 할인 이벤트는 할인율 또는 할인 금액 중 하나여야 합니다.");
+        switch (eventType) {
+            case MONTHLY_FLAVOR -> {
+                // 할인이 없는 대신 사이즈업이 곧 그 혜택이다 - 아무 혜택 없이 "이달의 맛" 표시만 하는 건
+                // 이벤트라고 할 수 없으므로, 이 맛을 고르면 반드시 사이즈업이 같이 걸리게 한다.
+                builder.flavor(requireFlavor(request));
+                applySizeUp(builder, request);
             }
-
-            if (eventType == EventType.MONTHLY_FLAVOR) {
-                if (request.flavorId() == null) {
-                    throw new IllegalArgumentException("할인을 붙일 맛을 선택해주세요.");
-                }
-                Flavor flavor = flavorRepository.findById(request.flavorId())
-                        .orElseThrow(() -> new IllegalArgumentException("맛을 찾을 수 없습니다."));
-                builder.flavor(flavor);
+            case HQ_FLAVOR_DISCOUNT -> {
+                // 본점이 맛과 할인값을 둘 다 직접 정한다 - 지점이 고를 게 없다는 점만 FLAVOR_DISCOUNT와 다르다.
+                builder.flavor(requireFlavor(request));
+                applyDiscount(builder, request);
             }
+            case FLAVOR_DISCOUNT -> applyDiscount(builder, request);
         }
 
         return HqEventResponse.from(eventRepository.save(builder.build()));
     }
 
-    private void applySizeUp(Event.EventBuilder builder, HqEventCreateRequest request) {
-        if (request.sizeUpFromProductId() == null || request.sizeUpToProductId() == null) {
-            throw new IllegalArgumentException("사이즈업 전/후 상품을 모두 선택해주세요.");
+    private Flavor requireFlavor(HqEventCreateRequest request) {
+        if (request.flavorId() == null) {
+            throw new IllegalArgumentException("맛을 선택해주세요.");
         }
-        if (request.sizeUpFromProductId().equals(request.sizeUpToProductId())) {
-            throw new IllegalArgumentException("사이즈업 전/후 상품은 서로 달라야 합니다.");
+        return flavorRepository.findById(request.flavorId())
+                .orElseThrow(() -> new IllegalArgumentException("맛을 찾을 수 없습니다."));
+    }
+
+    private void applyDiscount(Event.EventBuilder builder, HqEventCreateRequest request) {
+        BenefitType benefitType = parseEnum(BenefitType.class, request.benefitType(), "혜택 유형");
+        builder.benefitType(benefitType);
+        if (benefitType == BenefitType.DISCOUNT_RATE) {
+            if (request.discountRate() == null || request.discountRate().compareTo(BigDecimal.ZERO) <= 0
+                    || request.discountRate().compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new IllegalArgumentException("할인율은 0보다 크고 100 이하여야 합니다.");
+            }
+            builder.discountRate(request.discountRate());
+        } else {
+            if (request.discountAmount() == null || request.discountAmount() <= 0) {
+                throw new IllegalArgumentException("할인 금액을 올바르게 입력해주세요.");
+            }
+            builder.discountAmount(request.discountAmount());
+        }
+    }
+
+    // "사이즈업 후 상품"만 본점이 고른다 - "전 상품"은 스쿱 수가 하나 적은 상품 중 가장 싼 것으로 자동
+    // 결정한다 (예: 더블주니어(2스쿱) -> 싱글레귤러(1스쿱 중 최저가)). 관리자가 매번 두 상품을 다 고를
+    // 필요 없이 "이 상품으로 사이즈업" 한 번만 정하면 되게 한다.
+    private void applySizeUp(Event.EventBuilder builder, HqEventCreateRequest request) {
+        if (request.sizeUpToProductId() == null) {
+            throw new IllegalArgumentException("사이즈업 후 상품을 선택해주세요.");
         }
         if (request.additionalPayment() == null || request.additionalPayment() < 0) {
             throw new IllegalArgumentException("추가 금액을 올바르게 입력해주세요.");
         }
-        Product fromProduct = productRepository.findById(request.sizeUpFromProductId())
-                .orElseThrow(() -> new IllegalArgumentException("사이즈업 전 상품을 찾을 수 없습니다."));
         Product toProduct = productRepository.findById(request.sizeUpToProductId())
                 .orElseThrow(() -> new IllegalArgumentException("사이즈업 후 상품을 찾을 수 없습니다."));
-        builder.benefitType(BenefitType.SIZE_UP)
-                .sizeUpFromProduct(fromProduct)
+
+        // 파인트 이상 대용량(스쿱 3개 이상) 상품은 사이즈업 대상이 아니다 - 싱글레귤러/싱글킹/더블주니어/더블레귤러까지만.
+        if (isTooLargeForSizeUp(toProduct)) {
+            throw new IllegalArgumentException("사이즈업은 싱글레귤러/싱글킹/더블주니어/더블레귤러 사이에서만 가능합니다.");
+        }
+
+        Product fromProduct = resolveSizeUpFromProduct(toProduct);
+
+        // 실제 정가 차이 이상을 추가금액으로 받으면 사이즈업이 아니라 그냥 큰 사이즈를 따로 사는 것과 같거나
+        // 더 비싸진다 - 그러면 "사이즈업 할인" 자체가 의미 없으므로 반드시 정가 차이보다 싸야 한다.
+        int priceGap = toProduct.getBasePrice() - fromProduct.getBasePrice();
+        if (request.additionalPayment() >= priceGap) {
+            throw new IllegalArgumentException(
+                    "추가 금액은 정가 차이(" + priceGap + "원)보다 작아야 합니다. " + toProduct.getProductName()
+                            + " 정가가 " + fromProduct.getProductName() + "보다 " + priceGap + "원 더 비쌉니다.");
+        }
+
+        builder.sizeUpFromProduct(fromProduct)
                 .sizeUpToProduct(toProduct)
                 .additionalPayment(request.additionalPayment());
+    }
+
+    private Product resolveSizeUpFromProduct(Product toProduct) {
+        if (toProduct.getCategory() == null || toProduct.getSelectableFlavorCount() == null) {
+            throw new IllegalArgumentException("사이즈업 이전 상품을 자동으로 찾을 수 없습니다.");
+        }
+        int fromScoopCount = toProduct.getSelectableFlavorCount() - 1;
+        return productRepository.findAll().stream()
+                .filter(p -> p.getCategory() != null
+                        && p.getCategory().getCategoryId().equals(toProduct.getCategory().getCategoryId()))
+                .filter(p -> p.getSelectableFlavorCount() != null && p.getSelectableFlavorCount() == fromScoopCount)
+                .min(Comparator.comparing(Product::getBasePrice))
+                .orElseThrow(() -> new IllegalArgumentException("사이즈업 이전 상품을 찾을 수 없습니다."));
+    }
+
+    private boolean isTooLargeForSizeUp(Product product) {
+        return product.getSelectableFlavorCount() == null || product.getSelectableFlavorCount() > 2;
     }
 
     @Transactional(readOnly = true)

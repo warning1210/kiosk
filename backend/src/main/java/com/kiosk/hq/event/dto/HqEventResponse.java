@@ -30,7 +30,7 @@ public record HqEventResponse(
         return new HqEventResponse(
                 event.getEventId(),
                 event.getEventName(),
-                event.getEventType() != null ? event.getEventType().name() : null,
+                event.getEventType().name(),
                 event.getBenefitType() != null ? event.getBenefitType().name() : null,
                 event.getDescription(),
                 event.getImageUrl(),

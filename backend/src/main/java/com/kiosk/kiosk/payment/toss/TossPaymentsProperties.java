@@ -83,6 +83,15 @@ public class TossPaymentsProperties {
         this.failUrl = failUrl;
     }
 
+    /**
+     * 결제 QR 코드에 넣을 기준 주소. 손님 폰이 스캔하는 값이라 프론트가 자기 window.location.origin을
+     * 쓰면(키오스크 화면을 localhost로 열어둔 경우) 폰 입장에선 자기 자신을 가리키게 되어 접속이 안 된다 -
+     * success-url/fail-url과 같은 이유로 여기도 서버가 LAN IP를 잡아 내려준다.
+     */
+    public String getLanBaseUrl() {
+        return "http://" + detectLanIp() + ":5173";
+    }
+
     private static String lanUrl(String path) {
         return "http://" + detectLanIp() + ":5173" + path;
     }

@@ -55,6 +55,10 @@ public class OrderService {
 
         @Transactional
         public OrderCheckoutResponse checkout(OrderCheckoutRequest request) {
+                if (request.items() == null || request.items().isEmpty()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "장바구니가 비어있습니다.");
+                }
+
                 Branch branch = branchRepository.findById(request.branchId())
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "지점을 찾을 수 없습니다."));
 
@@ -75,9 +79,7 @@ public class OrderService {
                         Product product = productRepository.findById(itemRequest.productId())
                                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                         "상품을 찾을 수 없습니다."));
-                        int itemTotal = Boolean.TRUE.equals(itemRequest.monthlyFlavorUpgrade())
-                                        ? resolveMonthlyFlavorUpgradePrice(product, itemRequest)
-                                        : product.getBasePrice();
+                        int itemTotal = resolveItemBasePrice(product, itemRequest);
                         if (itemRequest.containerType() == ContainerType.WAFFLE_CONE) {
                                 itemTotal += 500;
                         }
@@ -170,21 +172,15 @@ public class OrderService {
                                 discountAmount, finalAmount);
         }
 
-        // itemRequest.productId()는 이미 사이즈업 "후" 상품(예: 더블주니어)이다 - 프론트가 맛 선택 전에
-        // selectedProduct를 미리 바꿔두기 때문. 그 상품을 향한 진행 중인 SIZE_UP 이벤트를 찾아 실제 가격을 계산한다.
-        private int resolveMonthlyFlavorUpgradePrice(Product product, OrderItemRequest request) {
-                Event sizeUpEvent = kioskFlavorDiscountService.activeSizeUpEventTo(product.getProductId())
-                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                "진행 중인 사이즈업 이벤트가 없습니다."));
-
-                boolean includesMonthlyFlavor = request.flavorIds() != null && request.flavorIds().stream()
-                                .anyMatch(kioskFlavorDiscountService::isMonthlyFlavor);
-                if (request.flavorIds() == null
-                                || product.getSelectableFlavorCount() == null
-                                || product.getSelectableFlavorCount().intValue() != request.flavorIds().size()
-                                || !includesMonthlyFlavor) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이달의 맛을 포함해야 사이즈업할 수 있습니다.");
-                }
-                return sizeUpEvent.getSizeUpFromProduct().getBasePrice() + sizeUpEvent.getAdditionalPayment();
+        // 이 상품이 진행 중인 MONTHLY_FLAVOR(사이즈업) 이벤트의 "후" 상품이고, 실제로 그 이벤트가 지정한 맛을
+        // 담았다면 사이즈업 가격을 적용한다 - 싱글레귤러에서 업그레이드해왔든, 처음부터 이 상품을 고르고 그
+        // 맛을 담았든 상관없이 같은 규칙이다 (사이즈업은 "이 맛을 고르면"이 조건이지 어떻게 도달했는지가 아님).
+        private int resolveItemBasePrice(Product product, OrderItemRequest request) {
+                return kioskFlavorDiscountService.activeSizeUpEventTo(product.getProductId())
+                                .filter(event -> event.getFlavor() != null
+                                                && request.flavorIds() != null
+                                                && request.flavorIds().contains(event.getFlavor().getFlavorId()))
+                                .map(event -> event.getSizeUpFromProduct().getBasePrice() + event.getAdditionalPayment())
+                                .orElse(product.getBasePrice());
         }
 }
