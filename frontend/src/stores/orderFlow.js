@@ -418,6 +418,10 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       const cart = useCartStore()
       this.customerLookupDone = false
       this.customer = null
+      // 번호가 바뀌면 이전 고객의 쿠폰/포인트가 새 고객에게 유효하지 않으므로 초기화
+      cart.setCouponCode(null)
+      cart.setCouponDiscount(0)
+      cart.setUsedPoints(0)
       if (!this.mobileNumberInput) return
       try {
         const { data } = await http.get(`/customers/${this.mobileNumberInput}`)

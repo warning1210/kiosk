@@ -1,0 +1,129 @@
+# 모노레포 CI/CD - backend/frontend/db 중 실제로 바뀐 경로의 job만 돈다 (rules: changes:).
+# 예: frontend/만 바뀐 커밋이 main에 merge되면 frontend job만 실행되고 backend EC2는 건드리지 않는다.
+#
+# 비용 정책: backend/frontend EC2는 상시 가동하지 않는다. 프리티어 750시간/월은 계정 전체 t3.micro
+# 합산이라 3대(DB+backend+frontend)를 늘 켜두면 한 달 안에 넘긴다. 그래서 두 인스턴스는 평소 stop
+# 상태로 두고, 배포 job이 시작 시점에 직접 켠 뒤(aws ec2 start-instances) 그때 새로 받은 공인 IP를
+# 조회해서 쓴다 - Elastic IP를 안 쓰므로 stop하면 그 공인 IP 자체가 해제되어 과금도 같이 멈춘다.
+# 테스트가 끝나면 사람이 직접 stop한다 (배포 직후 자동 stop하면 테스트할 새가 없어서 일부러 안 넣음).
+#
+# 전제(레포에 아직 없어서 GitLab CI/CD Variables에 직접 등록해야 하는 값들):
+#   BACKEND_SSH_KEY, FRONTEND_SSH_KEY           - 각 EC2 접속용 개인키 (Type: File, Protected+Masked)
+#   BACKEND_INSTANCE_ID, FRONTEND_INSTANCE_ID   - 각 EC2의 인스턴스 ID (i-xxxx, IP가 아니라 ID - 이건 안 바뀜)
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY    - ec2:StartInstances/DescribeInstances만 되는 전용 IAM 사용자
+#                                                  (이 두 인스턴스 ARN으로 범위를 좁힌 정책을 새로 만들 것 - 기존 admin 키 재사용 금지)
+#   AWS_DEFAULT_REGION                          - ap-northeast-2
+#   DB_HOST / DB_PORT / DB_USERNAME / DB_PASSWORD - 배포된 백엔드 컨테이너에 주입할 DB 접속 정보
+#   CI_REGISTRY_* 는 GitLab이 프로젝트당 자동으로 만들어준다 (Container Registry 활성화만 하면 됨)
+#
+# db/ 경로는 자동 배포하지 않는다 - 스키마 변경을 무인으로 라이브 DB에 적용하는 건 위험하고,
+# 이 프로젝트는 마이그레이션 툴(Flyway 등) 없이 01-schema.sql을 수동 반영하는 방식이라(CLAUDE.md 참고)
+# 자동화하면 오히려 사고 위험만 커진다. 대신 "바뀌었다"는 걸 사람이 알아차리도록 알림 job만 둔다.
+
+stages:
+  - build
+  - deploy
+
+variables:
+  BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA
+  FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+
+.deploy_base:
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache aws-cli openssh-client docker-cli
+    - eval $(ssh-agent -s)
+
+# --- backend ---
+
+build-backend:
+  stage: build
+  image: docker:27
+  services: [docker:27-dind]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [backend/**/*]
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $BACKEND_IMAGE backend
+    - docker push $BACKEND_IMAGE
+
+deploy-backend:
+  extends: .deploy_base
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [backend/**/*]
+  script:
+    - echo "$BACKEND_SSH_KEY" | tr -d '\r' | ssh-add -
+    # 이미 켜져 있어도 start-instances는 그냥 무시되고 넘어간다 (에러 아님) - 매번 켜는 걸 그대로 둬도 안전하다.
+    - aws ec2 start-instances --instance-ids "$BACKEND_INSTANCE_ID"
+    - aws ec2 wait instance-running --instance-ids "$BACKEND_INSTANCE_ID"
+    - BACKEND_HOST=$(aws ec2 describe-instances --instance-ids "$BACKEND_INSTANCE_ID" --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+    - echo "backend EC2 공인 IP $BACKEND_HOST"
+    - mkdir -p ~/.ssh && ssh-keyscan -H "$BACKEND_HOST" >> ~/.ssh/known_hosts
+    # EC2가 GitLab Container Registry에서 직접 이미지를 받아 컨테이너를 갈아끼운다 (docker-compose.yml 없이 단일 컨테이너).
+    - >
+      ssh ubuntu@$BACKEND_HOST "
+      docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+      docker pull $BACKEND_IMAGE &&
+      docker stop kiosk-backend || true &&
+      docker rm kiosk-backend || true &&
+      docker run -d --name kiosk-backend --restart unless-stopped -p 8080:8080
+      -e DB_HOST=$DB_HOST -e DB_PORT=$DB_PORT -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD
+      $BACKEND_IMAGE"
+    - echo "배포 끝. 테스트 다 하면 잊지 말고 stop -> aws ec2 stop-instances --instance-ids $BACKEND_INSTANCE_ID"
+
+# --- frontend ---
+
+build-frontend:
+  stage: build
+  image: docker:27
+  services: [docker:27-dind]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [frontend/**/*]
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $FRONTEND_IMAGE frontend
+    - docker push $FRONTEND_IMAGE
+
+deploy-frontend:
+  extends: .deploy_base
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [frontend/**/*]
+  script:
+    - echo "$FRONTEND_SSH_KEY" | tr -d '\r' | ssh-add -
+    - aws ec2 start-instances --instance-ids "$FRONTEND_INSTANCE_ID"
+    - aws ec2 wait instance-running --instance-ids "$FRONTEND_INSTANCE_ID"
+    - FRONTEND_HOST=$(aws ec2 describe-instances --instance-ids "$FRONTEND_INSTANCE_ID" --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+    # nginx -> backend는 같은 VPC 안이므로 공인 IP가 아니라 사설 IP로 붙인다 - 더 빠르고,
+    # 백엔드 보안그룹도 인터넷 전체가 아니라 이 VPC 대역(172.31.0.0/16)에서만 8080을 열면 된다.
+    - aws ec2 start-instances --instance-ids "$BACKEND_INSTANCE_ID"
+    - aws ec2 wait instance-running --instance-ids "$BACKEND_INSTANCE_ID"
+    - BACKEND_HOST=$(aws ec2 describe-instances --instance-ids "$BACKEND_INSTANCE_ID" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+    - echo "frontend EC2 공인 IP $FRONTEND_HOST / backend 사설 프록시 대상 $BACKEND_HOST"
+    - mkdir -p ~/.ssh && ssh-keyscan -H "$FRONTEND_HOST" >> ~/.ssh/known_hosts
+    - >
+      ssh ubuntu@$FRONTEND_HOST "
+      docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+      docker pull $FRONTEND_IMAGE &&
+      docker stop kiosk-frontend || true &&
+      docker rm kiosk-frontend || true &&
+      docker run -d --name kiosk-frontend --restart unless-stopped -p 80:80
+      -e BACKEND_HOST=$BACKEND_HOST
+      $FRONTEND_IMAGE"
+    - echo "배포 끝. 테스트 다 하면 잊지 말고 stop -> aws ec2 stop-instances --instance-ids $FRONTEND_INSTANCE_ID $BACKEND_INSTANCE_ID"
+
+# --- db (자동 배포 없음, 변경 인지용) ---
+
+notify-db-change:
+  stage: build
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes: [db/**/*]
+  script:
+    - echo "db/ 변경 감지됨 - 01-schema.sql은 자동 반영되지 않습니다. kiosk-db-server(13.125.213.12)에 수동으로 ALTER/마이그레이션 적용 필요."
