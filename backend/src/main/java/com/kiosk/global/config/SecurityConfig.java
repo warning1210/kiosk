@@ -54,6 +54,7 @@ public class SecurityConfig {
             List.of(
                 "http://127.0.0.1:5173",
                 "http://localhost:5173",
+                "http://172.16.15.66:5173",
                 "http://127.0.0.1:5500",
                 "http://localhost:5500"
             )
@@ -65,7 +66,8 @@ public class SecurityConfig {
                 "POST",
                 "PUT",
                 "DELETE",
-                "OPTIONS"
+                "OPTIONS",
+                "PATCH"
             )
         );
 
