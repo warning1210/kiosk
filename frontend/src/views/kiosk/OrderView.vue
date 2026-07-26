@@ -4,8 +4,6 @@
       현재 매장이 혼잡하여 주문이 지연될 수 있습니다 (약 {{ estimatedWaitMinutes }}분)
     </div>
 
-    <p>단계: {{ orderFlow.stepLabel }}</p>
-
     <OrderTypeStep v-if="orderFlow.step === 'orderType'" />
     <ProductStep v-else-if="orderFlow.step === 'product'" />
     <ContainerStep v-else-if="orderFlow.step === 'container'" />

@@ -165,13 +165,14 @@ function itemDetail(item) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 114px;
+  height: 130px;
   padding: 0 27px;
+  flex-shrink: 0;
 }
 
 .logo {
-  height: 88px;
-  width: 96px;
+  height: 100px;
+  width: 112px;
   object-fit: contain;
 }
 
@@ -183,8 +184,8 @@ function itemDetail(item) {
 
 .icon-btn {
   position: relative;
-  width: 53px;
-  height: 53px;
+  width: 62px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -200,14 +201,14 @@ function itemDetail(item) {
 
 .bell-icon {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
 }
 
 .close-btn :deep(svg) {
-  width: 55px;
-  height: 55px;
+  width: 64px;
+  height: 64px;
 }
 
 .icon-btn:disabled {
@@ -243,9 +244,10 @@ function itemDetail(item) {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 100px;
+  height: 116px;
   padding: 0 37px;
   background: #fafafa;
+  flex-shrink: 0;
 }
 
 .step-pill {
@@ -253,8 +255,8 @@ function itemDetail(item) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100px;
-  height: 36px;
+  width: 122px;
+  height: 44px;
 }
 
 .step-pill :deep(svg) {
@@ -267,13 +269,13 @@ function itemDetail(item) {
 .step-pill-text {
   position: relative;
   color: #fff;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 500;
 }
 
 .step-title {
   color: #ff53b8;
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 500;
 }
 
@@ -293,14 +295,14 @@ function itemDetail(item) {
 .cart-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 100px;
+  gap: 20px;
+  height: 132px;
   padding: 0 40px;
 }
 
 .cart-thumb {
-  width: 70px;
-  height: 70px;
+  width: 108px;
+  height: 108px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -316,13 +318,13 @@ function itemDetail(item) {
 
 .cart-item-name {
   margin: 0;
-  font-size: 20px;
+  font-size: 26px;
   color: #000;
 }
 
 .cart-item-detail {
-  margin: 4px 0 0;
-  font-size: 14px;
+  margin: 6px 0 0;
+  font-size: 18px;
   color: #999;
 }
 
@@ -335,20 +337,20 @@ function itemDetail(item) {
 
 .price-original {
   color: #bbb;
-  font-size: 13px;
+  font-size: 16px;
   text-decoration: line-through;
 }
 
 .price-final {
   color: #000;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 500;
 }
 
 .cart-item-qty {
-  min-width: 28px;
+  min-width: 34px;
   text-align: center;
-  font-size: 25px;
+  font-size: 32px;
   color: #000;
 }
 
@@ -360,13 +362,13 @@ function itemDetail(item) {
 }
 
 .quantity-btn {
-  width: 38px;
-  height: 38px;
+  width: 50px;
+  height: 50px;
   border: 1px solid #f20c93;
   border-radius: 50%;
   background: #fff;
   color: #f20c93;
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1;
   cursor: pointer;
 }
@@ -389,8 +391,8 @@ function itemDetail(item) {
 }
 
 .row-icon-btn :deep(svg) {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 
 .add-more-btn {
@@ -428,7 +430,7 @@ function itemDetail(item) {
 
 .pay-total {
   margin-left: auto;
-  font-size: 30px;
+  font-size: 38px;
   color: #f20c93;
 }
 
@@ -467,7 +469,7 @@ function itemDetail(item) {
 }
 
 .card-sub {
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1.4;
   text-align: left;
   white-space: pre-line;

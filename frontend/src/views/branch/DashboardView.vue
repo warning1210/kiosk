@@ -7,7 +7,6 @@
           <h1>대시보드</h1>
           <p>{{ today }} · {{ session.branchName }} 오늘 현황</p>
         </div>
-        <div class="branch-pill">🔔　<span>{{ branchInitial }}</span> {{ session.branchName }}</div>
       </header>
 
       <div v-if="notices.length" class="notice-wrap" ref="noticeBoxRef">

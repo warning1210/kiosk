@@ -6,9 +6,7 @@
       <span>{{ subtitle }}</span>
     </div>
     <div class="tools">
-      <label class="range"><i>📅</i>{{ displayedDate }}</label>
-      <!-- <button class="bell" type="button">🔔</button> -->
-      <div class="profile"><span>{{ nameInitial }}</span>{{ session.name }}</div>
+      <label class="range"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i>{{ displayedDate }}</label>
     </div>
   </header>
 </template>
@@ -58,7 +56,7 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
 .admin-page-header span{display:block;margin-top:7px;color:#7d8796;font-size:11px}
 .tools{display:flex;align-items:center;gap:10px}
 .range{display:flex;align-items:center;gap:8px;padding:10px 14px;color:#4e5868;border:1px solid #dfe3e9;background:#fff;border-radius:9px;font-size:11px;font-weight:700}
-.range i{font-style:normal}
+.range i{display:grid;place-items:center;font-style:normal}.range i svg{width:14px;height:14px;display:block}
 .bell{display:grid;width:38px;height:38px;place-items:center;border:1px solid #dfe3e9;background:#fff;border-radius:9px;font-size:14px;cursor:pointer}
 .profile{display:flex;align-items:center;gap:8px;padding:7px 14px 7px 7px;color:#4e5868;border:1px solid #dfe3e9;background:#fff;border-radius:20px;font-size:11px;font-weight:800}
 .profile span{display:grid;width:26px;height:26px;place-items:center;color:#fff;background:#6266f2;border-radius:50%;font-weight:800}

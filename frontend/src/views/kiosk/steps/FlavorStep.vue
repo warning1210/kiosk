@@ -223,9 +223,12 @@ const emptySlotCount = computed(() => {
 <style scoped>
 .page {
   max-width: 1024px;
+  width: 100%;
   margin: 0 auto;
   padding-bottom: 233px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
 .close-btn {
@@ -270,22 +273,28 @@ const emptySlotCount = computed(() => {
 
 .content {
   background: #fff;
-  padding: 24px 16px;
+  padding: 28px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .progress-text {
-  font-size: 20px;
+  font-size: 26px;
   color: #333;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
 }
 
 .progress-hint {
-  margin-left: 8px;
-  font-size: 14px;
+  margin-left: 10px;
+  font-size: 18px;
   color: #989898;
 }
 
 .flavor-viewport {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   touch-action: pan-y;
   user-select: none;
@@ -294,19 +303,22 @@ const emptySlotCount = computed(() => {
 
 .flavor-track {
   display: flex;
+  height: 100%;
   transition: transform 0.35s ease;
 }
 
 .flavor-grid {
   flex: 0 0 100%;
   min-width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 8px;
+  align-content: start;
+  row-gap: 26px;
+  column-gap: 8px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 8px 0 0;
 }
 
 .page-dots {
@@ -332,15 +344,15 @@ const emptySlotCount = computed(() => {
 
 .flavor-card {
   width: 100%;
-  min-height: 155px;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px 4px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 14px 6px;
   border: 2px solid transparent;
-  border-radius: 16px;
+  border-radius: 18px;
   background: #fff;
   cursor: pointer;
 }
@@ -356,8 +368,8 @@ const emptySlotCount = computed(() => {
 
 .flavor-thumb {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 128px;
+  height: 128px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,13 +405,12 @@ const emptySlotCount = computed(() => {
 }
 
 .flavor-name {
-  font-size: 14px;
+  font-size: 22px;
   color: #000;
   text-align: center;
   width: 100%;
-  min-height: 34px;
   padding: 0 2px;
-  line-height: 1.2;
+  line-height: 1.25;
   white-space: normal;
   overflow: visible;
   word-break: keep-all;
@@ -407,16 +418,16 @@ const emptySlotCount = computed(() => {
 
 .monthly-badge {
   color: #f20c93;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .discount-badge {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: #f20c93;
   color: #fff;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -429,46 +440,46 @@ const emptySlotCount = computed(() => {
   max-width: 1024px;
   background: #fff;
   border-top: 1px solid #eee;
-  padding: 0.75rem 1.5rem;
+  padding: 1.1rem 1.75rem;
 }
 
 .flavor-description {
   position: fixed;
-  bottom: 370px;
+  bottom: 430px;
   left: 50%;
   z-index: 3;
   display: grid;
-  grid-template-columns: 68px 1fr;
+  grid-template-columns: 92px 1fr;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
   width: calc(100% - 32px);
   max-width: 992px;
-  padding: 12px 18px;
+  padding: 18px 24px;
   transform: translateX(-50%);
   border: 1px solid #f0b8d5;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #fff5fa;
   box-shadow: 0 8px 22px rgb(94 50 69 / 10%);
 }
 
-.flavor-description.without-summary { bottom: 249px; }
+.flavor-description.without-summary { bottom: 253px; }
 .flavor-description.without-image { grid-template-columns: minmax(0, 1fr); }
-.flavor-description img { width: 64px; height: 64px; object-fit: contain; }
+.flavor-description img { width: 88px; height: 88px; object-fit: contain; }
 .flavor-description div { min-width: 0; }
-.flavor-description strong { display: block; overflow: hidden; color: #f20c93; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
-.flavor-description p { overflow: hidden; margin: 5px 0; color: #5f5057; font-size: 14px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
-.flavor-description small { color: #9a7e8a; font-size: 12px; }
+.flavor-description strong { display: block; overflow: hidden; color: #f20c93; font-size: 24px; text-overflow: ellipsis; white-space: nowrap; }
+.flavor-description p { overflow: hidden; margin: 8px 0; color: #5f5057; font-size: 19px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.flavor-description small { color: #9a7e8a; font-size: 16px; }
 
 .summary-label {
-  margin: 0 0 8px;
-  font-size: 14px;
+  margin: 0 0 12px;
+  font-size: 20px;
   color: #666;
 }
 
 .summary-circles {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 22px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -483,8 +494,8 @@ const emptySlotCount = computed(() => {
 
 .summary-circle {
   position: relative;
-  width: 66px;
-  height: 66px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
   border: 3px solid #f20c93;
   background: #fff;
@@ -508,24 +519,24 @@ const emptySlotCount = computed(() => {
 
 .summary-count-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
+  top: -6px;
+  right: -6px;
+  min-width: 27px;
+  height: 27px;
+  padding: 0 6px;
   border-radius: 999px;
   background: #f20c93;
   color: #fff;
-  font-size: 12px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .summary-name {
-  font-size: 12px;
+  font-size: 18px;
   color: #333;
-  max-width: 70px;
+  max-width: 104px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
