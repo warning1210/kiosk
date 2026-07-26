@@ -4,6 +4,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,12 +18,15 @@ import org.springframework.context.annotation.Configuration;
  *   success-url: ${TOSS_SUCCESS_URL:}
  *   fail-url: ${TOSS_FAIL_URL:}
  *
- * success-url/fail-url을 비워두면 이 서버 PC의 LAN IP를 자동으로 잡아서
- * http://<LAN IP>:5173/payment/... 로 쓴다. 결제 승인 후 토스가 리다이렉트시키는 대상은
- * "손님 폰 브라우저"라서, 여기 IP를 고정값(localhost나 특정 PC의 IP)으로 박아두면
- * 서버가 다른 네트워크에서 돌 때 폰이 그 주소에 접속하지 못해 결제 확인이 영영 안 들어오고
- * 키오스크 화면은 폴링만 계속 돌며 무한 로딩에 빠진다. ngrok 등 공인 주소로 데모할 땐
- * TOSS_SUCCESS_URL/TOSS_FAIL_URL 환경변수로 덮어쓸 것.
+ * success-url/fail-url(그리고 QR 코드에 넣는 기준 주소)을 비워두면 우선순위대로 잡는다:
+ *   1) APP_FRONTEND_URL 환경변수가 설정돼 있으면 그 값 그대로 사용 (배포 서버는 항상 이렇게 설정)
+ *   2) 없으면 이 서버 PC의 LAN IP를 자동 감지해서 http://<LAN IP>:5173/payment/... 로 사용
+ * 결제 승인 후 토스가 리다이렉트시키는 대상, 그리고 QR을 스캔하는 대상은 모두 "손님 폰 브라우저"라서,
+ * 여기 주소를 고정값(localhost나 컨테이너 내부 IP)으로 박아두면 폰이 그 주소에 접속하지 못해
+ * 결제 확인이 영영 안 들어오고 키오스크 화면은 폴링만 계속 돌며 무한 로딩에 빠진다.
+ * Docker로 배포할 땐 반드시 APP_FRONTEND_URL을 EC2 공인 IP/도메인으로 지정할 것 - 지정하지 않으면
+ * LAN IP 자동 감지가 컨테이너 내부 네트워크 IP(예: 172.18.0.4)를 잡아버려 폰에서 접속이 안 된다.
+ * ngrok 등 공인 주소로 데모할 땐 TOSS_SUCCESS_URL/TOSS_FAIL_URL 환경변수로 개별 덮어쓰기도 가능.
  */
 
 @Configuration
@@ -42,7 +46,16 @@ public class TossPaymentsProperties {
  
     /** 결제 인증 실패 후 리다이렉트될 프론트엔드 URL */
     private String failUrl;
- 
+
+    /**
+     * 배포 환경(Docker 등)에서는 LAN IP 자동 감지가 컨테이너 내부 네트워크 IP(예: 172.18.0.4)를
+     * 잡아버려 손님 폰이 접속할 수 없다. APP_FRONTEND_URL이 명시적으로 설정돼 있으면(운영 서버는
+     * docker-compose에서 항상 이 값을 EC2 공인 IP/도메인으로 지정) 그 값을 최우선으로 쓰고,
+     * 비어있을 때만(팀원 로컬 개발 등) 기존 LAN IP 자동 감지로 폴백한다.
+     */
+    @Value("${APP_FRONTEND_URL:}")
+    private String appFrontendUrl;
+
     public String getSecretKey() {
         return secretKey;
     }
@@ -68,7 +81,7 @@ public class TossPaymentsProperties {
     }
  
     public String getSuccessUrl() {
-        return (successUrl == null || successUrl.isBlank()) ? lanUrl("/payment/success") : successUrl;
+        return (successUrl == null || successUrl.isBlank()) ? baseUrl() + "/payment/success" : successUrl;
     }
 
     public void setSuccessUrl(String successUrl) {
@@ -76,7 +89,7 @@ public class TossPaymentsProperties {
     }
 
     public String getFailUrl() {
-        return (failUrl == null || failUrl.isBlank()) ? lanUrl("/payment/fail") : failUrl;
+        return (failUrl == null || failUrl.isBlank()) ? baseUrl() + "/payment/fail" : failUrl;
     }
 
     public void setFailUrl(String failUrl) {
@@ -86,14 +99,15 @@ public class TossPaymentsProperties {
     /**
      * 결제 QR 코드에 넣을 기준 주소. 손님 폰이 스캔하는 값이라 프론트가 자기 window.location.origin을
      * 쓰면(키오스크 화면을 localhost로 열어둔 경우) 폰 입장에선 자기 자신을 가리키게 되어 접속이 안 된다 -
-     * success-url/fail-url과 같은 이유로 여기도 서버가 LAN IP를 잡아 내려준다.
+     * success-url/fail-url과 같은 이유로 여기도 서버가 기준 주소를 잡아 내려준다.
      */
     public String getLanBaseUrl() {
-        return "http://" + detectLanIp() + ":5173";
+        return baseUrl();
     }
 
-    private static String lanUrl(String path) {
-        return "http://" + detectLanIp() + ":5173" + path;
+    private String baseUrl() {
+        if (appFrontendUrl != null && !appFrontendUrl.isBlank()) return appFrontendUrl;
+        return "http://" + detectLanIp() + ":5173";
     }
 
     // 이 PC의 LAN IP(예: 192.168.x.x)를 찾는다. 여러 개면 첫 번째로 찾은 것을 쓴다 -

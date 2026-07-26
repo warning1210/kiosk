@@ -155,10 +155,13 @@ function itemDetail(item) {
 <style scoped>
 .page {
   max-width: 1024px;
+  width: 100%;
   margin: 0 auto;
   background: #fff;
   min-height: 100vh;
   padding-bottom: 282px;
+  display: flex;
+  flex-direction: column;
 }
 
 .top-bar {
