@@ -244,23 +244,27 @@ function addFocusedProduct() {
 <style scoped>
 .page {
   max-width: 1024px;
+  width: 100%;
   margin: 0 auto;
   padding-bottom: 194px;
   background: #fff;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 114px;
+  height: 130px;
   padding: 0 27px;
+  flex-shrink: 0;
 }
 
 .logo {
-  height: 88px;
-  width: 96px;
+  height: 100px;
+  width: 112px;
   object-fit: contain;
 }
 
@@ -275,10 +279,10 @@ function addFocusedProduct() {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 16px;
-  border-radius: 20px;
-  font-size: 20px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  font-size: 24px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -308,8 +312,8 @@ function addFocusedProduct() {
 
 .icon-btn {
   position: relative;
-  width: 53px;
-  height: 53px;
+  width: 62px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,8 +329,8 @@ function addFocusedProduct() {
 
 .bell-icon {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
 }
 
@@ -360,28 +364,29 @@ function addFocusedProduct() {
 }
 
 .close-btn :deep(svg) {
-  width: 55px;
-  height: 55px;
+  width: 64px;
+  height: 64px;
 }
 
 .category-tabs {
   display: flex;
   align-items: center;
-  gap: 24px;
-  height: 100px;
-  padding: 0 14px;
+  gap: 28px;
+  height: 124px;
+  padding: 0 18px;
   overflow-x: auto;
+  flex-shrink: 0;
 }
 
 .category-tab {
   flex-shrink: 0;
   border: none;
   background: transparent;
-  font-size: 20px;
+  font-size: 30px;
   font-weight: 500;
   color: #f20c93;
   cursor: pointer;
-  padding: 11px 24px;
+  padding: 14px 32px;
   border-radius: 99px;
 }
 
@@ -398,6 +403,8 @@ function addFocusedProduct() {
 }
 
 .product-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   touch-action: pan-y;
   user-select: none;
@@ -406,14 +413,19 @@ function addFocusedProduct() {
 
 .product-track {
   display: flex;
+  height: 100%;
   transition: transform 0.35s ease;
 }
 
 .product-grid {
   flex: 0 0 100%;
   min-width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  align-content: start;
+  row-gap: 22px;
+  padding: 24px 0 0;
 }
 
 .page-dots {
@@ -441,11 +453,12 @@ function addFocusedProduct() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 164px;
+  justify-content: center;
+  height: auto;
   border: none;
   background: #fff;
   cursor: pointer;
-  padding: 0;
+  padding: 16px 8px;
 }
 
 .product-card.selected {
@@ -455,8 +468,8 @@ function addFocusedProduct() {
 }
 
 .product-image {
-  width: 110px;
-  height: 97px;
+  width: 160px;
+  height: 144px;
   object-fit: contain;
   margin-top: 0;
 }
@@ -467,14 +480,16 @@ function addFocusedProduct() {
 }
 
 .product-name {
-  margin: 8px 0 0;
-  font-size: 17px;
+  margin: 16px 0 0;
+  font-size: 26px;
+  line-height: 1.25;
+  word-break: keep-all;
   color: #000;
 }
 
 .product-price {
-  margin: 4px 0 0;
-  font-size: 17px;
+  margin: 8px 0 0;
+  font-size: 26px;
   color: #f20c93;
 }
 

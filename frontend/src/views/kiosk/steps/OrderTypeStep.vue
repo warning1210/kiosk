@@ -58,19 +58,19 @@ const { t } = useKioskI18n()
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(510px, 90vw);
-  padding: 48px 40px;
+  width: min(720px, 92vw);
+  padding: 64px 56px;
   background: #fff;
-  border-radius: 26px;
+  border-radius: 32px;
   text-align: center;
 }
 
 .close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 44px;
-  height: 44px;
+  top: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,20 +80,20 @@ const { t } = useKioskI18n()
 }
 
 .close-btn :deep(svg) {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
 }
 
 .logo {
-  width: 96px;
-  height: 88px;
+  width: 132px;
+  height: 120px;
   object-fit: contain;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
 }
 
 .modal h2 {
   margin: 0;
-  font-size: 40px;
+  font-size: 54px;
   font-weight: 500;
   line-height: 1.2;
   color: #000;
@@ -104,25 +104,25 @@ const { t } = useKioskI18n()
 }
 
 .subtitle {
-  margin: 12px 0 32px;
-  font-size: 20px;
+  margin: 16px 0 44px;
+  font-size: 26px;
   color: #acacac;
 }
 
 .options {
   display: flex;
-  gap: 32px;
+  gap: 44px;
 }
 
 .option {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 156px;
-  padding: 20px 0;
+  gap: 12px;
+  width: 230px;
+  padding: 34px 0;
   border: 3px solid #d2d2d2;
-  border-radius: 25px;
+  border-radius: 30px;
   background: #fff;
   cursor: pointer;
 }
@@ -135,8 +135,8 @@ const { t } = useKioskI18n()
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+  width: 104px;
+  height: 104px;
 }
 
 .icon-circle img {
@@ -146,12 +146,12 @@ const { t } = useKioskI18n()
 }
 
 .option-label {
-  font-size: 20px;
+  font-size: 30px;
   color: #f20c93;
 }
 
 .option-sub {
-  font-size: 13px;
+  font-size: 17px;
   color: #acacac;
 }
 </style>

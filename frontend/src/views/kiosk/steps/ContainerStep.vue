@@ -133,10 +133,13 @@ const DRY_ICE_CHOICES = [
 <style scoped>
 .page {
   max-width: 1024px;
+  width: 100%;
   margin: 0 auto;
   padding-bottom: 233px;
   background: #fff;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .close-btn {
@@ -180,19 +183,25 @@ const DRY_ICE_CHOICES = [
 }
 
 .content {
-  padding: 24px 32px;
+  padding: 32px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
 }
 
 .product-info {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
 }
 
 .preview-images {
   position: relative;
-  width: 140px;
-  height: 130px;
+  width: 184px;
+  height: 172px;
   flex-shrink: 0;
 }
 
@@ -202,24 +211,24 @@ const DRY_ICE_CHOICES = [
 }
 
 .preview-img--cone {
-  width: 90px;
-  height: 120px;
+  width: 118px;
+  height: 158px;
   left: 0;
-  top: 6px;
+  top: 8px;
   transform: rotate(14deg);
 }
 
 .preview-img--cup {
-  width: 80px;
-  height: 88px;
-  left: 60px;
-  top: 30px;
+  width: 106px;
+  height: 116px;
+  left: 80px;
+  top: 40px;
   transform: rotate(-13deg);
 }
 
 .preview-single {
-  width: 100px;
-  height: 100px;
+  width: 140px;
+  height: 140px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -230,34 +239,34 @@ const DRY_ICE_CHOICES = [
 
 .product-name {
   margin: 0;
-  font-size: 25px;
+  font-size: 32px;
   color: #000;
   line-height: 1.3;
 }
 
 .product-price {
   margin: 0;
-  font-size: 40px;
+  font-size: 46px;
   color: #f20c93;
   font-weight: 500;
 }
 
 .product-desc {
-  margin: 16px 0 0;
-  font-size: 20px;
+  margin: 20px 0 0;
+  font-size: 26px;
   color: #989898;
 }
 
 .warning-text {
-  margin: 24px 0 0;
-  font-size: 20px;
+  margin: 28px 0 0;
+  font-size: 26px;
   color: #f20c0c;
 }
 
 .options {
   display: flex;
-  gap: 24px;
-  margin-top: 32px;
+  gap: 28px;
+  margin-top: 44px;
   flex-wrap: wrap;
 }
 
@@ -266,11 +275,11 @@ const DRY_ICE_CHOICES = [
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  width: 220px;
-  height: 220px;
+  gap: 18px;
+  width: 250px;
+  height: 250px;
   border: 3px solid #d2d2d2;
-  border-radius: 24px;
+  border-radius: 26px;
   background: #fff;
   cursor: pointer;
 }
@@ -280,13 +289,13 @@ const DRY_ICE_CHOICES = [
 }
 
 .option-img {
-  width: 90px;
-  height: 90px;
+  width: 124px;
+  height: 124px;
   object-fit: contain;
 }
 
 .option-label {
-  font-size: 20px;
+  font-size: 28px;
   color: #9f9f9f;
 }
 
@@ -302,24 +311,24 @@ const DRY_ICE_CHOICES = [
 }
 
 .option-group-title {
-  margin: 0 0 16px;
-  font-size: 20px;
+  margin: 0 0 18px;
+  font-size: 26px;
   color: #000;
 }
 
 .stepper {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
 }
 
 .stepper button {
-  width: 48px;
-  height: 48px;
+  width: 62px;
+  height: 62px;
   border: 1px solid #d2d2d2;
   border-radius: 50%;
   background: #fff;
-  font-size: 20px;
+  font-size: 28px;
   cursor: pointer;
 }
 
@@ -329,9 +338,9 @@ const DRY_ICE_CHOICES = [
 }
 
 .stepper-value {
-  min-width: 40px;
+  min-width: 52px;
   text-align: center;
-  font-size: 25px;
+  font-size: 32px;
   color: #000;
 }
 
@@ -342,12 +351,12 @@ const DRY_ICE_CHOICES = [
 }
 
 .dryice-chip {
-  padding: 12px 20px;
+  padding: 16px 28px;
   border: 3px solid #d2d2d2;
-  border-radius: 24px;
+  border-radius: 26px;
   background: #fff;
   color: #9f9f9f;
-  font-size: 18px;
+  font-size: 24px;
   cursor: pointer;
 }
 

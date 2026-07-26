@@ -425,7 +425,7 @@ const remainingTimeLabel = computed(() => {
 }
 
 .top-bar {
-  height: 114px;
+  height: 130px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -433,8 +433,8 @@ const remainingTimeLabel = computed(() => {
 }
 
 .icon-btn {
-  width: 53px;
-  height: 53px;
+  width: 62px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -444,32 +444,34 @@ const remainingTimeLabel = computed(() => {
 }
 
 .close-btn :deep(svg) {
-  width: 55px;
-  height: 55px;
+  width: 64px;
+  height: 64px;
 }
 
 .logo {
-  height: 88px;
-  width: 96px;
+  height: 100px;
+  width: 112px;
   object-fit: contain;
 }
 
 .tab-bar {
   display: flex;
-  height: 100px;
+  height: 136px;
 }
 
 .tab {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
   border: none;
   background: #f8f8f8;
   color: #cacaca;
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -483,11 +485,11 @@ const remainingTimeLabel = computed(() => {
 }
 
 .tab-badge {
-  padding: 3px 10px;
+  padding: 5px 16px;
   border-radius: 99px;
   background: #cbcbcb;
   color: #fff;
-  font-size: 11px;
+  font-size: 16px;
 }
 
 .tab-badge--active {
