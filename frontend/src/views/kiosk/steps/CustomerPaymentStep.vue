@@ -12,8 +12,10 @@
          (STEP02는 QR이 실제로 있어야 볼 내용이 있으므로, qrInfo가 생기기 전까진 비활성) -->
     <nav class="tab-bar">
       <button type="button" class="tab" :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
-        <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'main' }">STEP01</span>
-        <span>{{ t('pointsDiscount') }}</span>
+        <span class="tab-stack">
+          <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'main' }">STEP01</span>
+          <span>{{ t('pointsDiscount') }}</span>
+        </span>
       </button>
       <button
         type="button"
@@ -22,8 +24,10 @@
         :disabled="!orderFlow.qrInfo"
         @click="activeTab = 'payment'"
       >
-        <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'payment' }">STEP02</span>
-        <span>{{ t('couponPayment') }}</span>
+        <span class="tab-stack">
+          <span class="tab-badge" :class="{ 'tab-badge--active': activeTab === 'payment' }">STEP02</span>
+          <span>{{ t('couponPayment') }}</span>
+        </span>
       </button>
     </nav>
 
@@ -413,10 +417,13 @@ const remainingTimeLabel = computed(() => {
 <style scoped>
 .page {
   max-width: 1024px;
+  width: 100%;
   margin: 0 auto;
   padding-bottom: 433px;
   background: #fff;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* STEP03(QR결제) 탭은 .bottom-bar가 없으니 그만큼(233px) 여백을 덜 잡는다 */
@@ -461,17 +468,11 @@ const remainingTimeLabel = computed(() => {
 
 .tab {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   border: none;
   background: #f8f8f8;
   color: #cacaca;
   font-size: 32px;
   font-weight: 500;
-  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -482,6 +483,15 @@ const remainingTimeLabel = computed(() => {
 
 .tab:disabled {
   cursor: default;
+}
+
+.tab-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
 }
 
 .tab-badge {
@@ -497,7 +507,14 @@ const remainingTimeLabel = computed(() => {
 }
 
 .content {
-  padding: 24px 40px;
+  padding: 32px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
 }
 
 .step2-content {
@@ -506,22 +523,22 @@ const remainingTimeLabel = computed(() => {
 
 .new-member-hint,
 .customer-hint {
-  margin: 8px 0 0;
-  font-size: 28px;
+  margin: 16px 0 0;
+  font-size: 30px;
   color: #f20c93;
   text-align: center;
 }
 
 .section-title {
-  margin: 24px 0 16px;
-  font-size: 35px;
+  margin: 44px 0 28px;
+  font-size: 48px;
   color: #000;
   text-align: center;
 }
 
 .coupon-applied-hint {
-  margin: -8px 0 16px;
-  font-size: 14px;
+  margin: -8px 0 24px;
+  font-size: 22px;
   color: #f20c93;
   text-align: center;
 }
@@ -529,7 +546,7 @@ const remainingTimeLabel = computed(() => {
 .point-options {
   display: flex;
   justify-content: center;
-  gap: 32px;
+  gap: 52px;
 }
 
 .point-card {
@@ -537,11 +554,11 @@ const remainingTimeLabel = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 122px;
-  height: 122px;
-  border: 1px solid #d2d2d2;
-  border-radius: 8px;
+  gap: 16px;
+  width: 220px;
+  height: 220px;
+  border: 3px solid #d2d2d2;
+  border-radius: 22px;
   background: #fff;
   cursor: pointer;
 }
@@ -551,57 +568,57 @@ const remainingTimeLabel = computed(() => {
 }
 
 .point-label {
-  font-size: 15px;
+  font-size: 28px;
   color: #000;
 }
 
 .point-result {
-  margin-top: 16px;
+  margin-top: 32px;
 }
 
 .phone-recheck {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-top: 12px;
-  font-size: 14px;
+  gap: 20px;
+  margin-top: 24px;
+  font-size: 28px;
   color: #666;
 }
 
 .phone-recheck-btn {
-  padding: 4px 12px;
+  padding: 14px 28px;
   border: 1px solid #f20c93;
   border-radius: 99px;
   background: #fff;
   color: #f20c93;
-  font-size: 13px;
+  font-size: 24px;
   cursor: pointer;
 }
 
 .coupon-hint {
-  margin: 8px 0 0;
-  font-size: 13px;
+  margin: 16px 0 0;
+  font-size: 26px;
   color: #a1a1a1;
   text-align: center;
 }
 
 .coupon-error {
-  margin: 8px 0 0;
-  font-size: 14px;
+  margin: 16px 0 0;
+  font-size: 24px;
   color: #f20c0c;
   text-align: center;
 }
 
 .lookup-btn {
   display: block;
-  margin: 16px auto 0;
-  padding: 14px 32px;
+  margin: 32px auto 0;
+  padding: 26px 56px;
   border: 1px solid #f20c93;
   border-radius: 99px;
   background: #f20c93;
   color: #fff;
-  font-size: 16px;
+  font-size: 30px;
   cursor: pointer;
 }
 
@@ -609,48 +626,49 @@ const remainingTimeLabel = computed(() => {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-width: 480px;
+  width: 100%;
+  max-width: 860px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 18px;
 }
 
 .coupon-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border: 1px solid #d2d2d2;
-  border-radius: 8px;
+  gap: 20px;
+  padding: 28px 32px;
+  border: 2px solid #d2d2d2;
+  border-radius: 18px;
 }
 
 .coupon-item-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   text-align: left;
 }
 
 .coupon-item-name {
-  font-size: 15px;
+  font-size: 28px;
   color: #000;
 }
 
 .coupon-item-desc {
-  font-size: 12px;
+  font-size: 20px;
   color: #a1a1a1;
 }
 
 .coupon-use-btn {
   flex-shrink: 0;
-  padding: 8px 16px;
+  padding: 18px 34px;
   border: 1px solid #f20c93;
   border-radius: 99px;
   background: #fff;
   color: #f20c93;
-  font-size: 14px;
+  font-size: 24px;
   cursor: pointer;
 }
 
@@ -668,9 +686,9 @@ const remainingTimeLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 64px;
-  margin: 0 auto 16px;
-  font-size: 36px;
+  height: 100px;
+  margin: 0 auto 24px;
+  font-size: 56px;
   font-weight: 500;
   letter-spacing: 2px;
 }
@@ -686,29 +704,29 @@ const remainingTimeLabel = computed(() => {
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  max-width: 360px;
+  gap: 16px;
+  max-width: 520px;
   margin: 0 auto;
 }
 
 .keypad-key {
-  height: 64px;
+  height: 100px;
   border: 1px solid #e2e2e2;
-  border-radius: 12px;
+  border-radius: 20px;
   background: #fafafa;
   color: #000;
-  font-size: 24px;
+  font-size: 34px;
   cursor: pointer;
 }
 
 .keypad-key--text {
-  font-size: 16px;
+  font-size: 24px;
   color: #666;
 }
 
 .point-desc {
-  margin: 16px 0 0;
-  font-size: 16px;
+  margin: 24px 0 0;
+  font-size: 26px;
   color: #a1a1a1;
   text-align: center;
 }
@@ -716,30 +734,31 @@ const remainingTimeLabel = computed(() => {
 .keypad-confirm {
   display: block;
   width: 100%;
-  max-width: 340px;
-  margin: 24px auto 0;
+  max-width: 480px;
+  margin: 32px auto 0;
   height: auto;
-  padding: 16px;
+  padding: 26px;
 }
 
 .used-points {
-  margin: 8px 0;
-  font-size: 18px;
+  margin: 16px 0;
+  font-size: 28px;
   color: #333;
 }
 
 .point-adjust-buttons {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .point-adjust-buttons button {
-  padding: 8px 12px;
+  padding: 18px 26px;
   border: 1px solid #d2d2d2;
-  border-radius: 8px;
+  border-radius: 16px;
   background: #fff;
+  font-size: 22px;
   cursor: pointer;
 }
 
@@ -767,7 +786,7 @@ const remainingTimeLabel = computed(() => {
   height: 100px;
   align-items: center;
   color: #f20c93;
-  font-size: 30px;
+  font-size: 44px;
 }
 
 .summary-breakdown {
@@ -777,7 +796,7 @@ const remainingTimeLabel = computed(() => {
   padding: 0 40px;
   height: 100px;
   color: #000;
-  font-size: 20px;
+  font-size: 28px;
 }
 
 .dash {
@@ -857,21 +876,21 @@ const remainingTimeLabel = computed(() => {
 
 .modal {
   position: relative;
-  width: min(637px, 90vw);
+  width: min(760px, 92vw);
   max-height: 90vh;
   overflow-y: auto;
   background: #fff;
-  border-radius: 26px;
-  padding: 48px 40px;
+  border-radius: 30px;
+  padding: 56px 48px;
   text-align: center;
 }
 
 .modal-close {
   position: absolute;
-  top: 27px;
-  right: 27px;
-  width: 53px;
-  height: 53px;
+  top: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -884,13 +903,13 @@ const remainingTimeLabel = computed(() => {
 
 .modal-title {
   margin: 0;
-  font-size: 50px;
+  font-size: 56px;
   color: #f20c93;
 }
 
 .modal-subtitle {
-  margin: 16px 0 24px;
-  font-size: 20px;
+  margin: 20px 0 32px;
+  font-size: 30px;
   color: #000;
 }
 
@@ -898,26 +917,26 @@ const remainingTimeLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 300px;
-  height: 300px;
+  width: 440px;
+  height: 440px;
   margin: 0 auto;
-  border: 3px solid #f20c93;
-  border-radius: 20px;
+  border: 5px solid #f20c93;
+  border-radius: 28px;
 }
 
 .qr-frame img {
-  width: 260px;
-  height: 260px;
+  width: 400px;
+  height: 400px;
 }
 
 .test-open-pay {
   display: block;
-  margin: 0.75rem auto;
-  padding: 0.5rem 0.75rem;
+  margin: 1rem auto;
+  padding: 0.6rem 0.9rem;
   color: #b8860b;
   border: 1px dashed #b8860b;
   background: #fff8e1;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
@@ -925,43 +944,43 @@ const remainingTimeLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 260px;
-  margin: 16px auto 0;
-  padding: 12px;
-  border-radius: 20px;
+  gap: 12px;
+  width: 400px;
+  margin: 28px auto 0;
+  padding: 20px;
+  border-radius: 30px;
   background: #ffe3f3;
-  font-size: 16px;
+  font-size: 26px;
   color: #000;
 }
 
 .clock-icon {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
 }
 
 .timer-value {
-  margin: 12px 0 0;
-  font-size: 36px;
+  margin: 20px 0 0;
+  font-size: 56px;
   color: #f20c93;
   font-weight: 500;
 }
 
 .timer-note {
-  margin: 12px 0 0;
-  font-size: 14px;
+  margin: 18px 0 0;
+  font-size: 24px;
   color: #a1a1a1;
 }
 
 .status-line {
-  margin: 16px 0 0;
-  font-size: 16px;
+  margin: 24px 0 0;
+  font-size: 26px;
   color: #333;
 }
 
 .paid-message {
-  margin: 8px 0 0;
-  font-size: 28px;
+  margin: 16px 0 0;
+  font-size: 34px;
   color: #f20c93;
 }
 
@@ -969,14 +988,14 @@ const remainingTimeLabel = computed(() => {
 .cancel-btn {
   display: block;
   width: 100%;
-  max-width: 340px;
-  margin: 16px auto 0;
-  padding: 16px;
+  max-width: 480px;
+  margin: 24px auto 0;
+  padding: 26px;
   border: 1px solid #b9b9b9;
-  border-radius: 40px;
+  border-radius: 54px;
   background: #fff;
   color: #f20c93;
-  font-size: 18px;
+  font-size: 28px;
   cursor: pointer;
 }
 
