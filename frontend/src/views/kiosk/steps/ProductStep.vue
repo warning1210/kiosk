@@ -1,5 +1,6 @@
 <template>
-  <div class="page">
+  <!-- easy-mode-page를 이 화면에 직접 붙여 scoped CSS 안에서도 2열 스타일이 확실히 적용되게 한다. -->
+  <div class="page" :class="{ 'easy-mode-page': orderFlow.easyMode }">
     <!-- 상단 헤더: 로고 + 알림/닫기 -->
     <header class="top-bar">
       <button
@@ -17,7 +18,15 @@
           <span>{{ currentLanguage.nativeLabel }}</span>
           <img :src="chevron" alt="" class="lang-chevron" />
         </button>
-        <button type="button" class="easy-mode-pill">{{ t('easyMode') }}</button>
+        <button
+          type="button"
+          class="easy-mode-pill"
+          :class="{ active: orderFlow.easyMode }"
+          :aria-pressed="orderFlow.easyMode"
+          @click="orderFlow.toggleEasyMode"
+        >
+          {{ t('easyMode') }}
+        </button>
         <button
           type="button"
           class="icon-btn notif-btn"
@@ -283,15 +292,16 @@ function goToCheckout() {
 }
 
 // 상품 그리드도 맛 선택과 동일한 방식으로 페이지 단위 좌우 스와이프
-const PRODUCTS_PER_PAGE = 16 // 4열 x 4행
+// 일반모드는 4열×4행, 쉬운모드는 큰 카드 2열×3행으로 페이지를 나눈다.
+const productsPerPage = computed(() => orderFlow.easyMode ? 6 : 16)
 const SWIPE_THRESHOLD = 40 // px
 
 const currentPage = ref(0)
 const productPages = computed(() => {
   const pages = []
   const items = orderFlow.visibleProducts
-  for (let i = 0; i < items.length; i += PRODUCTS_PER_PAGE) {
-    pages.push(items.slice(i, i + PRODUCTS_PER_PAGE))
+  for (let i = 0; i < items.length; i += productsPerPage.value) {
+    pages.push(items.slice(i, i + productsPerPage.value))
   }
   return pages.length ? pages : [[]]
 })
@@ -422,6 +432,12 @@ function addFocusedProduct() {
   border: 1px solid #000;
   background: #2d49ff;
   color: #fff;
+}
+
+.easy-mode-pill.active {
+  border-color: #f20c93;
+  background: #f20c93;
+  box-shadow: 0 0 0 5px rgb(242 12 147 / 18%);
 }
 
 .icon-btn {
@@ -578,6 +594,35 @@ function addFocusedProduct() {
   align-content: start;
   row-gap: 22px;
   padding: 24px 0 0;
+}
+
+/* 어르신용 쉬운모드: 한 줄에 두 상품만 배치하고 이미지·상품명·가격의 판독 크기를 키운다. */
+.easy-mode-page .product-grid {
+  grid-template-columns: repeat(2, 1fr);
+  row-gap: 34px;
+  column-gap: 24px;
+  padding: 34px 36px 0;
+}
+
+.easy-mode-page .product-card {
+  min-height: 390px;
+  padding: 28px 18px;
+  border-radius: 30px;
+}
+
+.easy-mode-page .product-image {
+  width: 290px;
+  height: 250px;
+}
+
+.easy-mode-page .product-name,
+.easy-mode-page .product-price {
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.easy-mode-page .product-card.selected {
+  border-width: 4px;
 }
 
 .page-dots {

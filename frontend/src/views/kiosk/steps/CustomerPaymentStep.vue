@@ -1,6 +1,13 @@
 <template>
   <!-- 7단계: 쿠폰/포인트(휴대폰 번호로 함께 조회) -> 결제 (CU-008) -->
-  <div class="page" :class="{ 'page--no-actions': activeTab === 'payment' }">
+  <!-- 결제 화면에도 쉬운모드 클래스를 직접 붙여 번호 입력 팝업의 크기와 높이를 함께 제어한다. -->
+  <div
+    class="page"
+    :class="{
+      'page--no-actions': activeTab === 'payment',
+      'easy-mode-page': orderFlow.easyMode
+    }"
+  >
     <header class="top-bar">
       <img class="logo" :src="logo" alt="배스킨라빈스" />
       <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
@@ -104,7 +111,7 @@
 
     <!-- 조회하기/해피포인트 카드를 누르면 뜨는 휴대폰 번호 입력 팝업. 조회 후 '사용하기'면 이어서 포인트 입력 단계로 넘어간다 -->
     <div v-if="showKeypad" class="modal-backdrop">
-      <div class="modal">
+      <div class="modal phone-modal">
         <button type="button" class="modal-close" :aria-label="t('close')" @click="showKeypad = false">
           <span v-html="closeXSvg"></span>
         </button>
@@ -911,6 +918,127 @@ const remainingTimeLabel = computed(() => {
   margin: 20px 0 32px;
   font-size: 30px;
   color: #000;
+}
+
+/* 기본모드 휴대폰 입력창은 공통 modal/keypad의 큰 기본값을 그대로 쓰면 세로 스크롤이 생긴다.
+   phone-modal 범위 안에서만 제목→설명→번호→4줄 키패드→확인 버튼 높이를 다시 배분해 한눈에 모두 보이게 한다. */
+.phone-modal {
+  width: min(700px, 90vw);
+  max-height: calc(100vh - 44px);
+  overflow-y: hidden;
+  padding: 24px 38px 22px;
+  border-radius: 26px;
+  box-sizing: border-box;
+}
+
+.phone-modal .modal-close {
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+}
+
+.phone-modal .modal-title {
+  font-size: 40px;
+  line-height: 1.15;
+}
+
+.phone-modal .modal-subtitle {
+  margin: 8px 42px 8px;
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.phone-modal .phone-display {
+  height: 60px;
+  margin-bottom: 8px;
+  font-size: 40px;
+}
+
+.phone-modal .keypad {
+  gap: 8px;
+  max-width: 480px;
+}
+
+.phone-modal .keypad-key {
+  height: 64px;
+  border-radius: 14px;
+  font-size: 27px;
+}
+
+.phone-modal .keypad-key--text {
+  font-size: 20px;
+}
+
+.phone-modal .keypad-confirm {
+  min-height: 64px;
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* 쉬운모드는 위 기본모드 값보다 제목·번호·키패드·확인 버튼을 한 단계씩 확실히 키운다.
+   단순히 축소해서 맞추는 방식이 아니라, 넓은 팝업 폭과 최소 여백을 사용해 큰 상태로 한 화면에 유지한다. */
+.easy-mode-page .phone-modal {
+  width: min(920px, 98vw);
+  max-height: calc(100vh - 12px);
+  padding: 24px 30px 20px;
+  border-radius: 36px;
+}
+
+.easy-mode-page .phone-modal .modal-close {
+  top: 10px;
+  right: 10px;
+  width: 66px;
+  height: 66px;
+}
+
+.easy-mode-page .phone-modal .modal-title {
+  font-size: 62px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.easy-mode-page .phone-modal .modal-subtitle {
+  margin: 6px 70px;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.easy-mode-page .phone-modal .phone-display {
+  height: 76px;
+  margin-bottom: 6px;
+  font-size: 64px;
+  font-weight: 700;
+}
+
+/* 쉬운모드 키패드는 기본 64px보다 약 40% 큰 90px 버튼을 사용하고 3×4 배열은 그대로 유지한다. */
+.easy-mode-page .phone-modal .keypad {
+  gap: 12px;
+  max-width: 700px;
+}
+
+.easy-mode-page .phone-modal .keypad-key {
+  height: 90px;
+  border-width: 3px;
+  border-radius: 22px;
+  font-size: 44px;
+  font-weight: 700;
+}
+
+.easy-mode-page .phone-modal .keypad-key--text {
+  font-size: 32px;
+}
+
+.easy-mode-page .phone-modal .keypad-confirm {
+  min-height: 96px;
+  max-width: 650px;
+  margin-top: 14px;
+  padding: 14px;
+  font-size: 42px;
+  font-weight: 800;
 }
 
 .qr-frame {
