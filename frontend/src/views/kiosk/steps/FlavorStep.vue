@@ -45,7 +45,8 @@
                 <span v-if="orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="monthly-badge">
                   {{ t('monthlyFlavor') }} · {{ flavor.sizeUpToProductName ? `${menuName(flavor.sizeUpToProductName)} ${t('sizeUp')}` : t('sizeUpAvailable') }}
                 </span>
-                <span v-if="flavor.discountType" class="discount-badge">{{ discountLabel(flavor) }}</span>
+                <!-- 이달의 맛은 500원 사이즈업 전용이므로 기존 DB의 600원 할인값/배지는 화면에 노출하지 않는다. -->
+                <span v-if="flavor.discountType && !orderFlow.isMonthlyFlavorId(flavor.flavorId)" class="discount-badge">{{ discountLabel(flavor) }}</span>
               </button>
             </li>
           </ul>

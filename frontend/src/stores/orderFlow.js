@@ -22,7 +22,9 @@ function resolveFlavorDiscount(flavors, flavorIds, baseAmount) {
   let maxDiscount = 0
   for (const flavorId of flavorIds ?? []) {
     const flavor = flavors.find((f) => f.flavorId === flavorId)
-    if (!flavor?.discountType) continue
+    // 이달의 맛은 할인 상품이 아니라 "싱글레귤러 가격 + 500원" 사이즈업 행사다.
+    // 예전 이벤트 데이터에 discountAmount가 남아 있어도 장바구니 금액에서 다시 차감하지 않는다.
+    if (!flavor?.discountType || isMonthlyFlavor(flavor)) continue
     const discount = flavor.discountType === 'DISCOUNT_RATE'
       ? Math.round((baseAmount * Number(flavor.discountRate)) / 100)
       : flavor.discountAmount ?? 0
@@ -63,6 +65,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     selectedProduct: null,
     editingItemId: null,
     selectedFlavorIds: [],
+    sizeUpRequiredFlavorId: null,
     containerType: 'NONE',
     spoonCount: 0,
     dryIceMinutes: null,
@@ -114,7 +117,11 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     canConfirmFlavor: (state) => {
       if (!state.selectedProduct) return false
       if (state.selectedProduct.requiresFlavorSelection) {
-        return state.selectedFlavorIds.length === state.selectedProduct.selectableFlavorCount
+        const hasAllFlavorSlots = state.selectedFlavorIds.length === state.selectedProduct.selectableFlavorCount
+        // 사이즈업에 동의한 주문은 혜택 조건인 이달의 맛을 반드시 포함해야 장바구니로 진행할 수 있다.
+        const hasRequiredMonthlyFlavor = state.sizeUpRequiredFlavorId == null
+          || state.selectedFlavorIds.includes(state.sizeUpRequiredFlavorId)
+        return hasAllFlavorSlots && hasRequiredMonthlyFlavor
       }
       return true
     },
@@ -163,6 +170,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.selectedProduct = null
       this.editingItemId = null
       this.selectedFlavorIds = []
+      this.sizeUpRequiredFlavorId = null
       this.containerType = 'NONE'
       this.spoonCount = 0
       this.dryIceMinutes = null
@@ -220,6 +228,7 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     resetFlavorStepState(product) {
       this.selectedProduct = product
       this.selectedFlavorIds = []
+      this.sizeUpRequiredFlavorId = null
       this.containerType = product.containerPolicy === 'NONE' ? 'NONE' : 'CUP'
       this.spoonCount = 0
       this.dryIceMinutes = null
@@ -244,24 +253,40 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.proceedPastContainer()
     },
 
-    // 이달의 맛(MONTHLY_FLAVOR)을 고르는 순간, 그 이벤트가 사이즈업 정보(flavor.sizeUpToProductId)까지
-    // 갖고 있고 지금 고른 상품이 그 사이즈업의 "전" 상품과 같으면 상품 업그레이드를 제안한다 - 실제
-    // 배스킨라빈스의 "이 맛 고르면 싱글레귤러를 더블주니어로 사이즈업" 프로모션과 동일한 규칙.
-    // (가격 자체는 addCurrentSelectionToCart에서 상품+맛 조합만 보고 다시 계산하므로, 여기서는 상품만 바꾼다 -
-    // 더블주니어를 처음부터 바로 고르고 이 맛을 담아도 addCurrentSelectionToCart가 같은 가격을 매긴다.)
+    // 이달의 맛(MONTHLY_FLAVOR)을 누른 시점에 현재 상품이 이벤트의 시작 상품(싱글레귤러)이면
+    // 500원 사이즈업 팝업을 띄운다. "네"를 누를 때만 선택 상품을 더블주니어로 바꾸므로 선택 가능 맛도
+    // 상품 데이터의 2개로 늘어나고, "아니오"를 누르면 싱글레귤러의 1개 선택 상태를 그대로 유지한다.
+    // 가격은 화면 값을 신뢰하지 않고 장바구니와 백엔드가 이달의 맛 포함 여부를 각각 다시 확인해 계산한다.
     async offerSizeUp(flavor) {
-      if (!flavor?.sizeUpToProductId) return
-      if (this.selectedProduct?.productId !== flavor.sizeUpFromProductId) return
-      const toProduct = this.products.find((product) => product.productId === flavor.sizeUpToProductId)
+      if (!isMonthlyFlavor(flavor)) return
+
+      // 사이즈업 컬럼이 추가되기 전에 만들어진 기존 이달의 맛 이벤트도 즉시 사용할 수 있게 한다.
+      // API 연결 정보가 비어 있으면 요구사항의 고정 조합(싱글레귤러 → 더블주니어, 500원)을 상품명으로 보완한다.
+      const fallbackFromProduct = this.products.find((product) => product.productName === '싱글레귤러')
+      const fallbackToProduct = this.products.find((product) => product.productName === '더블주니어')
+      const fromProductId = flavor.sizeUpFromProductId ?? fallbackFromProduct?.productId
+      const toProductId = flavor.sizeUpToProductId ?? fallbackToProduct?.productId
+      const additionalPayment = flavor.sizeUpAdditionalPayment ?? 500
+
+      if (!fromProductId || !toProductId) return
+      if (this.selectedProduct?.productId !== fromProductId) return
+      const toProduct = this.products.find((product) => product.productId === toProductId)
       if (!toProduct) return
-      const additionalPayment = flavor.sizeUpAdditionalPayment ?? 0
-      const fromProductName = this.selectedProduct.productName
+
+      // 아래 장바구니 가격 계산도 동일한 연결값을 사용하도록 현재 맛 응답에 보완한 값을 남긴다.
+      flavor.sizeUpFromProductId = fromProductId
+      flavor.sizeUpToProductId = toProductId
+      flavor.sizeUpToProductName = flavor.sizeUpToProductName ?? toProduct.productName
+      flavor.sizeUpAdditionalPayment = additionalPayment
       const accepted = await this.askConfirm(
-        `${additionalPayment.toLocaleString()}원만 더 내면 ${toProduct.productName}로 사이즈업!`,
-        { cancelLabel: fromProductName, confirmLabel: toProduct.productName }
+        `이달의 맛 선택 시\n${additionalPayment.toLocaleString()}원 추가하면 ${toProduct.productName}로 사이즈업 하시겠습니까?`,
+        { cancelLabel: '아니오', confirmLabel: '네' }
       )
       if (!accepted) return
       this.selectedProduct = toProduct
+      // 승인한 사이즈업은 이달의 맛이 혜택 조건이다. 이후 사용자가 요약바에서 이 맛을 지우면
+      // canConfirmFlavor가 false가 되어 다른 맛 두 개만으로 장바구니/결제 단계에 갈 수 없다.
+      this.sizeUpRequiredFlavorId = flavor.flavorId
     },
 
     proceedPastContainer() {
@@ -281,6 +306,10 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       this.selectedCategory = this.categories.find((c) => c.categoryId === product.categoryId) ?? this.selectedCategory
       this.selectedProduct = product
       this.selectedFlavorIds = item.flavors.map((f) => f.flavorId)
+      // 사이즈업 항목을 수정할 때도 필수 맛 조건을 복원하여 삭제 후 다른 맛으로 바꾸는 우회를 막는다.
+      this.sizeUpRequiredFlavorId = item.sizeUpApplied
+        ? item.flavors.find((flavor) => this.isMonthlyFlavorId(flavor.flavorId))?.flavorId ?? null
+        : null
       this.containerType = item.containerType
       this.spoonCount = item.spoonCount
       this.dryIceMinutes = item.dryIceMinutes
