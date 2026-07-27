@@ -1,6 +1,10 @@
 <template>
   <div class="admin-shell">
+<<<<<<< HEAD
+    <BranchSidebar active="inventory" />
+=======
     <BranchSidebar active="inventory" :new-orders="newOrderCount" />
+>>>>>>> c35473f07ea986e9c127e8763ed5eab14dffa0f3
 
     <main class="content">
       <header class="topbar">

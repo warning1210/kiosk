@@ -46,8 +46,15 @@ import { useRouter } from 'vue-router'
 import { firebaseAuth } from '../../firebase'
 import http from '../../api/branch'
 import { useStaffCallAlert } from '../../composables/useStaffCallAlert'
+<<<<<<< HEAD
+import { useNewOrderAlert } from '../../composables/useNewOrderAlert'
+defineProps({ active: String })
+const { called: staffCalled, acknowledge: acknowledgeStaffCall } = useStaffCallAlert()
+const { newOrdersCount: newOrders } = useNewOrderAlert()
+=======
 defineProps({ active: String, newOrders: { type: Number, default: 0 } })
 const { called: staffCalled, acknowledge: acknowledgeStaffCall } = useStaffCallAlert()
+>>>>>>> c35473f07ea986e9c127e8763ed5eab14dffa0f3
 const router=useRouter()
 const loggingOut=ref(false)
 let presenceTimer
