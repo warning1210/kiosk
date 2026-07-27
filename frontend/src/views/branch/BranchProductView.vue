@@ -30,7 +30,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="product in filteredProducts" :key="product.productId">
+            <tr v-for="product in pagedProducts" :key="product.productId">
               <td>
                 <div class="entity-cell">
                   <img v-if="product.imageUrl" :src="product.imageUrl" alt="">
@@ -50,19 +50,29 @@
             </tr>
           </tbody>
         </table>
+        <div class="pagination-foot">
+          <span>전체 {{ filteredProducts.length }}개 중 {{ pageStart }}-{{ pageEnd }} 표시</span>
+          <div class="pagination">
+            <button type="button" :disabled="page <= 1" @click="page--">이전</button>
+            <button v-for="p in Math.ceil(filteredProducts.length / pageSize)" :key="p" :class="{ active: page === p }" @click="page = p">{{ p }}</button>
+            <button type="button" :disabled="page >= Math.ceil(filteredProducts.length / pageSize)" @click="page++">다음</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import http from '../../api/branch'
 import BranchSidebar from '../../components/branch/BranchSidebar.vue'
 
 const products = ref([])
 const loading = ref(true)
 const keyword = ref('')
+const page = ref(1)
+const pageSize = 8
 
 async function loadProducts() {
   loading.value = true
@@ -97,8 +107,30 @@ const filteredProducts = computed(() => {
   return products.value.filter(p => p.productName.toLowerCase().includes(word))
 })
 
+watch(keyword, () => { page.value = 1 })
+
+const pageStart = computed(() => filteredProducts.value.length ? (page.value - 1) * pageSize + 1 : 0)
+const pageEnd = computed(() => Math.min(page.value * pageSize, filteredProducts.value.length))
+const pagedProducts = computed(() => filteredProducts.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+
+function handleKeydown(e) {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+  if (e.key === 'PageDown') {
+    e.preventDefault()
+    if (page.value < Math.ceil(filteredProducts.value.length / pageSize)) page.value++
+  } else if (e.key === 'PageUp') {
+    e.preventDefault()
+    if (page.value > 1) page.value--
+  }
+}
+
 onMounted(() => {
   loadProducts()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -240,6 +272,13 @@ input:checked + .slider:before {
 input:checked ~ .label-text {
   color: #0b9654;
 }
+
+.pagination-foot { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-top: 1px solid #e9edf2; }
+.pagination-foot>span { color: #8c95a2; font-size: 13px; }
+.pagination { display: flex; align-items: center; gap: 4px; }
+.pagination button { min-width: 28px; height: 28px; padding: 0 6px; color: #746c72; border: 1px solid #dfe3e9; background: #fff; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.pagination button.active { color: #e93685; border-color: #f4b8d3; background: #fff0f6; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
 
 @media (max-width: 760px) {
   main { margin-left: 0; padding: 20px; }
