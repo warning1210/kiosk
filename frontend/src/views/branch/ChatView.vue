@@ -1,9 +1,5 @@
 <template>
-<<<<<<< HEAD
   <div class="shell"><BranchSidebar active="chat" /><main>
-=======
-  <div class="shell"><BranchSidebar active="chat" :new-orders="0" /><main>
->>>>>>> c35473f07ea986e9c127e8763ed5eab14dffa0f3
     <header><div><h1>본점 채팅</h1><p>본점과 실시간으로 상담하세요.</p></div></header>
 
     <section class="thread">

@@ -1,10 +1,6 @@
 <template>
   <div class="shell">
-<<<<<<< HEAD
     <BranchSidebar active="orders" />
-=======
-    <BranchSidebar active="orders" :new-orders="newCount" />
->>>>>>> c35473f07ea986e9c127e8763ed5eab14dffa0f3
     <main>
       <header>
         <div>

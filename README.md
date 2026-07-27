@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # 🍦 Ice Cream Kiosk · 아이스크림 프랜차이즈 통합 관리 시스템
-=======
-# 🍦 Ice Cream Kiosk · 아이스크림 키오스크 통합 관리 시스템
->>>>>>> c35473f07ea986e9c127e8763ed5eab14dffa0f3
 
 > 무인 매장 **키오스크 주문**부터 **지점 운영**, **본사 관리**까지 하나로 연결한 **클라우드 기반 통합 플랫폼**
 
@@ -166,7 +162,6 @@ npm run dev               # :5173, /api/* → :8080 프록시 (vite.config.js)
 
 ---
 
-<<<<<<< HEAD
 ## 📚 문서
 
 | 문서 | 내용 |
@@ -179,9 +174,6 @@ npm run dev               # :5173, /api/* → :8080 프록시 (vite.config.js)
 | [`docs/cart-order-payment-changes.md`](docs/cart-order-payment-changes.md) | 장바구니·주문·결제 변경 이력 |
 
 ---
-
-=======
->>>>>>> c35473f07ea986e9c127e8763ed5eab14dffa0f3
 <p align="center">
   <b>🍦 대우능력개발원 · AI 에이전트 클라우드 · 보안 코딩 개발자 양성 과정 팀 프로젝트</b>
 </p>
