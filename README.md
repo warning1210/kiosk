@@ -1,4 +1,4 @@
-# 🍦 Ice Cream Kiosk · 아이스크림 프랜차이즈 통합 관리 시스템
+# 🍦 Ice Cream Kiosk · 아이스크림 키오스크 통합 관리 시스템
 
 > 무인 매장 **키오스크 주문**부터 **지점 운영**, **본사 관리**까지 하나로 연결한 **클라우드 기반 통합 플랫폼**
 
@@ -159,19 +159,6 @@ cd frontend
 npm install
 npm run dev               # :5173, /api/* → :8080 프록시 (vite.config.js)
 ```
-
----
-
-## 📚 문서
-
-| 문서 | 내용 |
-| --- | --- |
-| [`docs/requirements-priority.md`](docs/requirements-priority.md) | 요구사항 및 우선순위 |
-| [`docs/branch-api-full.md`](docs/branch-api-full.md) | 지점 API 명세 |
-| [`docs/branch-api-curl-tests.md`](docs/branch-api-curl-tests.md) | 지점 API curl 테스트 |
-| [`docs/stock-request-guide.md`](docs/stock-request-guide.md) | 재고 신청 흐름 가이드 |
-| [`docs/flavor-discount-logic.md`](docs/flavor-discount-logic.md) | 맛 선택·할인 로직 |
-| [`docs/cart-order-payment-changes.md`](docs/cart-order-payment-changes.md) | 장바구니·주문·결제 변경 이력 |
 
 ---
 
