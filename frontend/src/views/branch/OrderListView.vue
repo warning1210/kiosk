@@ -10,7 +10,7 @@
             <p>완료/취소된 주문 내역을 확인합니다</p>
           </div>
           <div class="date-picker-wrap">
-            <VueDatePicker v-model="filterDate" :enable-time-picker="false" :allowed-dates="availableDates" format="yyyy-MM-dd" model-type="yyyy-MM-dd" auto-apply class="date-input" @update:model-value="load" />
+            <VueDatePicker  v-model="filterDate" :time-config="{ enableTimePicker: false }" :allowed-dates="availableDates" format="yyyy-MM-dd" model-type="yyyy-MM-dd" auto-apply class="date-input" @update:model-value="load" />
           </div>
         </header>
         <div class="list-container">
