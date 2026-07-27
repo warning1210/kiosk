@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: kiosk-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: kiosk
+      MYSQL_USER: kiosk
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      # 호스트 3307 -> 컨테이너 3306. 호스트 3306은 다른 프로젝트(certimate-mysql)가 이미 사용 중이라 회피.
+      - "3307:3306"
+    volumes:
+      - kiosk-mysql-data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+    # character-set-client-handshake=FALSE: 클라이언트(Adminer, DBeaver, mysql CLI 등)가
+    # 접속 시 다른 문자셋(주로 latin1)을 요청해도 서버가 무시하고 강제로 utf8mb4를 쓰게 해서
+    # 한글이 이중 인코딩으로 깨지는 걸 원천 차단
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --character-set-client-handshake=FALSE
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    container_name: kiosk-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    ports:
+      - "8081:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  kiosk-mysql-data:
