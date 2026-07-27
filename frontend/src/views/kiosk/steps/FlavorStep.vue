@@ -1,6 +1,7 @@
 <template>
   <!-- 5단계: 맛 선택 (CU-006) -->
-  <div class="page">
+  <!-- 상품 화면과 동일하게 현재 화면에 클래스를 직접 붙여 쉬운모드 2열 스타일을 적용한다. -->
+  <div class="page" :class="{ 'easy-mode-page': orderFlow.easyMode }">
     <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
       <span v-html="closeXSvg"></span>
     </button>
@@ -122,7 +123,8 @@ import { useKioskI18n } from '../../../composables/useKioskI18n'
 
 const closeXSvg = closeXRaw
 
-const FLAVORS_PER_PAGE = 12 // 4열 x 3행
+// 일반모드는 4열×3행, 쉬운모드는 큰 맛 카드 2열×3행으로 페이지를 나눈다.
+const flavorsPerPage = computed(() => orderFlow.easyMode ? 6 : 12)
 const SWIPE_THRESHOLD = 40 // px
 
 const orderFlow = useOrderFlowStore()
@@ -166,8 +168,8 @@ function flavorImage(flavorId) {
 const currentPage = ref(0)
 const flavorPages = computed(() => {
   const pages = []
-  for (let i = 0; i < orderFlow.flavors.length; i += FLAVORS_PER_PAGE) {
-    pages.push(orderFlow.flavors.slice(i, i + FLAVORS_PER_PAGE))
+  for (let i = 0; i < orderFlow.flavors.length; i += flavorsPerPage.value) {
+    pages.push(orderFlow.flavors.slice(i, i + flavorsPerPage.value))
   }
   return pages.length ? pages : [[]]
 })
@@ -322,6 +324,36 @@ const emptySlotCount = computed(() => {
   padding: 8px 0 0;
 }
 
+/* 쉬운모드에서는 맛도 한 줄에 두 개만 보여주고 사진·이름·행사 배지를 크게 표시한다. */
+.easy-mode-page .flavor-grid {
+  grid-template-columns: repeat(2, 1fr);
+  row-gap: 32px;
+  column-gap: 20px;
+  padding: 12px 14px 0;
+}
+
+.easy-mode-page .flavor-card {
+  min-height: 300px;
+  padding: 18px 12px;
+  border-radius: 24px;
+}
+
+.easy-mode-page .flavor-thumb {
+  width: 190px;
+  height: 190px;
+}
+
+.easy-mode-page .flavor-name {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.easy-mode-page .monthly-badge,
+.easy-mode-page .discount-badge {
+  padding: 8px 12px;
+  font-size: 20px;
+}
+
 .page-dots {
   display: flex;
   justify-content: center;
@@ -470,6 +502,36 @@ const emptySlotCount = computed(() => {
 .flavor-description strong { display: block; overflow: hidden; color: #f20c93; font-size: 24px; text-overflow: ellipsis; white-space: nowrap; }
 .flavor-description p { overflow: hidden; margin: 8px 0; color: #5f5057; font-size: 19px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
 .flavor-description small { color: #9a7e8a; font-size: 16px; }
+
+/* 쉬운모드의 선택 맛 설명은 목록 카드보다 보조 정보이므로 과도하게 키우지 않고 약 15~20%만 확대한다.
+   글자만 커져 이미지와 균형이 깨지지 않도록 카드 여백·열 너비·썸네일도 같은 비율로 소폭 늘린다. */
+.easy-mode-page .flavor-description {
+  grid-template-columns: 110px 1fr;
+  gap: 22px;
+  padding: 22px 28px;
+}
+
+.easy-mode-page .flavor-description.without-image {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.easy-mode-page .flavor-description img {
+  width: 104px;
+  height: 104px;
+}
+
+.easy-mode-page .flavor-description strong {
+  font-size: 29px;
+}
+
+.easy-mode-page .flavor-description p {
+  margin: 9px 0;
+  font-size: 23px;
+}
+
+.easy-mode-page .flavor-description small {
+  font-size: 19px;
+}
 
 .summary-label {
   margin: 0 0 12px;

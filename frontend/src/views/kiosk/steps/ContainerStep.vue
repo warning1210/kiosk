@@ -1,6 +1,7 @@
 <template>
   <!-- 4단계: 상품정보 (컵/콘 둘 다 가능한 상품 → 컵/콘 선택, 테이크아웃 대용량 상품 → 숟가락/드라이아이스 선택) -->
-  <div class="page">
+  <!-- 쉬운모드 여부를 화면 루트에 직접 표시해 용기 카드 확대 스타일을 안정적으로 적용한다. -->
+  <div class="page" :class="{ 'easy-mode-page': orderFlow.easyMode }">
     <button type="button" class="icon-btn close-btn" :aria-label="t('goHome')" @click="orderFlow.goHome">
       <span v-html="closeXSvg"></span>
     </button>
@@ -287,6 +288,99 @@ const DRY_ICE_CHOICES = [
 
 .option-card.selected {
   border-color: #ef9bcd;
+}
+
+/* 쉬운모드에서는 용기 선택도 2열 큰 카드로 보여 터치 영역을 넓힌다. */
+.easy-mode-page .options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: 100%;
+}
+
+.easy-mode-page .option-card {
+  width: 100%;
+  height: 300px;
+}
+
+.easy-mode-page .option-img {
+  width: 160px;
+  height: 160px;
+}
+
+/* 가져가기에서 파인트 이상 대용량 상품을 누르면 컵/콘 대신 숟가락·드라이아이스 설정이 나온다.
+   이 분기에서도 easy-mode-page 값을 그대로 사용해 상품 정보와 모든 터치 영역을 함께 확대한다. */
+.easy-mode-page .content {
+  padding: 58px 56px 40px;
+  gap: 18px;
+}
+
+.easy-mode-page .preview-single {
+  width: 220px;
+  height: 220px;
+}
+
+.easy-mode-page .product-info {
+  gap: 36px;
+}
+
+.easy-mode-page .product-name {
+  font-size: 42px;
+  font-weight: 700;
+}
+
+.easy-mode-page .product-price {
+  font-size: 56px;
+  font-weight: 700;
+}
+
+.easy-mode-page .product-desc {
+  margin-top: 28px;
+  font-size: 34px;
+  line-height: 1.5;
+}
+
+.easy-mode-page .spoon-dryice-options {
+  gap: 48px;
+  margin-top: 48px;
+}
+
+.easy-mode-page .option-group-title {
+  margin-bottom: 24px;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+/* 숟가락 수량은 원형 버튼 자체와 가운데 숫자를 같이 키워 누르는 위치와 현재 값을 쉽게 구분한다. */
+.easy-mode-page .stepper {
+  gap: 30px;
+}
+
+.easy-mode-page .stepper button {
+  width: 90px;
+  height: 90px;
+  border-width: 2px;
+  font-size: 46px;
+}
+
+.easy-mode-page .stepper-value {
+  min-width: 70px;
+  font-size: 44px;
+  font-weight: 700;
+}
+
+/* 드라이아이스 시간은 글자만 키우면 터치 영역이 그대로이므로 패딩과 최소 높이도 함께 늘린다. */
+.easy-mode-page .dryice-choices {
+  gap: 18px;
+}
+
+.easy-mode-page .dryice-chip {
+  min-width: 135px;
+  min-height: 82px;
+  padding: 18px 30px;
+  border-width: 3px;
+  border-radius: 30px;
+  font-size: 30px;
+  font-weight: 700;
 }
 
 .option-img {

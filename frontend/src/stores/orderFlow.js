@@ -54,6 +54,8 @@ const PAYMENT_STATUS_LABELS = {
 export const useOrderFlowStore = defineStore('orderFlow', {
   state: () => ({
     step: 'orderType',
+    // 어르신용 쉬운모드 여부. 주문 단계가 바뀌어도 같은 Pinia 스토어를 사용하므로 선택 상태가 유지된다.
+    easyMode: false,
 
     categories: [],
     products: [],
@@ -161,6 +163,8 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       }
 
       this.step = cart.orderType ? 'product' : 'orderType'
+      // 새 주문을 시작한 고객에게 이전 고객의 쉬운모드 설정이 이어지지 않도록 일반모드로 초기화한다.
+      this.easyMode = false
       this.categories = []
       this.products = []
       this.flavors = []
@@ -223,6 +227,10 @@ export const useOrderFlowStore = defineStore('orderFlow', {
       const cart = useCartStore()
       cart.setOrderType(orderType)
       this.step = 'product'
+    },
+
+    toggleEasyMode() {
+      this.easyMode = !this.easyMode
     },
 
     resetFlavorStepState(product) {
