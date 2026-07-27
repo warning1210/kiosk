@@ -74,7 +74,9 @@ public class KioskFlavorDiscountService {
         int maxDiscount = 0;
         for (Long flavorId : flavorIds) {
             Event event = activeDiscounts.get(flavorId);
-            if (event != null) {
+            // 이달의 맛 혜택은 정액 할인이 아니라 사이즈업이다. 예전 DB에 남은 discountAmount=500을
+            // 여기서 또 빼면 "싱글레귤러 가격 + 500원"보다 500원이 낮아지므로 할인 계산에서는 제외한다.
+            if (event != null && event.getEventType() != EventType.MONTHLY_FLAVOR) {
                 maxDiscount = Math.max(maxDiscount, discountOf(event, itemBaseTotal));
             }
         }

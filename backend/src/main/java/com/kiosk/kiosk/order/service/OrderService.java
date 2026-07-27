@@ -8,6 +8,7 @@ import com.kiosk.domain.coupon.CouponRepository;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.customer.CustomerRepository;
 import com.kiosk.domain.event.Event;
+import com.kiosk.domain.event.EventType;
 import com.kiosk.domain.flavor.Flavor;
 import com.kiosk.domain.flavor.FlavorRepository;
 import com.kiosk.domain.order.ContainerType;
@@ -79,7 +80,7 @@ public class OrderService {
                         Product product = productRepository.findById(itemRequest.productId())
                                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                         "상품을 찾을 수 없습니다."));
-                        int itemTotal = resolveItemBasePrice(product, itemRequest);
+                        int itemTotal = resolveItemBasePrice(product, itemRequest, activeFlavorDiscounts);
                         if (itemRequest.containerType() == ContainerType.WAFFLE_CONE) {
                                 itemTotal += 500;
                         }
@@ -175,12 +176,30 @@ public class OrderService {
         // 이 상품이 진행 중인 MONTHLY_FLAVOR(사이즈업) 이벤트의 "후" 상품이고, 실제로 그 이벤트가 지정한 맛을
         // 담았다면 사이즈업 가격을 적용한다 - 싱글레귤러에서 업그레이드해왔든, 처음부터 이 상품을 고르고 그
         // 맛을 담았든 상관없이 같은 규칙이다 (사이즈업은 "이 맛을 고르면"이 조건이지 어떻게 도달했는지가 아님).
-        private int resolveItemBasePrice(Product product, OrderItemRequest request) {
-                return kioskFlavorDiscountService.activeSizeUpEventTo(product.getProductId())
+        private int resolveItemBasePrice(Product product, OrderItemRequest request, Map<Long, Event> activeFlavorDiscounts) {
+                var configuredSizeUp = kioskFlavorDiscountService.activeSizeUpEventTo(product.getProductId())
                                 .filter(event -> event.getFlavor() != null
                                                 && request.flavorIds() != null
                                                 && request.flavorIds().contains(event.getFlavor().getFlavorId()))
-                                .map(event -> event.getSizeUpFromProduct().getBasePrice() + event.getAdditionalPayment())
-                                .orElse(product.getBasePrice());
+                                .map(event -> event.getSizeUpFromProduct().getBasePrice() + event.getAdditionalPayment());
+                if (configuredSizeUp.isPresent()) {
+                        return configuredSizeUp.get();
+                }
+
+                // 기존 DB의 이달의 맛 이벤트는 사이즈업 상품 컬럼이 비어 있을 수 있다. 그런 데이터도
+                // 더블주니어에 이달의 맛이 실제 포함됐을 때만 싱글레귤러 가격 + 500원으로 서버에서 확정한다.
+                boolean containsLegacyMonthlyFlavor = request.flavorIds() != null
+                                && request.flavorIds().stream()
+                                                .map(activeFlavorDiscounts::get)
+                                                .anyMatch(event -> event != null
+                                                                && event.getEventType() == EventType.MONTHLY_FLAVOR);
+                if (containsLegacyMonthlyFlavor && "더블주니어".equals(product.getProductName())) {
+                        return productRepository.findAll().stream()
+                                        .filter(candidate -> "싱글레귤러".equals(candidate.getProductName()))
+                                        .findFirst()
+                                        .map(candidate -> candidate.getBasePrice() + 500)
+                                        .orElse(product.getBasePrice());
+                }
+                return product.getBasePrice();
         }
 }

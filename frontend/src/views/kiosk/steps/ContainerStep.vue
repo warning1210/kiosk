@@ -183,10 +183,11 @@ const DRY_ICE_CHOICES = [
 }
 
 .content {
-  padding: 32px 44px;
+  padding: 48px 44px 32px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* 세로 중앙 정렬 때문에 상단 탭과 상품 정보 사이에 생기던 큰 공백을 없애고 위에서부터 붙여 배치한다. */
+  justify-content: flex-start;
   flex: 1;
   min-height: 0;
   gap: 8px;

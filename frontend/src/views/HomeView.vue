@@ -120,6 +120,8 @@ async function loginKiosk() {
       data = (await http.post('/branch-auth/db-login', { loginId: loginId.value, password: password.value })).data
     }
     const session = { branchId: data.branchId, branchName: data.branchName }
+    // 영업 종료로 INACTIVE였던 키오스크도 다음 등록 성공 시 다시 주문 가능한 상태로 연다.
+    await http.patch('/kiosk/session/start', null, { params: { branchId: session.branchId } })
     setKioskSession(session)
     kioskSession.value = session
   } catch (e) {

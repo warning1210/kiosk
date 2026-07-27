@@ -2,7 +2,14 @@
   <div class="page">
     <!-- 상단 헤더: 로고 + 알림/닫기 -->
     <header class="top-bar">
-      <img class="logo" :src="logo" alt="배스킨라빈스" />
+      <button
+        type="button"
+        class="logo-button"
+        aria-label="배스킨라빈스"
+        @click="handleLogoTap"
+      >
+        <img class="logo" :src="logo" alt="배스킨라빈스" />
+      </button>
       <div class="top-actions">
         <!-- 언어 버튼을 누르면 아래 언어 선택 팝업을 엽니다. -->
         <button type="button" class="lang-pill" @click="showLanguageModal = true">
@@ -30,6 +37,39 @@
     <Transition name="staff-call-toast-fade">
       <p v-if="justCalled" class="staff-call-toast">직원을 호출했어요. 잠시만 기다려주세요.</p>
     </Transition>
+
+    <!-- 로고 5회 연타 시 오늘 매출을 먼저 확인하고 영업 종료와 단순 로그아웃을 구분한다. -->
+    <div v-if="showLogoutModal" class="logout-backdrop">
+      <section class="logout-modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+        <h2 id="logout-title">키오스크 로그아웃</h2>
+        <p v-if="logoutLoading" class="logout-status">오늘 매출을 불러오는 중입니다.</p>
+        <p v-else-if="logoutError" class="logout-error">{{ logoutError }}</p>
+        <template v-else>
+          <div class="logout-summary">
+            <div><span>오늘 매출</span><strong>{{ logoutSummary.totalRevenue.toLocaleString() }}원</strong></div>
+            <div><span>결제 주문</span><strong>{{ logoutSummary.orderCount.toLocaleString() }}건</strong></div>
+          </div>
+          <h3>오늘 많이 판매된 메뉴</h3>
+          <ol v-if="logoutSummary.popularMenus.length" class="popular-menu-list">
+            <!-- 서버도 TOP 5로 집계하지만 화면에서도 최대 5개로 제한해 데이터 변경 시 목록이 길어지지 않게 한다. -->
+            <li v-for="menu in logoutSummary.popularMenus.slice(0, 5)" :key="menu.productName">
+              <span>{{ menu.productName }}</span><strong>{{ menu.quantity }}개</strong>
+            </li>
+          </ol>
+          <p v-else class="logout-status">오늘 결제 완료된 메뉴가 없습니다.</p>
+          <p class="save-notice">결제된 주문과 매출은 이미 안전하게 저장되어 있습니다.</p>
+        </template>
+        <div class="logout-actions">
+          <button type="button" class="logout-cancel" :disabled="logoutSubmitting" @click="closeLogoutModal">취소</button>
+          <button type="button" class="logout-only" :disabled="logoutLoading || logoutSubmitting" @click="confirmLogout(false)">
+            저장 후 로그아웃만
+          </button>
+          <button type="button" class="business-close" :disabled="logoutLoading || logoutSubmitting" @click="confirmLogout(true)">
+            오늘 영업 종료
+          </button>
+        </div>
+      </section>
+    </div>
 
     <!-- 카테고리 탭 -->
     <nav class="category-tabs">
@@ -134,9 +174,13 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useOrderFlowStore } from '../../../stores/orderFlow'
 import { useCartStore } from '../../../stores/cart'
 import { useStaffCall } from '../../../composables/useStaffCall'
+import { clearKioskSession } from '../../../utils/kioskSession'
+import { getKioskBranchId } from '../../../utils/kioskSession'
+import http from '../../../api/http'
 
 import logo from '../../../assets/kiosk/logo.png'
 import globe from '../../../assets/kiosk/icons/globe.png'
@@ -151,9 +195,15 @@ import { KIOSK_LANGUAGES, useKioskI18n } from '../../../composables/useKioskI18n
 
 const orderFlow = useOrderFlowStore()
 const cart = useCartStore()
+const router = useRouter()
 const focusedProduct = ref(null)
 const { calling, justCalled, callStaff } = useStaffCall()
 const showLanguageModal = ref(false)
+const showLogoutModal = ref(false)
+const logoutLoading = ref(false)
+const logoutSubmitting = ref(false)
+const logoutError = ref('')
+const logoutSummary = ref({ totalRevenue: 0, orderCount: 0, popularMenus: [] })
 
 // 번역 함수와 현재 언어는 공통 composable에서 가져옵니다.
 const { locale, currentLanguage, setLocale, t, menuName } = useKioskI18n()
@@ -167,6 +217,60 @@ function selectLanguage(nextLocale) {
 const closeXSvg = closeXRaw
 const cartSvg = cartRaw
 const notifCircleSvg = notifCircleRaw
+
+const LOGOUT_TAP_COUNT = 5
+const LOGOUT_TAP_WINDOW_MS = 2_000
+let logoTapCount = 0
+let lastLogoTapAt = 0
+
+// 고객이 실수로 한두 번 로고를 눌러 로그아웃되지 않도록 2초 안에 5번 연속 탭했을 때만 동작한다.
+// 로그아웃할 때 진행 중 주문과 지점 연결을 함께 지운 뒤 광고 경로로 이동하면 HomeView가 지점 등록 화면을 보여준다.
+async function handleLogoTap() {
+  const now = Date.now()
+  logoTapCount = now - lastLogoTapAt <= LOGOUT_TAP_WINDOW_MS ? logoTapCount + 1 : 1
+  lastLogoTapAt = now
+  if (logoTapCount < LOGOUT_TAP_COUNT) return
+
+  logoTapCount = 0
+  lastLogoTapAt = 0
+  showLogoutModal.value = true
+  logoutLoading.value = true
+  logoutError.value = ''
+  try {
+    const { data } = await http.get('/kiosk/session/today-summary', {
+      params: { branchId: getKioskBranchId() }
+    })
+    logoutSummary.value = data
+  } catch (e) {
+    logoutError.value = e.response?.data?.message ?? '오늘 매출을 불러오지 못했습니다.'
+  } finally {
+    logoutLoading.value = false
+  }
+}
+
+function closeLogoutModal() {
+  if (logoutSubmitting.value) return
+  showLogoutModal.value = false
+}
+
+async function confirmLogout(closeBusiness) {
+  logoutSubmitting.value = true
+  logoutError.value = ''
+  try {
+    // 영업 종료 여부를 서버에 먼저 저장한 뒤 로컬 주문/지점 세션을 지워 데이터 유실이나 상태 불일치를 막는다.
+    await http.patch('/kiosk/session/logout', null, {
+      params: { branchId: getKioskBranchId(), closeBusiness }
+    })
+    orderFlow.stopPolling()
+    cart.clear()
+    clearKioskSession()
+    await router.replace('/')
+  } catch (e) {
+    logoutError.value = e.response?.data?.message ?? '로그아웃 상태를 저장하지 못했습니다.'
+  } finally {
+    logoutSubmitting.value = false
+  }
+}
 
 function goToCart() {
   if (!cart.items.length) return
@@ -268,6 +372,16 @@ function addFocusedProduct() {
   object-fit: contain;
 }
 
+.logo-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .top-actions {
   display: flex;
   align-items: center;
@@ -362,6 +476,44 @@ function addFocusedProduct() {
 .staff-call-toast-fade-leave-to {
   opacity: 0;
 }
+
+.logout-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 55%);
+}
+
+.logout-modal {
+  width: min(620px, 92vw);
+  padding: 34px;
+  border-radius: 26px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 24%);
+}
+
+.logout-modal h2 { margin: 0; color: #222; font-size: 28px; }
+.logout-modal h3 { margin: 26px 0 12px; color: #444; font-size: 18px; }
+.logout-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+.logout-summary div { display: grid; gap: 8px; padding: 20px; border-radius: 16px; background: #fff2f8; }
+.logout-summary span { color: #777; font-size: 14px; }
+.logout-summary strong { color: #f20c93; font-size: 24px; }
+.popular-menu-list { display: grid; gap: 8px; margin: 0; padding-left: 24px; }
+.popular-menu-list li { padding: 9px 12px; color: #444; }
+.popular-menu-list li span { margin-left: 6px; }
+.popular-menu-list li strong { float: right; color: #f20c93; }
+.logout-status, .logout-error, .save-notice { margin: 20px 0 0; text-align: center; }
+.logout-error { color: #c52f47; }
+.save-notice { padding: 12px; border-radius: 10px; color: #555; background: #f5f5f5; font-size: 13px; }
+.logout-actions { display: grid; grid-template-columns: 0.7fr 1.2fr 1.2fr; gap: 10px; margin-top: 28px; }
+.logout-actions button { min-height: 54px; padding: 8px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; }
+.logout-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+.logout-cancel { border: 1px solid #bbb; color: #555; background: #fff; }
+.logout-only { border: 1px solid #f20c93; color: #f20c93; background: #fff; }
+.business-close { border: 0; color: #fff; background: #f20c93; }
 
 .close-btn :deep(svg) {
   width: 64px;

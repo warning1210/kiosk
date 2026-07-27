@@ -15,6 +15,12 @@ export function setKioskSession(session) {
   localStorage.setItem(KIOSK_SESSION_KEY, JSON.stringify(session))
 }
 
+// 숨겨진 키오스크 로그아웃에서 기기에 저장된 소속 지점만 해제한다.
+// 관리자 인증 토큰은 애초에 키오스크 세션에 저장하지 않으므로 이 값만 지우면 최초 등록 화면으로 돌아간다.
+export function clearKioskSession() {
+  localStorage.removeItem(KIOSK_SESSION_KEY)
+}
+
 export function getKioskBranchId() {
   return getKioskSession()?.branchId ?? null
 }
