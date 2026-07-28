@@ -106,6 +106,21 @@ public class BranchOrderService {
                     .map(OrderItemFlavor::getFlavorNameSnapshot)
                     .collect(Collectors.toList());
 
+            if (item.getContainerType() != null && item.getContainerType() != com.kiosk.domain.order.ContainerType.NONE) {
+                switch (item.getContainerType()) {
+                    case CUP: options.add("용기: 컵"); break;
+                    case CONE: options.add("용기: 콘"); break;
+                    case WAFFLE_CONE: options.add("용기: 와플콘"); break;
+                    default: break;
+                }
+            }
+            if (item.getDryIceMinutes() != null && item.getDryIceMinutes() > 0) {
+                options.add("드라이아이스: " + item.getDryIceMinutes() + "분");
+            }
+            if (item.getSpoonCount() != null && item.getSpoonCount() > 0) {
+                options.add("스푼: " + item.getSpoonCount() + "개");
+            }
+
             return BranchOrderDetailItemResponse.builder()
                     .productName(item.getProductNameSnapshot())
                     .unitPrice(item.getUnitPriceSnapshot())
