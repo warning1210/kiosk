@@ -52,7 +52,11 @@
           <tbody>
             <template v-for="o in sorted" :key="o.orderId">
               <tr @click="toggleDetail(o.orderId)" class="clickable-row" :class="{ expanded: expandedOrderId === o.orderId }">
-                <td><b>#{{ String(o.waitingNumber).padStart(3, '0') }}</b></td>
+                <td>
+                  <!-- 과거 주문 데이터에 waitingNumber가 없어도 화면에 null을 노출하지 않는다. -->
+                  <b>#{{ formatWaitingNumber(o) }}</b>
+                  <span v-if="o.paymentMethod === 'CASH'" class="cash-badge">현금</span>
+                </td>
                 <td>
                   <span class="elapsed" :class="o.elapsedMinutes > 15 ? 'danger' : o.elapsedMinutes > 8 ? 'warn' : 'safe'">
                     {{ o.elapsedMinutes }}분
@@ -65,6 +69,8 @@
                 <td><strong :class="`s-${o.status}`">{{ label(o.status) }}</strong></td>
                 <td>
                   <div class="actions">
+                    <!-- 현금 주문은 직원이 실제 돈을 받은 뒤에만 결제 완료로 전환한다. -->
+                    <button v-if="o.status === 'PENDING_PAYMENT' && o.paymentMethod === 'CASH'" class="cash-confirm" @click.stop="confirmCash(o)">현금 결제 확인</button>
                     <button v-if="o.status === 'PAID'" class="start" @click.stop="changeStatus(o, 'MAKING')">제조 시작</button>
                     <button v-if="o.status === 'MAKING'" class="complete" @click.stop="changeStatus(o, 'COMPLETED')">완료</button>
                     <button v-if="o.status !== 'CANCELLED'" class="cancel" @click.stop="openCancelModal(o)">취소</button>
@@ -170,7 +176,11 @@ const sorted = computed(() => [...activeOrders.value].sort((a, b) =>
   oldest.value ? new Date(a.createdAt) - new Date(b.createdAt) : new Date(b.createdAt) - new Date(a.createdAt)
 ));
 function label(s) {
-  return ({ PAID: '신규', MAKING: '처리중', READY: '준비완료', COMPLETED: '완료', CANCELLED: '취소' })[s] || s;
+  return ({ PENDING_PAYMENT: '카운터 결제대기', PAID: '신규', MAKING: '처리중', READY: '준비완료', COMPLETED: '완료', CANCELLED: '취소' })[s] || s;
+}
+function formatWaitingNumber(order) {
+  const number = order.waitingNumber ?? order.orderId;
+  return String(number).padStart(3, '0');
 }
 function getFlavors(options) {
   if (!options) return [];
@@ -240,13 +250,23 @@ async function submitCancel() {
 }
 async function load() {
   try {
-    orders.value = (await http.get('/orders')).data;
+    // 이 화면은 2초마다 조회하므로 완료/취소 이력 수백 건은 받지 않고 처리 중 주문만 요청한다.
+    orders.value = (await http.get('/orders?activeOnly=true')).data;
   } catch (e) {
     console.error(e);
   }
 }
 async function changeStatus(o, status, cancelReason = null) {
   await http.patch(`/orders/${o.orderId}/status`, { status, cancelReason });
+  // 서버 응답이 성공하면 목록 재조회 전에 버튼과 상태 문구를 즉시 바꿔 체감 지연을 없앤다.
+  o.status = status;
+  if (status === 'COMPLETED' || status === 'CANCELLED') {
+    orders.value = orders.value.filter(order => order.orderId !== o.orderId);
+  }
+}
+// 카운터에서 현금을 받은 뒤 백엔드의 포인트/쿠폰/재고 확정 처리까지 한 번에 실행한다.
+async function confirmCash(o) {
+  await http.post(`/orders/${o.orderId}/confirm-cash`);
   await load();
 }
 onMounted(() => {
@@ -287,12 +307,15 @@ td > b { font-size: 12px; }
 .type.dine_in { color: #3671e9; background: #eaf1ff; }
 .type.takeout { color: #7253e7; background: #f0ebff; }
 .s-PAID { color: #6165ee; }
+.s-PENDING_PAYMENT { color: #d27c00; }
+.cash-badge { display: inline-block; margin-left: 6px; padding: 3px 6px; border-radius: 5px; color: #fff; background: #d27c00; font-size: 8px; }
 .s-MAKING { color: #dc7200; }
 .s-COMPLETED { color: #0b9c58; }
 .s-CANCELLED { color: #a3a9b2; }
 .actions { display: flex; gap: 6px; }
 .actions button { padding: 7px 10px; border-radius: 7px; font-size: 9px; font-weight: 800; cursor: pointer; }
 .start, .complete { color: #0a9c54; border: 0; background: #dff8e9; }
+.cash-confirm { color: #fff; border: 0; background: #d27c00; }
 .cancel { color: #ef3e4b; border: 1px solid #ffabb1; background: #fff; }
 .empty { padding: 60px; text-align: center; color: #9ba3af; }
 /* 모달 디자인 */

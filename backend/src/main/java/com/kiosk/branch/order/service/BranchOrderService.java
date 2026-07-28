@@ -8,11 +8,13 @@ import com.kiosk.branch.order.dto.BranchOrderDetailResponse;
 import com.kiosk.domain.order.OrderItemFlavor;
 import com.kiosk.domain.order.OrderItemFlavorRepository;
 import com.kiosk.domain.payment.Payment;
+import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.order.Order;
 import com.kiosk.domain.order.OrderItem;
 import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.order.OrderStatus;
+import com.kiosk.kiosk.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,12 +31,17 @@ public class BranchOrderService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final OrderItemFlavorRepository orderItemFlavorRepository;
+    private final PaymentService paymentService;
 
     @Transactional(readOnly = true)
-    public List<BranchOrderListResponse> getBranchOrders(Long branchId, java.time.LocalDate date) {
-        // PAID, MAKING, READY, COMPLETED, CANCELLED 주문을 생성시간 오름차순(오래된 순)으로 조회
-        List<OrderStatus> statuses = List.of(OrderStatus.PAID, OrderStatus.MAKING, OrderStatus.READY,
-                OrderStatus.COMPLETED, OrderStatus.CANCELLED);
+    public List<BranchOrderListResponse> getBranchOrders(
+            Long branchId, java.time.LocalDate date, boolean activeOnly) {
+        // 주문관리 화면은 2초마다 갱신된다. activeOnly 요청에서는 이미 끝난 수백 건을
+        // 매번 읽지 않고 현재 처리할 주문만 조회해 제조 시작 버튼의 응답 지연을 막는다.
+        List<OrderStatus> statuses = activeOnly
+                ? List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.MAKING, OrderStatus.READY)
+                : List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.MAKING, OrderStatus.READY,
+                        OrderStatus.COMPLETED, OrderStatus.CANCELLED);
         List<Order> orders;
 
         if (date != null) {
@@ -47,7 +54,15 @@ public class BranchOrderService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        return orders.stream().map(order -> {
+        return orders.stream()
+                // PENDING_PAYMENT 상태는 현금 주문만 주문관리에 미리 보여준다.
+                // 카드/QR 주문은 결제가 승인되어 PAID가 된 뒤 나타나므로 기존처럼 곧바로
+                // "제조 시작" 버튼이 보이고, 카운터 결제 확인 단계는 거치지 않는다.
+                .filter(order -> order.getOrderStatus() != OrderStatus.PENDING_PAYMENT
+                        || paymentRepository.findByOrder_OrderId(order.getOrderId())
+                                .map(payment -> payment.getPaymentMethod() == PaymentMethod.CASH)
+                                .orElse(false))
+                .map(order -> {
             long elapsedMinutes = Duration.between(order.getCreatedAt(), now).toMinutes();
 
             // 메뉴 요약 문자열 생성 로직 (ex: 바닐라 파인트 외 2건)
@@ -61,6 +76,8 @@ public class BranchOrderService {
                 }
             }
 
+            // 결제수단을 목록 DTO에 포함하면 프론트가 현금 주문을 별도 배지로 표시할 수 있다.
+            Payment payment = paymentRepository.findByOrder_OrderId(order.getOrderId()).orElse(null);
             return BranchOrderListResponse.builder()
                     .orderId(order.getOrderId())
                     .orderNumber(order.getOrderNumber())
@@ -71,6 +88,7 @@ public class BranchOrderService {
                     .status(order.getOrderStatus())
                     .createdAt(order.getCreatedAt())
                     .finalAmount(order.getFinalAmount())
+                    .paymentMethod(payment != null ? payment.getPaymentMethod().name() : null)
                     .build();
         }).collect(Collectors.toList());
     }
@@ -87,6 +105,20 @@ public class BranchOrderService {
             order.setCancellationReason(request.getCancelReason());
         }
         order.setOrderStatus(request.getStatus());
+    }
+
+    /**
+     * 지점 직원이 현금을 받은 시점에만 결제를 확정한다.
+     * 먼저 소속 지점을 검증한 후 결제 서비스의 공통 확정 로직을 호출한다.
+     */
+    @Transactional
+    public void confirmCashPayment(Long branchId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+        if (!order.getBranch().getBranchId().equals(branchId)) {
+            throw new IllegalArgumentException("다른 지점의 주문은 결제할 수 없습니다.");
+        }
+        paymentService.confirmCash(orderId);
     }
 
     @Transactional(readOnly = true)

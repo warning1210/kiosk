@@ -8,6 +8,7 @@ import com.kiosk.domain.order.OrderItemRepository;
 import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.payment.Payment;
 import com.kiosk.domain.payment.PaymentRepository;
+import com.kiosk.domain.payment.PaymentMethod;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -84,11 +85,17 @@ public class ReceiptService {
                 ? payment.getPaidAt()
                 : LocalDateTime.now();
 
+        boolean cashOrder = payment != null && payment.getPaymentMethod() == PaymentMethod.CASH;
+
+        // 현금 주문서는 카운터에 제출하는 용도이므로 내부 주문 ID 대신 1번부터 시작하는
+        // 현금 대기번호를 크게 출력하고, 일반 영수증용 바코드는 출력하지 않는다.
         PrinterReceiptRequest request = new PrinterReceiptRequest(
-                order.getOrderNumber(),
+                cashOrder ? String.valueOf(order.getWaitingNumber()) : order.getOrderNumber(),
                 buildItemSummary(orderId),
                 formatWon(order.getFinalAmount()),
-                when.format(DATE_FORMAT)
+                when.format(DATE_FORMAT),
+                cashOrder ? "주문번호(현금주문)" : "주문번호",
+                !cashOrder
         );
         return printClient.print(request);
     }

@@ -85,7 +85,12 @@
       </div>
 
       <div class="pay-methods">
-        <button type="button" class="pay-method pay-method--cash" :disabled="!cart.items.length" @click="showCashPaymentNotice">
+        <button
+          type="button"
+          class="pay-method pay-method--cash"
+          :disabled="!cart.items.length || orderFlow.checkoutInProgress"
+          @click="startCashOrder"
+        >
           <span>{{ t('cash') }}</span>
         </button>
         <button type="button" class="pay-method pay-method--card" :disabled="!cart.items.length" @click="orderFlow.step = 'customer'">
@@ -134,9 +139,10 @@ function canEditItem(item) {
   return product.requiresFlavorSelection || orderFlow.needsContainerStep(product)
 }
 
-async function showCashPaymentNotice() {
-  await orderFlow.showNotice(t('cashNotice'))
-  orderFlow.finishOrder()
+async function startCashOrder() {
+  // 현금 버튼을 누르면 별도의 안내 팝업을 거치지 않는다.
+  // 주문 생성 → 현금 주문 등록 → 주문서 화면 이동 → 자동 출력 순서로 바로 진행한다.
+  await orderFlow.startCashOrder()
 }
 
 function itemDetail(item) {

@@ -551,28 +551,10 @@ export const useOrderFlowStore = defineStore('orderFlow', {
     },
 
     async startPayment() {
-      const cart = useCartStore()
       this.checkoutError = ''
       this.checkoutInProgress = true
       try {
-        this.checkoutPayload = {
-          branchId: getKioskBranchId(), // 이 키오스크가 부팅 시 로그인해서 기억해둔 소속 지점
-          orderType: cart.orderType,
-          customerMobileNumber: cart.customerMobileNumber,
-          usedPoints: cart.usedPoints,
-          couponCode: cart.couponCode || null,
-          language: 'ko',
-          // 백엔드 요청에는 quantity가 없으므로 장바구니 수량만큼 주문 항목을 펼친다.
-          items: cart.items.flatMap((item) =>
-            Array.from({ length: item.quantity }, () => ({
-              productId: item.productId,
-              containerType: item.containerType,
-              spoonCount: item.spoonCount,
-              dryIceMinutes: item.dryIceMinutes,
-              flavorIds: item.flavors.map((f) => f.flavorId)
-            }))
-          )
-        }
+        this.checkoutPayload = this.buildCheckoutPayload()
         const { data } = await http.post('/orders/checkout', this.checkoutPayload)
         this.orderId = data.orderId
         await this.requestQr()
@@ -580,6 +562,53 @@ export const useOrderFlowStore = defineStore('orderFlow', {
         this.checkoutError = e.response?.data?.message ?? '결제 요청에 실패했습니다.'
       } finally {
         this.checkoutInProgress = false
+      }
+    },
+
+    // 현금 결제는 키오스크에서 승인하지 않는다.
+    // 주문을 서버에 먼저 저장한 뒤 CASH 결제대기로 등록하고, 카운터 제출용 주문서를 즉시 출력한다.
+    async startCashOrder() {
+      const cart = useCartStore()
+      this.checkoutError = ''
+      this.checkoutInProgress = true
+      try {
+        this.checkoutPayload = this.buildCheckoutPayload()
+        const { data } = await http.post('/orders/checkout', this.checkoutPayload)
+        this.orderId = data.orderId
+        await http.post('/payments/cash', { orderId: this.orderId })
+
+        // 출력할 때 상품명/옵션을 그대로 사용할 수 있도록 주문 상세를 먼저 불러온다.
+        await this.loadReceipt()
+        this.step = 'receipt'
+        await this.printReceipt()
+        cart.clear()
+      } catch (e) {
+        this.checkoutError = e.response?.data?.message ?? '현금 주문서 발급에 실패했습니다.'
+        await this.showNotice(this.checkoutError)
+      } finally {
+        this.checkoutInProgress = false
+      }
+    },
+
+    // 카드와 현금이 동일한 주문 데이터를 보내도록 요청 JSON 생성을 한 곳에 모은다.
+    buildCheckoutPayload() {
+      const cart = useCartStore()
+      return {
+        branchId: getKioskBranchId(),
+        orderType: cart.orderType,
+        customerMobileNumber: cart.customerMobileNumber,
+        usedPoints: cart.usedPoints,
+        couponCode: cart.couponCode || null,
+        language: 'ko',
+        items: cart.items.flatMap((item) =>
+          Array.from({ length: item.quantity }, () => ({
+            productId: item.productId,
+            containerType: item.containerType,
+            spoonCount: item.spoonCount,
+            dryIceMinutes: item.dryIceMinutes,
+            flavorIds: item.flavors.map((f) => f.flavorId)
+          }))
+        )
       }
     },
 

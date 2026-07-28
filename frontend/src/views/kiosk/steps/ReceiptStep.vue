@@ -6,13 +6,16 @@
     <div class="done-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
     </div>
-    <h2 class="done-title">결제가 완료되었습니다</h2>
+    <h2 class="done-title">{{ isCashOrder ? '주문서를 카운터에 제출해주세요' : '결제가 완료되었습니다' }}</h2>
 
     <!-- 실제 종이 영수증과 비슷하게 보이도록 만든 영역.
          '영수증 다시 출력'은 이 화면과 별개로 강사님 프린터로 출력을 다시 요청한다. -->
     <div v-if="r" class="receipt-paper" id="receipt-paper">
       <p class="store">{{ r.storeName }}</p>
-      <p class="order-no">주문번호 {{ r.orderNumber }}</p>
+      <p class="order-no">
+        {{ isCashOrder ? '주문번호(현금주문)' : '주문번호' }}
+        {{ isCashOrder ? r.waitingNumber : r.orderNumber }}
+      </p>
       <p class="type">{{ r.orderType === 'DINE_IN' ? '매장 식사' : '포장' }}</p>
       <hr />
 
@@ -35,7 +38,7 @@
       <div v-if="r.discountAmount > 0" class="row">
         <span>포인트 사용</span><span>-{{ r.discountAmount.toLocaleString() }}원</span>
       </div>
-      <div class="row total"><span>결제 금액</span><span>{{ r.finalAmount.toLocaleString() }}원</span></div>
+      <div class="row total"><span>{{ isCashOrder ? '카운터 결제 예정 금액' : '결제 금액' }}</span><span>{{ r.finalAmount.toLocaleString() }}원</span></div>
       <div v-if="r.earnedPoints > 0" class="row"><span>적립 포인트</span><span>{{ r.earnedPoints.toLocaleString() }}P</span></div>
 
       <hr />
@@ -66,6 +69,7 @@ import logo from '../../../assets/kiosk/logo.png'
 
 const orderFlow = useOrderFlowStore()
 const r = computed(() => orderFlow.receipt)
+const isCashOrder = computed(() => r.value?.paymentMethod === 'CASH')
 
 const PAYMENT_METHOD_LABELS = { QR: 'QR 간편결제', CARD: '신용카드', CASH: '현금', POINT: '포인트', EASY_PAY: '간편결제' }
 const paymentMethodLabel = computed(() => PAYMENT_METHOD_LABELS[r.value?.paymentMethod] ?? r.value?.paymentMethod ?? '-')

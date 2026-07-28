@@ -1,6 +1,8 @@
 package com.kiosk.kiosk.payment.controller;
 
 import com.kiosk.kiosk.payment.dto.PaymentCheckoutResponse;
+import com.kiosk.kiosk.payment.dto.CashPaymentRequest;
+import com.kiosk.kiosk.payment.dto.CashPaymentResponse;
 import com.kiosk.kiosk.payment.dto.PaymentQrRequest;
 import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
 import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
@@ -20,6 +22,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
     private final PaymentService paymentService;
+
+    /**
+     * 키오스크 현금 선택 전용 API.
+     * 실제 결제 승인이 아니라 카운터에 가져갈 주문서를 발급할 수 있도록 현금 대기 주문을 등록한다.
+     */
+    @PostMapping("/cash")
+    public CashPaymentResponse createCash(@RequestBody CashPaymentRequest request) {
+        return paymentService.createCash(request.orderId());
+    }
 
     @PostMapping("/qr")
     public PaymentQrResponse createQr(@RequestBody PaymentQrRequest request) {

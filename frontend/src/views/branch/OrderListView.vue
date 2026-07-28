@@ -28,7 +28,7 @@
               <tr v-for="o in sorted" :key="o.orderId" 
                   @click="selectOrder(o.orderId)"
                   :class="{ active: selectedOrderId === o.orderId }">
-                <td><b>#{{ String(o.waitingNumber).padStart(3, '0') }}</b></td>
+                <td><b>#{{ formatWaitingNumber(o) }}</b></td>
                 <td><span class="type" :class="o.orderType.toLowerCase()">{{ o.orderType === 'TAKEOUT' ? '포장' : '매장' }}</span></td>
                 <td class="menu-summary">{{ o.menuSummary }}</td>
                 <td><strong :class="`s-${o.status}`">{{ label(o.status) }}</strong></td>
@@ -116,6 +116,12 @@ async function loadDates() {
 
 function label(s) {
   return ({ PAID: '신규', MAKING: '처리중', READY: '준비완료', COMPLETED: '완료', CANCELLED: '취소' })[s] || s;
+}
+
+// 번호 체계 적용 전 생성된 주문도 "null" 대신 주문 ID를 임시 표시한다.
+function formatWaitingNumber(order) {
+  const number = order.waitingNumber ?? order.orderId;
+  return String(number).padStart(3, '0');
 }
 
 function formatTime(dateStr) {

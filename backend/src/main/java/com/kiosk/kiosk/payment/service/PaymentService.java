@@ -13,6 +13,7 @@ import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.payment.PaymentStatus;
 import com.kiosk.branch.inventory.service.BranchInventoryService;
 import com.kiosk.kiosk.payment.dto.PaymentCheckoutResponse;
+import com.kiosk.kiosk.payment.dto.CashPaymentResponse;
 import com.kiosk.kiosk.payment.dto.PaymentQrResponse;
 import com.kiosk.kiosk.payment.dto.PaymentStatusResponse;
 import com.kiosk.kiosk.payment.dto.TossConfirmRequest;
@@ -39,6 +40,65 @@ public class PaymentService {
     private final TossPaymentGateway tossPaymentGateway;
     private final TossPaymentsProperties tossProperties;
 
+    /**
+     * 현금 버튼을 누른 주문을 "카운터 결제 대기" 상태로 등록한다.
+     *
+     * 카드 결제와 달리 여기서는 결제를 완료 처리하지 않는다. Payment에는 CASH를 남기고
+     * Order는 PENDING_PAYMENT 상태를 유지하므로 지점 화면에서 결제 전 주문임을 구분할 수 있다.
+     * 현금 주문서의 번호는 지점별·날짜별로 가장 큰 번호 다음 값을 사용해 1번부터 시작한다.
+     */
+    @Transactional
+    public CashPaymentResponse createCash(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."));
+
+        if (paymentRepository.findByOrder_OrderId(orderId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 결제 방법이 등록된 주문입니다.");
+        }
+
+        LocalDateTime startOfToday = LocalDateTime.now().toLocalDate().atStartOfDay();
+        Integer currentMax = orderRepository.findMaxCashWaitingNumber(
+                order.getBranch().getBranchId(), startOfToday, startOfToday.plusDays(1));
+        int cashWaitingNumber = currentMax == null ? 1 : currentMax + 1;
+
+        // QR 토큰이나 승인번호는 만들지 않는다. QR_CREATED는 기존 DB에서 사용하는
+        // "아직 결제되지 않음" 상태이며, 결제수단 CASH와 함께 카운터 대기로 해석한다.
+        Payment payment = Payment.builder()
+                .order(order)
+                .paymentMethod(PaymentMethod.CASH)
+                .paymentStatus(PaymentStatus.QR_CREATED)
+                .requestedAmount(order.getFinalAmount())
+                .paidAmount(0)
+                .build();
+        paymentRepository.save(payment);
+
+        order.setWaitingNumber(cashWaitingNumber);
+        orderRepository.save(order);
+
+        return new CashPaymentResponse(orderId, cashWaitingNumber, "CASH", "PENDING_COUNTER_PAYMENT");
+    }
+
+    /**
+     * 카운터 직원이 현금을 받은 뒤 호출하는 확정 처리.
+     * 단순히 화면 상태만 PAID로 바꾸지 않고 기존 카드 승인과 같은 공통 로직을 타게 하여
+     * 포인트/쿠폰/재고도 실제 결제 시점에 함께 반영한다.
+     */
+    @Transactional
+    public void confirmCash(Long orderId) {
+        Payment payment = paymentRepository.findByOrder_OrderId(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."));
+        if (payment.getPaymentMethod() != PaymentMethod.CASH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "현금 주문만 카운터에서 확정할 수 있습니다.");
+        }
+        if (payment.getPaymentStatus() == PaymentStatus.PAID) {
+            return;
+        }
+
+        payment.setPaidAmount(payment.getRequestedAmount());
+        payment.setApprovalNumber("CASH-" + orderId);
+        markPaidAndComplete(payment);
+    }
+
     @Transactional
     public PaymentQrResponse createQr(Long orderId) {
         Order order = orderRepository.findById(orderId)
@@ -46,10 +106,19 @@ public class PaymentService {
 
         String qrToken = UUID.randomUUID().toString();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(QR_VALID_MINUTES);
+        LocalDateTime startOfToday = LocalDateTime.now().toLocalDate().atStartOfDay();
 
         // CU-009-1: 결제 실패 시 QR코드를 재생성하여 다시 시도 - 기존 Payment가 있으면 토큰만 갱신
         Payment payment = paymentRepository.findByOrder_OrderId(orderId).orElse(null);
         if (payment == null) {
+            // 카드/QR 주문은 현금 주문의 1번대 번호와 겹치지 않도록 매일 300번부터 시작한다.
+            // 이미 오늘 발급된 QR 주문이 있다면 그중 가장 큰 번호의 다음 번호를 사용한다.
+            Integer currentMax = orderRepository.findMaxQrWaitingNumber(
+                    order.getBranch().getBranchId(), startOfToday, startOfToday.plusDays(1));
+            int cardWaitingNumber = currentMax == null || currentMax < 300 ? 300 : currentMax + 1;
+            order.setWaitingNumber(cardWaitingNumber);
+            orderRepository.save(order);
+
             payment = Payment.builder()
                     .order(order)
                     .paymentMethod(PaymentMethod.QR)

@@ -18,4 +18,5 @@ public class BranchOrderListResponse {
     private OrderStatus status;
     private LocalDateTime createdAt;
     private Integer finalAmount;
+    private String paymentMethod;
 }
