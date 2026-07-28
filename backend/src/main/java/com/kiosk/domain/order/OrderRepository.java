@@ -23,4 +23,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // 지점의 모든 주문 생성일시 조회
     @Query("SELECT o.createdAt FROM Order o WHERE o.branch.branchId = :branchId")
     List<LocalDateTime> findCreatedAtByBranchId(@Param("branchId") Long branchId);
+
+    // 자정 이전의 미처리 주문 목록 조회 (자동 취소용)
+    @Query("SELECT o FROM Order o WHERE o.orderStatus IN :statuses AND o.createdAt < :cutoff")
+    List<Order> findByOrderStatusInAndCreatedAtBefore(@Param("statuses") List<OrderStatus> statuses, @Param("cutoff") LocalDateTime cutoff);
 }
