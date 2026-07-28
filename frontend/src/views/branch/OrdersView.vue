@@ -50,26 +50,73 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="o in sorted" :key="o.orderId">
-              <td><b>#{{ String(o.waitingNumber).padStart(3, '0') }}</b></td>
-              <td>
-                <span class="elapsed" :class="o.elapsedMinutes > 15 ? 'danger' : o.elapsedMinutes > 8 ? 'warn' : 'safe'">
-                  {{ o.elapsedMinutes }}분
-                </span>
-              </td>
-              <td>
-                <span class="type" :class="o.orderType.toLowerCase()">{{ o.orderType === 'TAKEOUT' ? '포장' : '매장' }}</span>
-              </td>
-              <td>{{ o.menuSummary }}</td>
-              <td><strong :class="`s-${o.status}`">{{ label(o.status) }}</strong></td>
-              <td>
-                <div class="actions">
-                  <button v-if="o.status === 'PAID'" class="start" @click="changeStatus(o, 'MAKING')">제조 시작</button>
-                  <button v-if="o.status === 'MAKING'" class="complete" @click="changeStatus(o, 'COMPLETED')">완료</button>
-                  <button v-if="o.status !== 'CANCELLED'" class="cancel" @click="openCancelModal(o)">취소</button>
-                </div>
-              </td>
-            </tr>
+            <template v-for="o in sorted" :key="o.orderId">
+              <tr @click="toggleDetail(o.orderId)" class="clickable-row" :class="{ expanded: expandedOrderId === o.orderId }">
+                <td><b>#{{ String(o.waitingNumber).padStart(3, '0') }}</b></td>
+                <td>
+                  <span class="elapsed" :class="o.elapsedMinutes > 15 ? 'danger' : o.elapsedMinutes > 8 ? 'warn' : 'safe'">
+                    {{ o.elapsedMinutes }}분
+                  </span>
+                </td>
+                <td>
+                  <span class="type" :class="o.orderType.toLowerCase()">{{ o.orderType === 'TAKEOUT' ? '포장' : '매장' }}</span>
+                </td>
+                <td>{{ o.menuSummary }}</td>
+                <td><strong :class="`s-${o.status}`">{{ label(o.status) }}</strong></td>
+                <td>
+                  <div class="actions">
+                    <button v-if="o.status === 'PAID'" class="start" @click.stop="changeStatus(o, 'MAKING')">제조 시작</button>
+                    <button v-if="o.status === 'MAKING'" class="complete" @click.stop="changeStatus(o, 'COMPLETED')">완료</button>
+                    <button v-if="o.status !== 'CANCELLED'" class="cancel" @click.stop="openCancelModal(o)">취소</button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="expandedOrderId === o.orderId" class="detail-row">
+                <td colspan="6" class="detail-td">
+                  <div class="detail-container" v-if="detailOrder">
+                    <ul class="order-items">
+                      <li v-for="(item, idx) in detailOrder.items" :key="idx">
+                        <div class="item-main">
+                          <span class="item-name">{{ item.productName }} x {{ item.quantity }}</span>
+                          <span class="item-price">{{ item.itemTotal?.toLocaleString() }}원</span>
+                        </div>
+                        <div class="item-details" v-if="item.options && item.options.length">
+                          <div class="flavors-wrapper" v-if="getFlavors(item.options).length">
+                            <span class="detail-label">선택한 맛</span>
+                            <div class="flavor-tags">
+                              <span class="flavor-tag" v-for="f in getFlavors(item.options)" :key="f">{{ f }}</span>
+                            </div>
+                          </div>
+                          <div class="extras-wrapper" v-if="getExtras(item.options).length">
+                            <span class="detail-label">포장 및 추가 옵션</span>
+                            <div class="extra-tags">
+                              <span class="extra-tag" v-for="e in getExtras(item.options)" :key="e">{{ e }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="order-summary">
+                      <div class="summary-row">
+                        <span>주문 금액</span>
+                        <span>{{ detailOrder.amountBeforeDiscount?.toLocaleString() }}원</span>
+                      </div>
+                      <div class="summary-row" v-if="detailOrder.discountAmount">
+                        <span>할인 금액</span>
+                        <span class="discount">-{{ detailOrder.discountAmount?.toLocaleString() }}원</span>
+                      </div>
+                      <div class="summary-row total">
+                        <span>최종 결제 금액</span>
+                        <span>{{ detailOrder.finalAmount?.toLocaleString() }}원</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="loading-state">
+                    상세 정보를 불러오는 중입니다...
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
         <div v-if="!sorted.length" class="empty">접수된 주문이 없습니다.</div>
@@ -99,7 +146,8 @@
         </div>
       </div>
     </div>
-  </div>
+
+    </div>
 </template>
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -114,6 +162,8 @@ const tempWaitTime = ref(20);
 const showCancelModal = ref(false);
 const cancelTarget = ref(null);
 const cancelReasonText = ref('');
+const expandedOrderId = ref(null);
+const detailOrder = ref(null);
 const newCount = computed(() => orders.value.filter(o => o.status === 'PAID').length);
 const activeOrders = computed(() => orders.value.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'));
 const sorted = computed(() => [...activeOrders.value].sort((a, b) => 
@@ -121,6 +171,14 @@ const sorted = computed(() => [...activeOrders.value].sort((a, b) =>
 ));
 function label(s) {
   return ({ PAID: '신규', MAKING: '처리중', READY: '준비완료', COMPLETED: '완료', CANCELLED: '취소' })[s] || s;
+}
+function getFlavors(options) {
+  if (!options) return [];
+  return options.filter(opt => !opt.startsWith('용기:') && !opt.startsWith('드라이아이스:') && !opt.startsWith('스푼:'));
+}
+function getExtras(options) {
+  if (!options) return [];
+  return options.filter(opt => opt.startsWith('용기:') || opt.startsWith('드라이아이스:') || opt.startsWith('스푼:'));
 }
 function openPopup() {
   showPopup.value = !showPopup.value;
@@ -156,6 +214,24 @@ function openCancelModal(order) {
 function closeCancelModal() {
   showCancelModal.value = false;
   cancelTarget.value = null;
+}
+async function toggleDetail(orderId) {
+  if (expandedOrderId.value === orderId) {
+    expandedOrderId.value = null;
+    detailOrder.value = null;
+    return;
+  }
+  
+  expandedOrderId.value = orderId;
+  detailOrder.value = null;
+  try {
+    const res = await http.get(`/orders/${orderId}`);
+    detailOrder.value = res.data;
+  } catch (e) {
+    console.error(e);
+    alert('상세 정보를 불러오는데 실패했습니다.');
+    expandedOrderId.value = null;
+  }
 }
 async function submitCancel() {
   if (!cancelTarget.value) return;
@@ -235,6 +311,31 @@ td > b { font-size: 12px; }
 .modal-footer button { flex: 1; padding: 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; }
 .btn-close { background: #fff; border: 1px solid #dce1e8; color: #566173; }
 .btn-cancel-submit { background: #da291c; border: none; color: #fff; }
+
+.clickable-row { cursor: pointer; transition: background-color 0.2s; }
+.clickable-row:hover { background-color: #f8fafc; }
+tr.expanded { background-color: #f8fafc; }
+tr.expanded td { border-bottom: none; }
+.detail-row td { padding: 0; border-top: none; }
+.detail-td { padding: 0; }
+.detail-container { padding: 20px 34px; background: #fdfdfd; border-bottom: 1px solid #edf0f4; animation: slideDown 0.2s ease-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+.loading-state { padding: 40px; text-align: center; color: #7c8796; font-size: 13px; border-bottom: 1px solid #edf0f4; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+.order-items { list-style: none; padding: 0; margin: 0 0 20px 0; max-height: 420px; overflow-y: auto; border-bottom: 1px solid #edf0f4; }
+.order-items li { padding: 16px 0; border-bottom: 1px dashed #edf0f4; }
+.order-items li:last-child { border-bottom: none; }
+.item-main { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #1f2938; margin-bottom: 8px; }
+.item-details { background: #f8fafc; padding: 10px 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.flavors-wrapper, .extras-wrapper { display: flex; flex-direction: column; gap: 6px; }
+.detail-label { font-size: 10px; font-weight: bold; color: #747f8f; }
+.flavor-tags, .extra-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.flavor-tag { background: #ffe8eb; color: #da291c; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid #ffd4d8; }
+.extra-tag { background: #eaf1ff; color: #3671e9; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid #d4e2ff; }
+.order-summary { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #566173; }
+.summary-row { display: flex; justify-content: space-between; }
+.summary-row.total { font-size: 15px; font-weight: bold; color: #da291c; margin-top: 10px; padding-top: 12px; border-top: 2px solid #edf0f4; }
+.discount { color: #3671e9; }
 @media(max-width: 760px) {
   main { margin-left: 0; padding: 20px; }
   section { overflow: auto; }
