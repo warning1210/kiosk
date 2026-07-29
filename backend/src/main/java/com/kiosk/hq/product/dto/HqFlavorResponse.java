@@ -13,8 +13,7 @@ public record HqFlavorResponse(
         String allergyInfo,
         String saleStatus,
         Boolean isVisible,
-        LocalDateTime createdAt
-) {
+        LocalDateTime createdAt) {
     public static HqFlavorResponse from(Flavor flavor) {
         return new HqFlavorResponse(
                 flavor.getFlavorId(),
@@ -26,7 +25,6 @@ public record HqFlavorResponse(
                 flavor.getAllergyInfo(),
                 flavor.getSaleStatus().name(),
                 flavor.getIsVisible(),
-                flavor.getCreatedAt()
-        );
+                flavor.getCreatedAt());
     }
 }

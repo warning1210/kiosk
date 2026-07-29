@@ -31,12 +31,6 @@ public class HqProductService {
     }
 
     public HqProductResponse create(HqProductUpsertRequest request) {
-        if (request.productName() == null || request.productName().isBlank()) {
-            throw new IllegalArgumentException("상품명을 입력해주세요.");
-        }
-        if (request.basePrice() == null || request.basePrice() < 0) {
-            throw new IllegalArgumentException("가격은 0 이상이어야 합니다.");
-        }
 
         Product product = Product.builder()
                 .category(resolveCategory(request.categoryId()))
@@ -46,7 +40,8 @@ public class HqProductService {
                 .description(request.description())
                 .requiresFlavorSelection(Boolean.TRUE.equals(request.requiresFlavorSelection()))
                 .selectableFlavorCount(toByte(request.selectableFlavorCount()))
-                .containerPolicy(parseEnum(ContainerPolicy.class, request.containerPolicy(), "용기 정책", ContainerPolicy.NONE))
+                .containerPolicy(
+                        parseEnum(ContainerPolicy.class, request.containerPolicy(), "용기 정책", ContainerPolicy.NONE))
                 .isLarge(Boolean.TRUE.equals(request.isLarge()))
                 .isNew(Boolean.TRUE.equals(request.isNew()))
                 .saleStatus(parseEnum(SaleStatus.class, request.saleStatus(), "판매 상태", SaleStatus.ON_SALE))
@@ -60,13 +55,6 @@ public class HqProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다."));
 
-        if (request.productName() == null || request.productName().isBlank()) {
-            throw new IllegalArgumentException("상품명을 입력해주세요.");
-        }
-        if (request.basePrice() == null || request.basePrice() < 0) {
-            throw new IllegalArgumentException("가격은 0 이상이어야 합니다.");
-        }
-
         product.setCategory(resolveCategory(request.categoryId()));
         product.setProductName(request.productName());
         product.setBasePrice(request.basePrice());
@@ -74,7 +62,8 @@ public class HqProductService {
         product.setDescription(request.description());
         product.setRequiresFlavorSelection(Boolean.TRUE.equals(request.requiresFlavorSelection()));
         product.setSelectableFlavorCount(toByte(request.selectableFlavorCount()));
-        product.setContainerPolicy(parseEnum(ContainerPolicy.class, request.containerPolicy(), "용기 정책", ContainerPolicy.NONE));
+        product.setContainerPolicy(
+                parseEnum(ContainerPolicy.class, request.containerPolicy(), "용기 정책", ContainerPolicy.NONE));
         product.setIsLarge(Boolean.TRUE.equals(request.isLarge()));
         product.setIsNew(Boolean.TRUE.equals(request.isNew()));
         product.setSaleStatus(parseEnum(SaleStatus.class, request.saleStatus(), "판매 상태", SaleStatus.ON_SALE));

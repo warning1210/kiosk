@@ -18,8 +18,7 @@ public record HqProductResponse(
         Boolean isNew,
         String saleStatus,
         Boolean isVisible,
-        LocalDateTime createdAt
-) {
+        LocalDateTime createdAt) {
     public static HqProductResponse from(Product product) {
         return new HqProductResponse(
                 product.getProductId(),
@@ -36,7 +35,6 @@ public record HqProductResponse(
                 product.getIsNew(),
                 product.getSaleStatus().name(),
                 product.getIsVisible(),
-                product.getCreatedAt()
-        );
+                product.getCreatedAt());
     }
 }
