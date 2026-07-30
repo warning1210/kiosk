@@ -30,12 +30,12 @@
             <span v-if="productUploading" class="uploading">업로드 중...</span>
           </div>
           <div class="fields">
-            <input v-model.trim="productForm.productName" required placeholder="상품명">
+            <input v-model.trim="productForm.productName" placeholder="상품명">
             <select v-model="productForm.categoryId">
               <option value="">카테고리 없음</option>
               <option v-for="c in categories" :key="c.categoryId" :value="c.categoryId">{{ c.categoryName }}</option>
             </select>
-            <input v-model.number="productForm.basePrice" type="number" min="0" required placeholder="가격(원)">
+            <input v-model.number="productForm.basePrice" type="number" min="0" placeholder="가격(원)">
             <select v-model="productForm.containerPolicy">
               <option value="NONE">용기 없음</option>
               <option value="CUP_ONLY">컵만</option>
@@ -76,7 +76,7 @@
             <span v-if="flavorUploading" class="uploading">업로드 중...</span>
           </div>
           <div class="fields">
-            <input v-model.trim="flavorForm.flavorName" required placeholder="맛 이름">
+            <input v-model.trim="flavorForm.flavorName" placeholder="맛 이름">
             <select v-model="flavorForm.categoryId">
               <option value="">카테고리 없음</option>
               <option v-for="c in categories" :key="c.categoryId" :value="c.categoryId">{{ c.categoryName }}</option>
@@ -296,7 +296,15 @@ async function submitProduct() {
     }
     cancelEditProduct()
   } catch (e) {
-    productFormError.value = e.response?.data?.message || '상품을 저장하지 못했습니다.'
+    const data = e.response?.data
+    if (data && data.message) {
+      productFormError.value = data.message
+    } else if (data && typeof data === 'object') {
+      // 백엔드 BindingResult에서 Map<String, String> 형태로 에러를 반환할 때
+      productFormError.value = Object.values(data).join(', ')
+    } else {
+      productFormError.value = '상품을 저장하지 못했습니다.'
+    }
   } finally {
     productSaving.value = false
   }
@@ -333,7 +341,14 @@ async function submitFlavor() {
     }
     cancelEditFlavor()
   } catch (e) {
-    flavorFormError.value = e.response?.data?.message || '맛을 저장하지 못했습니다.'
+    const data = e.response?.data
+    if (data && data.message) {
+      flavorFormError.value = data.message
+    } else if (data && typeof data === 'object') {
+      flavorFormError.value = Object.values(data).join(', ')
+    } else {
+      flavorFormError.value = '맛을 저장하지 못했습니다.'
+    }
   } finally {
     flavorSaving.value = false
   }
