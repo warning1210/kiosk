@@ -20,6 +20,7 @@ import com.kiosk.domain.branch.KioskStatus;
 import com.kiosk.domain.branch.OperationStatus;
 import com.kiosk.domain.branchapplication.BranchApplication;
 import com.kiosk.domain.branchapplication.BranchApplicationRepository;
+import com.kiosk.global.security.TurnstileVerifier;
 import java.time.LocalDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class BranchAuthService {
     private final BranchRepository branchRepository;
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TurnstileVerifier turnstileVerifier;
 
     @Transactional(readOnly = true)
     public ApplicationResponse invite(String token) {
@@ -156,6 +158,8 @@ public class BranchAuthService {
     }
 
     public LoginResponse firebaseSession(FirebaseSessionRequest request) {
+        turnstileVerifier.verify(request.turnstileToken());
+
         FirebaseToken token;
         try {
             token = FirebaseAuth.getInstance().verifyIdToken(request.idToken(), true);

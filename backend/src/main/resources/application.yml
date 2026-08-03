@@ -86,3 +86,9 @@ toss:
   api-base-url: https://api.tosspayments.com
   success-url: ${TOSS_SUCCESS_URL:}
   fail-url: ${TOSS_FAIL_URL:}
+
+# Cloudflare Turnstile - 지점/본사 로그인 캡차의 서버 검증용 시크릿 키.
+# 프론트 sitekey(BranchLoginView.vue)와 Cloudflare 대시보드에서 짝을 이루는 값이라,
+# 비어있거나 안 맞으면 로그인 자체가 항상 실패 처리된다 (fail-closed).
+turnstile:
+  secret-key: ${TURNSTILE_SECRET_KEY:}

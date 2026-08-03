@@ -7,6 +7,7 @@ import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.admin.AdminRepository;
 import com.kiosk.domain.admin.AdminRole;
 import com.kiosk.global.security.AdminTokenService;
+import com.kiosk.global.security.TurnstileVerifier;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,8 +25,11 @@ public class BranchFallbackLoginService {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminTokenService adminTokenService;
+    private final TurnstileVerifier turnstileVerifier;
 
     public DbLoginResponse login(DbLoginRequest request) {
+        turnstileVerifier.verify(request.turnstileToken());
+
         Admin admin = adminRepository.findByLoginId(request.loginId())
                 .filter(a -> a.getRole() == AdminRole.BRANCH_MANAGER)
                 .filter(a -> a.getAccountStatus() == AccountStatus.ACTIVE)

@@ -5,6 +5,7 @@ import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.admin.AdminRepository;
 import com.kiosk.domain.admin.AdminRole;
 import com.kiosk.global.security.AdminTokenService;
+import com.kiosk.global.security.TurnstileVerifier;
 import com.kiosk.hq.auth.dto.HqLoginRequest;
 import com.kiosk.hq.auth.dto.HqLoginResponse;
 import java.time.LocalDateTime;
@@ -22,8 +23,11 @@ public class HqAuthService {
     private final AdminRepository adminRepository;
     private final AdminTokenService adminTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final TurnstileVerifier turnstileVerifier;
 
     public HqLoginResponse login(HqLoginRequest request) {
+        turnstileVerifier.verify(request.turnstileToken());
+
         Admin admin = findByIdentifier(request.loginId())
                 .filter(a -> a.getRole() == AdminRole.HQ_ADMIN || a.getRole() == AdminRole.SUPER_ADMIN)
                 .filter(a -> a.getAccountStatus() == AccountStatus.ACTIVE)
