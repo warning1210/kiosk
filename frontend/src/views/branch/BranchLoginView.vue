@@ -19,16 +19,15 @@
     </label>
     <a href="#">ID / PW 찾기</a>  
 </div>
-
-    <button>로그인</button>
+    <div class="cf-turnstile" ref="turnstileEl"></div>
+    <button :disabled="!turnstileToken">로그인</button>
     <p v-if="error" class="error">{{ error }}</p>
     </form>
 </section>
 </main>   
 </template>
-
 <script setup>
-import{ref}from'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import{useRoute,useRouter}from'vue-router';
 import{setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword}from'firebase/auth';
 import{firebaseAuth}from'../../firebase';
@@ -42,6 +41,46 @@ const loginId = ref('')
 const password = ref('')
 const remember = ref(false)
 const error = ref('')
+
+const turnstileToken = ref('')
+const turnstileEl = ref(null)
+const TURNSTILE_SITE_KEY = '0x4AAAAAAEEtSohyLNe5LOg2'
+let widgetId = null
+
+// data-sitekey(implicit) 방식은 api.js가 "로드되는 시점"에 페이지를 한 번만 스캔해서 렌더링하기 때문에,
+// SPA에서 이 화면에 두 번째로 들어오면(새로고침 없이 라우팅) 스크립트가 이미 로드돼 있어 다시 스캔이 안 일어나
+// 위젯이 안 뜨는 문제가 있었다. 그래서 마운트마다 명시적으로 render()를 호출하는 방식으로 바꾼다.
+function renderTurnstile() {
+  if (!window.turnstile || !turnstileEl.value) return
+  widgetId = window.turnstile.render(turnstileEl.value, {
+    sitekey: TURNSTILE_SITE_KEY,
+    theme: 'light',
+    callback: (token) => { turnstileToken.value = token },
+    'expired-callback': () => { turnstileToken.value = '' }
+  })
+}
+
+onMounted(() => {
+  if (window.turnstile) {
+    renderTurnstile()
+    return
+  }
+  let script = document.querySelector('script[data-turnstile-api]')
+  if (!script) {
+    script = document.createElement('script')
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+    script.async = true
+    script.defer = true
+    script.dataset.turnstileApi = 'true'
+    document.head.appendChild(script)
+  }
+  script.addEventListener('load', renderTurnstile, { once: true })
+})
+
+onBeforeUnmount(() => {
+  if (widgetId) window.turnstile?.remove(widgetId)
+})
+
 // 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
 // const activeKeypad = ref(null)
 // function openKeypad(name) {
@@ -52,6 +91,10 @@ const error = ref('')
 // 미리 나누지 않고, 각 경로를 순서대로 시도해보고 "성공한 경로"로 role을 판단한다.
 async function login() {
   error.value = ''
+  if (!turnstileToken.value) {
+    error.value = '본인 인증을 먼저 완료해주세요.'
+    return
+  }
   const attempts = loginId.value.includes('@')
     ? [loginAsHq, loginWithFirebase]
     : [loginAsHq, loginWithDb]
@@ -140,4 +183,4 @@ function firebaseMessage(code) {
     display:grid;
     place-items:center
     }
-form{width:min(440px,80%)}h2{margin:0;font-size:25px}form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}input:focus{border-color:#6266ef}.options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}.options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}.options a,.apply a{color:#5f64ee;text-decoration:none}form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}.error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}.apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}@media(max-width:700px){.auth{grid-template-columns:1fr}.auth aside{display:none}}</style>
+form{width:min(440px,80%)}h2{margin:0;font-size:25px}form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}input:focus{border-color:#6266ef}.options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}.options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}.options a,.apply a{color:#5f64ee;text-decoration:none}form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}form>button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}.cf-turnstile{margin:13px 0 20px}.error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}.apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}@media(max-width:700px){.auth{grid-template-columns:1fr}.auth aside{display:none}}</style>
