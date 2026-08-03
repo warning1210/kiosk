@@ -16,6 +16,8 @@ import com.kiosk.domain.branch.OperationStatus;
 import com.kiosk.domain.branch.Branch;
 import com.kiosk.domain.branch.BranchRepository;
 import java.time.LocalDateTime;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -49,8 +51,7 @@ public class BranchApplicationService {
 
     @Transactional(readOnly = true)
     public List<ApplicationResponse> list(String origin) {
-        // 요청 브라우저의 localhost가 아니라 서버에 설정된 공개 주소를 사용한다.
-        String base = frontendBaseUrl;
+        String base = frontendBaseUrl(origin);
         return applicationRepository.findAllByOrderByAppliedAtDesc().stream()
                 // 승인까지 끝난 가입은 초대 메일의 역할이 끝났으므로 발송 내역에서 제외한다.
                 .filter(application -> application.getApprovalStatus() != ApprovalStatus.APPROVED)
@@ -59,6 +60,7 @@ public class BranchApplicationService {
     }
 
     public ApplicationResponse issueInvite(String email, String origin) {
+        String base = frontendBaseUrl(origin);
         // 같은 이메일로 이전에 발급한 초대 또는 제출한 신청이 있는지 확인한다.
         BranchApplication existing = applicationRepository.findFirstByEmailOrderByCreatedAtDesc(email).orElse(null);
         // 아직 신청서를 제출하지 않은 초대라면 새 토큰으로 갱신해 다시 발송한다.
@@ -68,7 +70,7 @@ public class BranchApplicationService {
             // 갱신된 초대 정보를 저장한다.
             applicationRepository.save(existing);
             // 설정된 외부 주소로 새 신청서 URL을 만든다.
-            String retryUrl = inviteUrl(existing, frontendBaseUrl);
+            String retryUrl = inviteUrl(existing, base);
             // 동일 이메일로 신청서 URL을 다시 발송한다.
             mailService.sendInvite(email, retryUrl);
             // 본점 화면에서도 새 URL을 확인할 수 있도록 반환한다.
@@ -91,7 +93,7 @@ public class BranchApplicationService {
 
         // 지점장이 작성할 신청서 URL을 만든다.
         // 다른 PC의 예비 지점장도 열 수 있는 설정 주소로 신청서 URL을 만든다.
-        String url = inviteUrl(application, frontendBaseUrl);
+        String url = inviteUrl(application, base);
         // 설정된 SMTP 서버로 신청서 URL을 발송한다.
         mailService.sendInvite(email, url);
         // 화면에서도 복사할 수 있도록 발급 결과와 URL을 반환한다.
@@ -100,6 +102,7 @@ public class BranchApplicationService {
 
     // 초대 URL이 만료됐거나 재발송이 필요할 때 본점이 새로 발급한다 (기존 토큰은 즉시 무효화됨)
     public ApplicationResponse regenerateInvite(Long id, String origin) {
+        String base = frontendBaseUrl(origin);
         BranchApplication application = applicationRepository.findById(id).orElseThrow();
         // 이미 신청서를 제출한 건에는 새 초대 URL을 만들 수 없다.
         if (application.getManagerName() != null) throw new IllegalStateException("이미 제출된 신청서입니다.");
@@ -110,11 +113,28 @@ public class BranchApplicationService {
         applicationRepository.save(application);
         // 새로 만든 URL을 계산한다.
         // 재발급 URL도 같은 외부 접속 주소를 사용한다.
-        String url = inviteUrl(application, frontendBaseUrl);
+        String url = inviteUrl(application, base);
         // 재발급된 URL도 같은 이메일로 다시 발송한다.
         mailService.sendInvite(application.getEmail(), url);
         // 화면에 최신 URL을 반환한다.
         return toResponse(application, url);
+    }
+
+    // 관리 화면을 연 실제 프론트 주소를 사용해 배포 도메인이 바뀌어도 초대 링크가 따라가게 한다.
+    private String frontendBaseUrl(String origin) {
+        if (origin != null && !origin.isBlank()) {
+            try {
+                URI uri = new URI(origin);
+                String scheme = uri.getScheme();
+                if (("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                        && uri.getHost() != null && uri.getRawUserInfo() == null) {
+                    return origin.replaceAll("/+$", "");
+                }
+            } catch (URISyntaxException ignored) {
+                // 잘못된 Origin은 설정된 공개 주소로 대체한다.
+            }
+        }
+        return frontendBaseUrl.replaceAll("/+$", "");
     }
 
     // 본점이 제출된 신청서를 수락해 지점과 로그인을 활성화한다.

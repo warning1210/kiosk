@@ -13,6 +13,7 @@ import com.kiosk.hq.branch.dto.HqBranchAccountResponse;
 import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.FirebaseApp;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
@@ -20,12 +21,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 // 본점에서 실제로 생성된 모든 지점장 계정을 조회하고 관리한다.
 @Service
+@Slf4j
 // 필요한 저장소를 생성자로 자동 주입한다.
 @RequiredArgsConstructor
 // 계정 상태 변경을 하나의 DB 작업으로 처리한다.
@@ -206,6 +209,10 @@ public class HqBranchAccountService {
 
     // 이미 Firebase에서 사라진 사용자는 폐업 완료로 간주하고 그 밖의 오류만 사용자에게 전달한다.
     private void deleteFirebaseUser(String email) {
+        if (FirebaseApp.getApps().isEmpty()) {
+            log.warn("Firebase가 초기화되지 않아 {} 계정의 Firebase 삭제를 건너뜁니다.", email);
+            return;
+        }
         try {
             String uid = FirebaseAuth.getInstance().getUserByEmail(email).getUid();
             FirebaseAuth.getInstance().deleteUser(uid);
