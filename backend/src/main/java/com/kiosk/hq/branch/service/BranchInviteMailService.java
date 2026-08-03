@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
@@ -26,6 +27,12 @@ public class BranchInviteMailService {
             @Value("${app.mail.from:}") String from) {
         // Spring SMTP 발송기를 보관한다.
         this.mailSender = mailSender;
+        // SMTP 서버가 응답하지 않을 때 API가 무기한 멈추지 않도록 모든 네트워크 단계에 제한시간을 둔다.
+        if (mailSender instanceof JavaMailSenderImpl sender) {
+            sender.getJavaMailProperties().putIfAbsent("mail.smtp.connectiontimeout", "10000");
+            sender.getJavaMailProperties().putIfAbsent("mail.smtp.timeout", "10000");
+            sender.getJavaMailProperties().putIfAbsent("mail.smtp.writetimeout", "10000");
+        }
         // 실제 발송 설정을 보관한다.
         this.enabled = enabled;
         // 발신 이메일 주소를 보관한다.
