@@ -41,7 +41,8 @@ public class BranchFallbackLoginService {
         adminRepository.save(admin);
 
         String token = adminTokenService.issue(admin.getAdminId());
-        return new DbLoginResponse(admin.getAdminId(), admin.getBranch().getBranchId(), admin.getBranch().getBranchName(),
+        return new DbLoginResponse(admin.getAdminId(), admin.getBranch().getBranchId(),
+                admin.getBranch().getBranchName(),
                 admin.getName(), token);
     }
 
