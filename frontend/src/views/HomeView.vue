@@ -86,7 +86,7 @@ function openKeypad(name) {
 
 const turnstileToken = ref('')
 const turnstileEl = ref(null)
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY
+const TURNSTILE_SITE_KEY = '0x4AAAAAAECTZDoACjjMeNgw'
 let widgetId = null
 
 // BranchLoginView와 동일한 이유로 마운트마다 명시적으로 render()를 호출한다 - api.js는

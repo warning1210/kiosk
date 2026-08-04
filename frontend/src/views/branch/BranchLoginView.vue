@@ -44,7 +44,7 @@ const error = ref('')
 
 const turnstileToken = ref('')
 const turnstileEl = ref(null)
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY
+const TURNSTILE_SITE_KEY = '0x4AAAAAAECTZDoACjjMeNgw'
 let widgetId = null
 
 // data-sitekey(implicit) 방식은 api.js가 "로드되는 시점"에 페이지를 한 번만 스캔해서 렌더링하기 때문에,

@@ -11,6 +11,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * 로그인 폼의 Cloudflare Turnstile 캡차 토큰을 서버에서 검증한다.
  * 프론트에서만 체크하면 /api/*-auth/* 를 직접 호출하는 요청은 캡차 없이 그대로 통과하므로,
@@ -23,6 +25,7 @@ public class TurnstileVerifier {
 
     private final RestTemplate restTemplate;
     private final String secretKey;
+    private final ConcurrentHashMap<String, Long> verifiedTokens = new ConcurrentHashMap<>();
 
     @Autowired
     public TurnstileVerifier(@Value("${turnstile.secret-key:}") String secretKey) {
@@ -43,6 +46,18 @@ public class TurnstileVerifier {
             throw new IllegalArgumentException("본인 인증을 먼저 완료해주세요.");
         }
 
+        long now = System.currentTimeMillis();
+        // 10회 호출마다 오래된 캐시 정리
+        if (now % 10 == 0) {
+            verifiedTokens.entrySet().removeIf(entry -> now - entry.getValue() > 5000);
+        }
+
+        // 2초 이내에 동일한 토큰으로 다시 검증 요청이 오면 (프론트엔드의 본점/지점 순차 로그인 시도 등)
+        // Cloudflare를 다시 찌르지 않고 (어차피 1회용이라 실패함) 바로 성공 처리한다.
+        if (verifiedTokens.containsKey(token) && now - verifiedTokens.get(token) < 2000) {
+            return;
+        }
+
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("secret", secretKey);
         form.add("response", token);
@@ -60,5 +75,8 @@ public class TurnstileVerifier {
         if (result == null || !result.path("success").asBoolean(false)) {
             throw new IllegalArgumentException("본인 인증에 실패했습니다. 다시 시도해주세요.");
         }
+        
+        // 검증 성공 시 토큰을 캐시에 저장
+        verifiedTokens.put(token, now);
     }
 }

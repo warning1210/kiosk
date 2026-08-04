@@ -91,4 +91,4 @@ toss:
 # 프론트 sitekey(BranchLoginView.vue)와 Cloudflare 대시보드에서 짝을 이루는 값이라,
 # 비어있거나 안 맞으면 로그인 자체가 항상 실패 처리된다 (fail-closed).
 turnstile:
-  secret-key: ${TURNSTILE_SECRET_KEY:}
+  secret-key: 0x4AAAAAAECTZFMy_NgnHahTGnjTyVEu79o
