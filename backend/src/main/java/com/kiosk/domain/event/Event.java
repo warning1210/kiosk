@@ -3,20 +3,6 @@ package com.kiosk.domain.event;
 import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.flavor.Flavor;
 import com.kiosk.domain.product.Product;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -25,8 +11,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "event")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,84 +18,53 @@ import lombok.Setter;
 @Builder
 public class Event {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "event_id")
     private Long eventId;
 
-    @Column(name = "event_name", length = 100, nullable = false)
     private String eventName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "event_type", nullable = false)
     private EventType eventType;
 
-    // FLAVOR_DISCOUNT 전용 - 본점이 지점에 넘길 할인 유형(율/금액). MONTHLY_FLAVOR는 할인이 없으므로 null.
-    @Enumerated(EnumType.STRING)
-    @Column(name = "benefit_type")
+    // FLAVOR_DISCOUNT ?꾩슜 - 蹂몄젏??吏?먯뿉 ?섍만 ?좎씤 ?좏삎(??湲덉븸). MONTHLY_FLAVOR???좎씤???놁쑝誘濡?null.
     private BenefitType benefitType;
 
-    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Lob
-    @Column(name = "description", length = 65535)
     private String description;
 
-    @Column(name = "discount_rate", precision = 5, scale = 2)
     private BigDecimal discountRate;
 
-    @Column(name = "discount_amount")
     private Integer discountAmount;
 
-    // MONTHLY_FLAVOR 전용 - 본점이 직접 지정한 할인 맛 (전 지점 자동 적용, 지점별 선택 없음)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "flavor_id")
+    // MONTHLY_FLAVOR ?꾩슜 - 蹂몄젏??吏곸젒 吏?뺥븳 ?좎씤 留?(??吏???먮룞 ?곸슜, 吏?먮퀎 ?좏깮 ?놁쓬)
     private Flavor flavor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "size_up_from_product_id")
     private Product sizeUpFromProduct;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "size_up_to_product_id")
     private Product sizeUpToProduct;
 
-    @Column(name = "additional_payment")
     private Integer additionalPayment;
 
-    @Column(name = "target_json", columnDefinition = "json")
     private String targetJson;
 
-    @Column(name = "start_at", nullable = false)
     private LocalDateTime startAt;
 
-    @Column(name = "end_at", nullable = false)
     private LocalDateTime endAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
     @Builder.Default
     private EventStatus status = EventStatus.DRAFT;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_admin_id", nullable = false)
     private Admin creatorAdmin;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
 
-    @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }

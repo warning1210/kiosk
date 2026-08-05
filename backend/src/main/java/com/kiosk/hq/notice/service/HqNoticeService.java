@@ -61,7 +61,7 @@ public class HqNoticeService {
         notice.setContent(request.content());
         notice.setImageUrl(request.imageUrl());
         notice.setStatus(parseStatus(request.status()));
-
+        noticeRepository.update(notice);
         return HqNoticeResponse.from(notice);
     }
 

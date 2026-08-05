@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.notice.NoticeRepository">
+ <resultMap id="notice" type="com.kiosk.domain.notice.Notice"><id property="noticeId" column="notice_id"/><association property="authorAdmin" javaType="com.kiosk.domain.admin.Admin"><id property="adminId" column="author_admin_id"/><result property="name" column="author_name"/></association></resultMap>
+ <sql id="base">select n.*, a.name author_name from notice n join admin a on a.admin_id=n.author_admin_id</sql>
+ <select id="findByStatus" resultMap="notice"><include refid="base"/> where n.status=#{status} order by n.notice_id desc</select>
+ <select id="findAll" resultMap="notice"><include refid="base"/> order by n.notice_id desc</select>
+ <select id="findById" resultMap="notice"><include refid="base"/> where n.notice_id=#{id}</select>
+ <insert id="insert" useGeneratedKeys="true" keyProperty="noticeId">insert into notice(title,content,image_url,status,author_admin_id,created_at,updated_at) values(#{title},#{content},#{imageUrl},#{status},#{authorAdmin.adminId},now(),now())</insert>
+ <update id="update">update notice set title=#{title},content=#{content},image_url=#{imageUrl},status=#{status},updated_at=now() where notice_id=#{noticeId}</update>
+</mapper>

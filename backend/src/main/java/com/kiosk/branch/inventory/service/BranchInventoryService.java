@@ -117,6 +117,7 @@ public class BranchInventoryService {
 
         StockRequest request = requestItem.getStockRequest();
         request.setRequestStatus(StockRequestStatus.CLOSED);
+        stockRequestRepository.update(request);
         stockRequestRepository.save(request);
 
         transactionRepository.save(InventoryTransaction.builder()
@@ -167,6 +168,7 @@ public class BranchInventoryService {
         inventory.setInventoryStatus(after == 0 ? InventoryStatus.SOLD_OUT
                 : after <= inventory.getSafetyQuantity() ? InventoryStatus.LOW : InventoryStatus.NORMAL);
         inventory.setIsKioskVisible(after > 0);
+        inventoryRepository.update(inventory);
         inventoryRepository.save(inventory);
     }
 

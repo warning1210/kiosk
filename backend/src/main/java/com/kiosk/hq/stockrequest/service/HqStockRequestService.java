@@ -77,6 +77,8 @@ public class HqStockRequestService {
             item.approve(item.getRequestedQuantity());
         }
         stockRequest.approve(admin, LocalDateTime.now());
+        stockRequestItemRepository.saveAll(items);
+        stockRequestRepository.update(stockRequest);
         return StockRequestResponse.from(stockRequest, items);
     }
 
@@ -88,6 +90,7 @@ public class HqStockRequestService {
         requireStatus(stockRequest, StockRequestStatus.PENDING, "대기중인 신청만 반려할 수 있습니다");
 
         stockRequest.reject(admin, request.rejectionReason(), LocalDateTime.now());
+        stockRequestRepository.update(stockRequest);
         return StockRequestResponse.from(stockRequest, loadItems(stockRequestId));
     }
 

@@ -1,6 +1,7 @@
 package com.kiosk.domain.product;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
 
-public interface ProductTranslationRepository extends JpaRepository<ProductTranslation, Long> {
+@Mapper
+public interface ProductTranslationRepository {
 }
