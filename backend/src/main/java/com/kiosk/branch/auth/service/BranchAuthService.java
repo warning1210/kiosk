@@ -50,6 +50,10 @@ public class BranchAuthService {
 
     @Transactional(readOnly = true)
     public ApplicationResponse invite(String token) {
+        if (token == null || token.length() > 100) {
+            throw new IllegalArgumentException("유효하지 않은 초대 토큰입니다.");
+        }
+
         return toResponse(validInvite(token), null);
     }
 

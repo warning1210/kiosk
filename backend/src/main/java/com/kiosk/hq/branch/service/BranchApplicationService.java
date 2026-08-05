@@ -126,7 +126,7 @@ public class BranchApplicationService {
             try {
                 URI uri = new URI(origin);
                 String scheme = uri.getScheme();
-                if (("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                if (("http".equals(scheme) || "https".equals(scheme))
                         && uri.getHost() != null && uri.getRawUserInfo() == null) {
                     return origin.replaceAll("/+$", "");
                 }

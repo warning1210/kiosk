@@ -38,7 +38,8 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (!"POST".equalsIgnoreCase(request.getMethod()) || !LIMITED_PATHS.contains(request.getRequestURI())) {
+    	if (!"POST".equals(request.getMethod())
+    	        || !LIMITED_PATHS.contains(request.getRequestURI())) {
             chain.doFilter(request, response);
             return;
         }
