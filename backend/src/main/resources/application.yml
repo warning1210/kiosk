@@ -57,6 +57,11 @@ app:
   upload:
     dir: uploads
 
+# 관리자 토큰 HMAC 서명 키다. 운영 환경별로 서로 다른 32바이트 이상의 무작위 값을 사용한다.
+# 기본값을 두지 않아 키가 누락된 서버는 안전하게 기동을 중단한다.
+hq:
+  token-secret: ${HQ_TOKEN_SECRET:}
+
 # Firebase 인증을 로컬에서 테스트하려면 본인의 인증 파일 경로를
 # FIREBASE_CREDENTIALS_PATH 환경변수로 지정한다. 비어 있으면 초기화를 건너뛴다.
 firebase:
@@ -77,10 +82,11 @@ logging:
 printer:
   url: ${PRINTER_URL:http://172.16.15.97:7777/receipt}
 
-# 토스페이먼츠 기본값은 테스트 키다. 운영 환경에서는 환경변수로 교체한다.
+# 토스페이먼츠 키는 개발자센터에서 발급받아 환경변수로만 주입한다.
+# 저장소에 노출됐던 테스트 키는 폐기하고 재발급한 키를 사용해야 한다.
 toss:
-  secret-key: ${TOSS_SECRET_KEY:test_sk_LlDJaYngroawzQAvQJ9l3ezGdRpX}
-  client-key: ${TOSS_CLIENT_KEY:test_ck_Gv6LjeKD8aXOdnl1lpYkrwYxAdXy}
+  secret-key: ${TOSS_SECRET_KEY:}
+  client-key: ${TOSS_CLIENT_KEY:}
   api-base-url: https://api.tosspayments.com
   success-url: ${TOSS_SUCCESS_URL:}
   fail-url: ${TOSS_FAIL_URL:}

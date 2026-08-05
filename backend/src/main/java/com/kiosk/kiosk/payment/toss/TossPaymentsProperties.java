@@ -4,16 +4,18 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * application.yml에 아래 내용을 추가하세요.
  *
  * toss:
- *   secret-key: ${TOSS_SECRET_KEY:test_sk_docs_OaPz8L5KdmQXkzRz3y47BMw6}
- *   client-key: ${TOSS_CLIENT_KEY:test_ck_docs_Ovk5rk1EwkEbP0W43n07VZUWBN}
+ *   secret-key: ${TOSS_SECRET_KEY:}
+ *   client-key: ${TOSS_CLIENT_KEY:}
  *   api-base-url: https://api.tosspayments.com
  *   success-url: ${TOSS_SUCCESS_URL:}
  *   fail-url: ${TOSS_FAIL_URL:}
@@ -31,12 +33,15 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @ConfigurationProperties(prefix = "toss")
+@Validated
 public class TossPaymentsProperties {
- 
+
     /** 시크릿 키. 절대 프론트엔드나 깃허브에 노출되면 안 됨 */
+    @NotBlank(message = "TOSS_SECRET_KEY를 설정해야 합니다.")
     private String secretKey;
- 
+
     /** 클라이언트 키. 프론트엔드에 그대로 내려줘도 되는 값 */
+    @NotBlank(message = "TOSS_CLIENT_KEY를 설정해야 합니다.")
     private String clientKey;
  
     private String apiBaseUrl = "https://api.tosspayments.com";

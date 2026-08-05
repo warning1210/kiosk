@@ -9,6 +9,7 @@ import com.kiosk.domain.admin.AdminRole;
 import com.kiosk.domain.branch.BranchRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 // URL의 branchId를 그대로 신뢰하지 않고 서버가 "이 토큰의 주인이 실제로 담당하는 지점"을 검증하기 위한 용도.
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BranchAccessService {
 
     private final AdminRepository adminRepository;
@@ -65,7 +67,8 @@ public class BranchAccessService {
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 정보가 유효하지 않습니다. 원인: " + e.getMessage());
+            log.warn("Firebase 로그인 토큰 검증에 실패했습니다.", e);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 정보가 유효하지 않습니다.");
         }
     }
 }

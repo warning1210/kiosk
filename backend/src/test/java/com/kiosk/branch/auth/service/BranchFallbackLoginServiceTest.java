@@ -35,7 +35,7 @@ class BranchFallbackLoginServiceTest {
     private TurnstileVerifier turnstileVerifier;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    private final AdminTokenService adminTokenService = new AdminTokenService("test-secret");
+    private final AdminTokenService adminTokenService = new AdminTokenService("test-secret-for-hmac-signing-32-bytes");
 
     private BranchFallbackLoginService service;
 

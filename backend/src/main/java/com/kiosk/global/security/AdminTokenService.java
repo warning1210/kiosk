@@ -20,7 +20,10 @@ public class AdminTokenService {
 
     private final SecretKeySpec key;
 
-    public AdminTokenService(@Value("${hq.token-secret:kiosk-hq-dev-secret-change-me}") String secret) {
+    public AdminTokenService(@Value("${hq.token-secret}") String secret) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("HQ_TOKEN_SECRET은 32바이트 이상의 값으로 설정해야 합니다.");
+        }
         this.key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     }
 
