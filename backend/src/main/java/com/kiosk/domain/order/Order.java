@@ -3,20 +3,6 @@ package com.kiosk.domain.order;
 import com.kiosk.domain.branch.Branch;
 import com.kiosk.domain.common.Language;
 import com.kiosk.domain.customer.Customer;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,11 +13,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Table name is the reserved word "order" - must stay backtick-quoted so Hibernate
- * generates valid MySQL DDL/DML against it.
+ * Table name is the reserved word "order"; mapper SQL must quote it with backticks.
  */
-@Entity
-@Table(name = "`order`")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -39,82 +22,54 @@ import lombok.Setter;
 @Builder
 public class Order {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_id")
     private Long orderId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
 
-    @Column(name = "kiosk_code", length = 50)
     private String kioskCode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @Column(name = "order_number", length = 30, unique = true, nullable = false)
     private String orderNumber;
 
-    @Column(name = "waiting_number")
     private Integer waitingNumber;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "order_type", nullable = false)
     private OrderType orderType;
 
-    @Column(name = "pickup_at")
     private LocalDateTime pickupAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "order_status", nullable = false)
     @Builder.Default
     private OrderStatus orderStatus = OrderStatus.PENDING_PAYMENT;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "language", nullable = false)
     @Builder.Default
     private Language language = Language.ko;
 
-    @Column(name = "is_easy_mode", nullable = false)
     @Builder.Default
     private Boolean isEasyMode = false;
 
-    @Column(name = "used_points", nullable = false)
     @Builder.Default
     private Integer usedPoints = 0;
 
-    @Column(name = "earned_points", nullable = false)
     @Builder.Default
     private Integer earnedPoints = 0;
 
-    @Column(name = "amount_before_discount", nullable = false)
     private Integer amountBeforeDiscount;
 
-    @Column(name = "discount_amount", nullable = false)
     @Builder.Default
     private Integer discountAmount = 0;
 
-    @Column(name = "final_amount", nullable = false)
     private Integer finalAmount;
 
-    @Column(name = "cancellation_reason", length = 500)
     private String cancellationReason;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "order_completed_at")
     private LocalDateTime orderCompletedAt;
 
-    // 지점 주문 관리 화면에서 주문에 담긴 상품 목록을 바로 조회하기 위한 편의 연관관계
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    // 吏??二쇰Ц 愿由??붾㈃?먯꽌 二쇰Ц???닿릿 ?곹뭹 紐⑸줉??諛붾줈 議고쉶?섍린 ?꾪븳 ?몄쓽 ?곌?愿怨?    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }

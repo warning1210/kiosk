@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.chat.ChatRoomRepository">
+ <resultMap id="room" type="com.kiosk.domain.chat.ChatRoom"><id property="chatRoomId" column="chat_room_id"/><association property="branch" javaType="com.kiosk.domain.branch.Branch"><id property="branchId" column="branch_id"/><result property="branchName" column="branch_name"/></association><association property="assignedAdmin" javaType="com.kiosk.domain.admin.Admin"><id property="adminId" column="assigned_admin_id"/><result property="name" column="assigned_name"/></association></resultMap>
+ <sql id="base">select cr.*,b.branch_name,a.name assigned_name from chat_room cr join branch b on b.branch_id=cr.branch_id left join admin a on a.admin_id=cr.assigned_admin_id</sql>
+ <select id="findFirstByBranch_BranchIdAndConsultationStatusOrderByStartedAtDesc" resultMap="room"><include refid="base"/> where cr.branch_id=#{branchId} and cr.consultation_status=#{consultationStatus} order by cr.started_at desc limit 1</select>
+ <select id="findAllByOrderByStartedAtDesc" resultMap="room"><include refid="base"/> order by cr.started_at desc</select>
+ <select id="findById" resultMap="room"><include refid="base"/> where cr.chat_room_id=#{id}</select>
+ <insert id="insert" useGeneratedKeys="true" keyProperty="chatRoomId">insert into chat_room(branch_id,consultation_status,started_at,ended_at,assigned_admin_id) values(#{branch.branchId},#{consultationStatus},coalesce(#{startedAt},now()),#{endedAt},#{assignedAdmin.adminId})</insert>
+ <update id="update">update chat_room set consultation_status=#{consultationStatus},ended_at=#{endedAt},assigned_admin_id=#{assignedAdmin.adminId} where chat_room_id=#{chatRoomId}</update>
+</mapper>

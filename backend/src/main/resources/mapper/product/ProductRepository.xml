@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.product.ProductRepository">
+  <resultMap id="productMap" type="com.kiosk.domain.product.Product">
+    <id property="productId" column="product_id"/>
+    <association property="category" javaType="com.kiosk.domain.category.Category">
+      <id property="categoryId" column="category_id"/><result property="categoryName" column="category_name"/>
+    </association>
+  </resultMap>
+  <sql id="columns">p.*, c.category_name</sql>
+  <select id="findAll" resultMap="productMap">SELECT <include refid="columns"/> FROM product p LEFT JOIN category c ON c.category_id=p.category_id ORDER BY p.product_id</select>
+  <select id="selectById" resultMap="productMap">SELECT <include refid="columns"/> FROM product p LEFT JOIN category c ON c.category_id=p.category_id WHERE p.product_id=#{id}</select>
+  <select id="findByIsVisibleTrueAndSaleStatusOrderByProductNameAsc" resultMap="productMap">SELECT <include refid="columns"/> FROM product p LEFT JOIN category c ON c.category_id=p.category_id WHERE p.is_visible=1 AND p.sale_status=#{saleStatus} ORDER BY p.product_name</select>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="productId">INSERT INTO product(category_id,product_name,base_price,image_url,description,requires_flavor_selection,selectable_flavor_count,container_policy,is_large,is_new,release_date,sale_status,is_visible,created_at,updated_at) VALUES(#{category.categoryId},#{productName},#{basePrice},#{imageUrl},#{description},#{requiresFlavorSelection},#{selectableFlavorCount},#{containerPolicy},#{isLarge},#{isNew},#{releaseDate},#{saleStatus},#{isVisible},NOW(),NOW())</insert>
+  <update id="update">UPDATE product SET category_id=#{category.categoryId},product_name=#{productName},base_price=#{basePrice},image_url=#{imageUrl},description=#{description},requires_flavor_selection=#{requiresFlavorSelection},selectable_flavor_count=#{selectableFlavorCount},container_policy=#{containerPolicy},is_large=#{isLarge},is_new=#{isNew},release_date=#{releaseDate},sale_status=#{saleStatus},is_visible=#{isVisible},updated_at=NOW() WHERE product_id=#{productId}</update>
+</mapper>

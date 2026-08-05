@@ -94,6 +94,7 @@ public class BranchStockRequestService {
         requireStatus(stockRequest, StockRequestStatus.PENDING, "대기중인 신청만 취소할 수 있습니다");
         // 조회한 엔티티는 영속 상태라 값만 바꿔 두면 트랜잭션이 끝날 때 UPDATE가 나간다.
         stockRequest.cancel();
+        stockRequestRepository.update(stockRequest);
     }
 
     /**
@@ -109,6 +110,7 @@ public class BranchStockRequestService {
         requireStatus(stockRequest, StockRequestStatus.SHIPPING, "배송중인 신청만 수령 확인할 수 있습니다");
 
         stockRequest.confirmReceipt(admin, LocalDateTime.now());
+        stockRequestRepository.update(stockRequest);
 
         List<StockRequestItem> items =
                 stockRequestItemRepository.findByStockRequest_StockRequestId(stockRequestId);

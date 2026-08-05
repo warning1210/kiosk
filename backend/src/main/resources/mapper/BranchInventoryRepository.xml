@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.inventory.BranchInventoryRepository">
+ <resultMap id="inventory" type="com.kiosk.domain.inventory.BranchInventory"><id property="branchInventoryId" column="branch_inventory_id"/><association property="branch" javaType="com.kiosk.domain.branch.Branch"><id property="branchId" column="branch_id"/><result property="branchName" column="branch_name"/></association><association property="flavor" javaType="com.kiosk.domain.flavor.Flavor"><id property="flavorId" column="flavor_id"/><result property="flavorName" column="flavor_name"/><result property="imageUrl" column="flavor_image_url"/></association></resultMap>
+ <sql id="base">select bi.*,b.branch_name,f.flavor_name,f.image_url flavor_image_url from branch_inventory bi join branch b on b.branch_id=bi.branch_id join flavor f on f.flavor_id=bi.flavor_id</sql>
+ <select id="findByBranch_BranchIdAndFlavor_FlavorId" resultMap="inventory"><include refid="base"/> where bi.branch_id=#{branchId} and bi.flavor_id=#{flavorId}</select>
+ <select id="findByBranch_BranchIdOrderByFlavor_FlavorNameAsc" resultMap="inventory"><include refid="base"/> where bi.branch_id=#{branchId} order by f.flavor_name</select>
+ <select id="findById" resultMap="inventory"><include refid="base"/> where bi.branch_inventory_id=#{id}</select>
+ <select id="findAll" resultMap="inventory"><include refid="base"/></select>
+ <insert id="insert" useGeneratedKeys="true" keyProperty="branchInventoryId">insert into branch_inventory(branch_id,flavor_id,current_quantity,safety_quantity,inventory_status,is_kiosk_visible,is_branch_recommended,display_order,updated_at) values(#{branch.branchId},#{flavor.flavorId},#{currentQuantity},#{safetyQuantity},#{inventoryStatus},#{isKioskVisible},#{isBranchRecommended},#{displayOrder},now())</insert>
+ <update id="update">update branch_inventory set current_quantity=#{currentQuantity},safety_quantity=#{safetyQuantity},inventory_status=#{inventoryStatus},is_kiosk_visible=#{isKioskVisible},is_branch_recommended=#{isBranchRecommended},display_order=#{displayOrder},updated_at=now() where branch_inventory_id=#{branchInventoryId}</update>
+</mapper>

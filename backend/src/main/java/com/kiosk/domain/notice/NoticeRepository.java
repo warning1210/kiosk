@@ -1,8 +1,14 @@
 package com.kiosk.domain.notice;
 
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
 
-public interface NoticeRepository extends JpaRepository<Notice, Long> {
+@Mapper
+public interface NoticeRepository {
     List<Notice> findByStatus(NoticeStatus status);
+    List<Notice> findAll();
+    java.util.Optional<Notice> findById(Long id);
+    int insert(Notice notice);
+    int update(Notice notice);
+    default Notice save(Notice notice) { if (notice.getNoticeId() == null) insert(notice); else update(notice); return notice; }
 }

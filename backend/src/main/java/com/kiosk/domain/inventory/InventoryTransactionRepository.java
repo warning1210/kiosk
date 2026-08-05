@@ -1,6 +1,9 @@
 package com.kiosk.domain.inventory;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
 
-public interface InventoryTransactionRepository extends JpaRepository<InventoryTransaction, Long> {
+@Mapper
+public interface InventoryTransactionRepository {
+    int insert(InventoryTransaction transaction);
+    default InventoryTransaction save(InventoryTransaction transaction) { insert(transaction); return transaction; }
 }

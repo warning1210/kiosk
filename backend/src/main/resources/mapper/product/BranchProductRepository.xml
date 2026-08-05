@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.product.BranchProductRepository">
+ <resultMap id="map" type="com.kiosk.domain.product.BranchProduct"><id property="branchProductId" column="branch_product_id"/><association property="branch" javaType="com.kiosk.domain.branch.Branch"><id property="branchId" column="branch_id"/></association><association property="product" javaType="com.kiosk.domain.product.Product"><id property="productId" column="product_id"/></association></resultMap>
+ <select id="findByBranch_BranchId" resultMap="map">SELECT * FROM branch_product WHERE branch_id=#{branchId} ORDER BY display_order,branch_product_id</select>
+ <select id="selectByBranchAndProduct" resultMap="map">SELECT * FROM branch_product WHERE branch_id=#{branchId} AND product_id=#{productId}</select>
+ <insert id="insert" useGeneratedKeys="true" keyProperty="branchProductId">INSERT INTO branch_product(branch_id,product_id,is_visible,sale_status,display_order,updated_at) VALUES(#{branch.branchId},#{product.productId},#{isVisible},#{saleStatus},#{displayOrder},NOW())</insert>
+ <update id="update">UPDATE branch_product SET is_visible=#{isVisible},sale_status=#{saleStatus},display_order=#{displayOrder},updated_at=NOW() WHERE branch_product_id=#{branchProductId}</update>
+</mapper>

@@ -1,90 +1,66 @@
 package com.kiosk.domain.stockrequest;
 
-import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.data.domain.PageImpl;
+import java.util.List;
 
-public interface StockRequestRepository extends JpaRepository<StockRequest, Long> {
+@Mapper
+public interface StockRequestRepository {
 
-    // --- 지점 화면: 내 지점 신청 목록 (상태 필터 유무에 따라 두 가지) ---
+    // --- 吏???붾㈃: ??吏???좎껌 紐⑸줉 (?곹깭 ?꾪꽣 ?좊Т???곕씪 ??媛吏) ---
 
-    Page<StockRequest> findByBranch_BranchIdOrderByRequestedAtDesc(Long branchId, Pageable pageable);
+    default Page<StockRequest> findByBranch_BranchIdOrderByRequestedAtDesc(Long branchId, Pageable pageable) { return new PageImpl<>(selectBranch(branchId, null, pageable.getOffset(), pageable.getPageSize()), pageable, countBranch(branchId, null)); }
 
-    Page<StockRequest> findByBranch_BranchIdAndRequestStatusOrderByRequestedAtDesc(
-            Long branchId, StockRequestStatus status, Pageable pageable);
+    default Page<StockRequest> findByBranch_BranchIdAndRequestStatusOrderByRequestedAtDesc(Long branchId, StockRequestStatus status, Pageable pageable) { return new PageImpl<>(selectBranch(branchId, status, pageable.getOffset(), pageable.getPageSize()), pageable, countBranch(branchId, status)); }
+    List<StockRequest> selectBranch(@Param("branchId") Long branchId, @Param("status") StockRequestStatus status, @Param("offset") long offset, @Param("limit") int limit);
+    long countBranch(@Param("branchId") Long branchId, @Param("status") StockRequestStatus status);
 
-    // --- 본사 화면: 전 지점 신청 검색 ---
+    // --- 蹂몄궗 ?붾㈃: ??吏???좎껌 寃??---
 
-    // 안 보낸 조건은 null로 들어와서 그 줄이 통째로 참이 되므로, 실제로 보낸 조건만 걸러진다.
-    // keyword는 호출부에서 소문자 + %...% 형태로 만들어 넘긴다.
-    @Query("""
-            SELECT sr FROM StockRequest sr
-            WHERE (:status IS NULL OR sr.requestStatus = :status)
-              AND (:branchId IS NULL OR sr.branch.branchId = :branchId)
-              AND (:fromDate IS NULL OR sr.requestedAt >= :fromDate)
-              AND (:toDate IS NULL OR sr.requestedAt <= :toDate)
-              AND (:keyword IS NULL
-                   OR LOWER(sr.requestNumber) LIKE :keyword
-                   OR LOWER(sr.branch.branchName) LIKE :keyword
-                   OR EXISTS (
-                       SELECT item.stockRequestItemId
-                       FROM StockRequestItem item
-                       WHERE item.stockRequest = sr
-                         AND LOWER(item.flavor.flavorName) LIKE :keyword
-                   ))
-            ORDER BY sr.requestedAt DESC
-            """)
-    Page<StockRequest> searchForHq(
+    // ??蹂대궦 議곌굔? null濡??ㅼ뼱???洹?以꾩씠 ?듭㎏濡?李몄씠 ?섎?濡? ?ㅼ젣濡?蹂대궦 議곌굔留?嫄몃윭吏꾨떎.
+    // keyword???몄텧遺?먯꽌 ?뚮Ц??+ %...% ?뺥깭濡?留뚮뱾???섍릿??
+    default Page<StockRequest> searchForHq(
             @Param("status") StockRequestStatus status,
             @Param("branchId") Long branchId,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             @Param("keyword") String keyword,
-            Pageable pageable);
+            Pageable pageable) { return new PageImpl<>(selectForHq(status, branchId, fromDate, toDate, keyword, pageable.getOffset(), pageable.getPageSize()), pageable, countForHq(status, branchId, fromDate, toDate, keyword)); }
+    List<StockRequest> selectForHq(@Param("status") StockRequestStatus status,@Param("branchId") Long branchId,@Param("fromDate") LocalDateTime fromDate,@Param("toDate") LocalDateTime toDate,@Param("keyword") String keyword,@Param("offset") long offset,@Param("limit") int limit);
+    long countForHq(@Param("status") StockRequestStatus status,@Param("branchId") Long branchId,@Param("fromDate") LocalDateTime fromDate,@Param("toDate") LocalDateTime toDate,@Param("keyword") String keyword);
 
     long countByRequestStatus(StockRequestStatus status);
 
     long countByRequestStatusNotIn(Collection<StockRequestStatus> statuses);
 
-    // --- 배송 관리 화면 ---
+    // --- 諛곗넚 愿由??붾㈃ ---
 
-    // 배송과 관련된 단계(출고 준비/배송 중/수령 완료)만 모아서 본다.
-    // status를 따로 주면 그 상태 하나만, 안 주면 아래 statuses 집합 전체를 조회한다.
-    @Query("""
-            SELECT sr FROM StockRequest sr
-            WHERE sr.requestStatus IN :statuses
-              AND (:status IS NULL OR sr.requestStatus = :status)
-              AND (:branchId IS NULL OR sr.branch.branchId = :branchId)
-              AND (:keyword IS NULL
-                   OR LOWER(sr.requestNumber) LIKE :keyword
-                   OR LOWER(sr.shipmentNumber) LIKE :keyword
-                   OR LOWER(sr.branch.branchName) LIKE :keyword)
-            ORDER BY
-              CASE WHEN sr.requestStatus = com.kiosk.domain.stockrequest.StockRequestStatus.PREPARING THEN 0
-                   WHEN sr.requestStatus = com.kiosk.domain.stockrequest.StockRequestStatus.SHIPPING THEN 1
-                   ELSE 2 END,
-              sr.requestedAt DESC
-            """)
-    Page<StockRequest> searchDeliveries(
+    // 諛곗넚怨?愿?⑤맂 ?④퀎(異쒓퀬 以鍮?諛곗넚 以??섎졊 ?꾨즺)留?紐⑥븘??蹂몃떎.
+    // status瑜??곕줈 二쇰㈃ 洹??곹깭 ?섎굹留? ??二쇰㈃ ?꾨옒 statuses 吏묓빀 ?꾩껜瑜?議고쉶?쒕떎.
+    default Page<StockRequest> searchDeliveries(
             @Param("statuses") Collection<StockRequestStatus> statuses,
             @Param("status") StockRequestStatus status,
             @Param("branchId") Long branchId,
             @Param("keyword") String keyword,
-            Pageable pageable);
+            Pageable pageable) { return new PageImpl<>(selectDeliveries(statuses,status,branchId,keyword,pageable.getOffset(),pageable.getPageSize()),pageable,countDeliveries(statuses,status,branchId,keyword)); }
+    List<StockRequest> selectDeliveries(@Param("statuses") Collection<StockRequestStatus> statuses,@Param("status") StockRequestStatus status,@Param("branchId") Long branchId,@Param("keyword") String keyword,@Param("offset") long offset,@Param("limit") int limit);
+    long countDeliveries(@Param("statuses") Collection<StockRequestStatus> statuses,@Param("status") StockRequestStatus status,@Param("branchId") Long branchId,@Param("keyword") String keyword);
 
-    // 배송 중인데 도착 예정 시각이 지난(지연) 건수 - 배송 관리 요약 카드에 쓴다.
+    // 諛곗넚 以묒씤???꾩갑 ?덉젙 ?쒓컖??吏??吏?? 嫄댁닔 - 諛곗넚 愿由??붿빟 移대뱶???대떎.
     long countByRequestStatusAndEstimatedArrivalAtBefore(StockRequestStatus status, LocalDateTime time);
 
-    // 승인/반려/배송/수령확인은 같은 신청 건을 두 사람이 동시에 건드릴 수 있어서,
-    // 상태를 바꾸기 전에 이 메서드로 행을 잠그고 시작한다.
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM StockRequest s WHERE s.stockRequestId = :id")
+    // ?뱀씤/諛섎젮/諛곗넚/?섎졊?뺤씤? 媛숈? ?좎껌 嫄댁쓣 ???щ엺???숈떆??嫄대뱶由????덉뼱??
+    // ?곹깭瑜?諛붽씀湲??꾩뿉 ??硫붿꽌?쒕줈 ?됱쓣 ?좉렇怨??쒖옉?쒕떎.
     Optional<StockRequest> findByIdForUpdate(@Param("id") Long id);
+    Optional<StockRequest> findById(Long id);
+    long count();
+    int insert(StockRequest request);
+    int update(StockRequest request);
+    default StockRequest save(StockRequest request) { if (request.getStockRequestId() == null) insert(request); else update(request); return request; }
 }
