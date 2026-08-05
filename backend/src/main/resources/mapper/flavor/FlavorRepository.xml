@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.flavor.FlavorRepository">
+  <resultMap id="flavorMap" type="com.kiosk.domain.flavor.Flavor"><id property="flavorId" column="flavor_id"/><association property="category" javaType="com.kiosk.domain.category.Category"><id property="categoryId" column="category_id"/><result property="categoryName" column="category_name"/></association></resultMap>
+  <sql id="base">SELECT f.*,c.category_name FROM flavor f LEFT JOIN category c ON c.category_id=f.category_id</sql>
+  <select id="findAll" resultMap="flavorMap"><include refid="base"/> ORDER BY f.flavor_id</select>
+  <select id="selectById" resultMap="flavorMap"><include refid="base"/> WHERE f.flavor_id=#{id}</select>
+  <select id="findAllById" resultMap="flavorMap"><include refid="base"/> WHERE f.flavor_id IN <foreach collection="ids" item="id" open="(" close=")" separator=",">#{id}</foreach></select>
+  <select id="findByIsVisibleTrueAndSaleStatusOrderByFlavorNameAsc" resultMap="flavorMap"><include refid="base"/> WHERE f.is_visible=1 AND f.sale_status=#{saleStatus} ORDER BY f.flavor_name</select>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="flavorId">INSERT INTO flavor(category_id,flavor_name,image_url,description,allergy_info,sale_status,is_visible,created_at,updated_at) VALUES(#{category.categoryId},#{flavorName},#{imageUrl},#{description},#{allergyInfo},#{saleStatus},#{isVisible},NOW(),NOW())</insert>
+  <update id="update">UPDATE flavor SET category_id=#{category.categoryId},flavor_name=#{flavorName},image_url=#{imageUrl},description=#{description},allergy_info=#{allergyInfo},sale_status=#{saleStatus},is_visible=#{isVisible},updated_at=NOW() WHERE flavor_id=#{flavorId}</update>
+</mapper>

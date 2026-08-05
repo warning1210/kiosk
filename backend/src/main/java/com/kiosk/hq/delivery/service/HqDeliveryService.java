@@ -86,6 +86,7 @@ public class HqDeliveryService {
                 : now.plusDays(DEFAULT_ARRIVAL_DAYS);
 
         stockRequest.dispatch(generateShipmentNumber(stockRequest), request.driverName(), estimatedArrival, now);
+        stockRequestRepository.update(stockRequest);
 
         List<StockRequestItem> items = stockRequestItemRepository.findByStockRequest_StockRequestId(stockRequestId);
         return DeliveryResponse.from(stockRequest, items, now);

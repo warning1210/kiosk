@@ -10,6 +10,7 @@ import com.kiosk.domain.branchapplication.ApprovalStatus;
 import com.kiosk.domain.branchapplication.BranchApplication;
 import com.kiosk.domain.branchapplication.BranchApplicationRepository;
 import com.kiosk.hq.branch.dto.HqBranchAccountResponse;
+import com.kiosk.hq.branch.mapper.HqBranchAccountMapper;
 import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -23,7 +24,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 // 본점에서 실제로 생성된 모든 지점장 계정을 조회하고 관리한다.
@@ -45,7 +45,7 @@ public class HqBranchAccountService {
     // 실제 가입 승인 대기 신청에 연결된 임시 지점만 목록에서 제외하기 위해 사용한다.
     private final BranchApplicationRepository applicationRepository;
     // 폐업 시 외래키 순서에 맞춰 해당 지점의 업무 데이터를 완전히 제거한다.
-    private final JdbcTemplate jdbcTemplate;
+    private final HqBranchAccountMapper hqBranchAccountMapper;
 
     // 현재 DB에 만들어진 모든 지점장 계정을 반환한다.
     @Transactional(readOnly = true)
@@ -179,32 +179,32 @@ public class HqBranchAccountService {
         deleteFirebaseUser(admin.getEmail());
 
         // 주문·재고·채팅처럼 지점을 직접 또는 간접 참조하는 자식 행부터 지운다.
-        jdbcTemplate.update("DELETE cm FROM chat_message cm JOIN chat_room cr ON cm.chat_room_id=cr.chat_room_id WHERE cr.branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM chat_message WHERE sender_admin_id=?", adminId);
-        jdbcTemplate.update("DELETE FROM chat_room WHERE branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM inventory_transaction WHERE branch_id=?", branchId);
-        jdbcTemplate.update("DELETE sri FROM stock_request_item sri JOIN stock_request sr ON sri.stock_request_id=sr.stock_request_id WHERE sr.branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM stock_request WHERE branch_id=?", branchId);
-        jdbcTemplate.update("UPDATE coupon c JOIN `order` o ON c.used_order_id=o.order_id SET c.used_order_id=NULL WHERE o.branch_id=?", branchId);
-        jdbcTemplate.update("DELETE p FROM payment p JOIN `order` o ON p.order_id=o.order_id WHERE o.branch_id=?", branchId);
-        jdbcTemplate.update("DELETE oif FROM order_item_flavor oif JOIN order_item oi ON oif.order_item_id=oi.order_item_id JOIN `order` o ON oi.order_id=o.order_id WHERE o.branch_id=?", branchId);
-        jdbcTemplate.update("DELETE oi FROM order_item oi JOIN `order` o ON oi.order_id=o.order_id WHERE o.branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM `order` WHERE branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM branch_inventory WHERE branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM branch_product WHERE branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM event_branch_flavor WHERE branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM audit_log WHERE admin_id=?", adminId);
+        hqBranchAccountMapper.deleteBranchChatMessages(branchId);
+        hqBranchAccountMapper.deleteAdminChatMessages(adminId);
+        hqBranchAccountMapper.deleteChatRooms(branchId);
+        hqBranchAccountMapper.deleteInventoryTransactions(branchId);
+        hqBranchAccountMapper.deleteStockRequestItems(branchId);
+        hqBranchAccountMapper.deleteStockRequests(branchId);
+        hqBranchAccountMapper.clearCouponOrders(branchId);
+        hqBranchAccountMapper.deletePayments(branchId);
+        hqBranchAccountMapper.deleteOrderItemFlavors(branchId);
+        hqBranchAccountMapper.deleteOrderItems(branchId);
+        hqBranchAccountMapper.deleteOrders(branchId);
+        hqBranchAccountMapper.deleteBranchInventory(branchId);
+        hqBranchAccountMapper.deleteBranchProducts(branchId);
+        hqBranchAccountMapper.deleteEventBranchFlavors(branchId);
+        hqBranchAccountMapper.deleteAuditLogs(adminId);
         // 다른 업무 행의 선택적 처리자 참조를 비워 관리자 외래키 삭제를 안전하게 만든다.
-        jdbcTemplate.update("UPDATE branch_application SET issued_by_admin_id=NULL WHERE issued_by_admin_id=?", adminId);
-        jdbcTemplate.update("UPDATE branch_application SET processed_admin_id=NULL WHERE processed_admin_id=?", adminId);
-        jdbcTemplate.update("UPDATE stock_request SET processed_admin_id=NULL WHERE processed_admin_id=?", adminId);
-        jdbcTemplate.update("UPDATE stock_request SET receipt_confirmed_admin_id=NULL WHERE receipt_confirmed_admin_id=?", adminId);
-        jdbcTemplate.update("UPDATE inventory_transaction SET processed_admin_id=NULL WHERE processed_admin_id=?", adminId);
-        jdbcTemplate.update("UPDATE chat_room SET assigned_admin_id=NULL WHERE assigned_admin_id=?", adminId);
-        jdbcTemplate.update("UPDATE admin SET inviter_admin_id=NULL WHERE inviter_admin_id=?", adminId);
-        jdbcTemplate.update("DELETE FROM branch_application WHERE approved_branch_id=?", branchId);
-        jdbcTemplate.update("DELETE FROM admin WHERE admin_id=?", adminId);
-        jdbcTemplate.update("DELETE FROM branch WHERE branch_id=?", branchId);
+        hqBranchAccountMapper.clearIssuedByAdmin(adminId);
+        hqBranchAccountMapper.clearApplicationProcessedAdmin(adminId);
+        hqBranchAccountMapper.clearStockRequestProcessedAdmin(adminId);
+        hqBranchAccountMapper.clearReceiptConfirmedAdmin(adminId);
+        hqBranchAccountMapper.clearInventoryProcessedAdmin(adminId);
+        hqBranchAccountMapper.clearAssignedAdmin(adminId);
+        hqBranchAccountMapper.clearInviterAdmin(adminId);
+        hqBranchAccountMapper.deleteBranchApplications(branchId);
+        hqBranchAccountMapper.deleteAdmin(adminId);
+        hqBranchAccountMapper.deleteBranch(branchId);
     }
 
     // 이미 Firebase에서 사라진 사용자는 폐업 완료로 간주하고 그 밖의 오류만 사용자에게 전달한다.

@@ -1,11 +1,16 @@
 package com.kiosk.domain.product;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 import java.util.Optional;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-public interface BranchProductRepository extends JpaRepository<BranchProduct, Long> {
+@Mapper
+public interface BranchProductRepository {
     List<BranchProduct> findByBranch_BranchId(Long branchId);
-    Optional<BranchProduct> findByBranch_BranchIdAndProduct_ProductId(Long branchId, Long productId);
+    BranchProduct selectByBranchAndProduct(@Param("branchId") Long branchId, @Param("productId") Long productId);
+    default Optional<BranchProduct> findByBranch_BranchIdAndProduct_ProductId(Long branchId, Long productId) { return Optional.ofNullable(selectByBranchAndProduct(branchId, productId)); }
+    int insert(BranchProduct value);
+    int update(BranchProduct value);
+    default BranchProduct save(BranchProduct value) { if (value.getBranchProductId() == null) insert(value); else update(value); return value; }
 }

@@ -9,7 +9,8 @@
       <VirtualKeypad v-if="activeKeypad === 'id'" v-model="loginId" @close="activeKeypad = null" />
       <label>비밀번호<input v-model="password" required type="password" placeholder="비밀번호 입력" @focus="openKeypad('password')"></label>
       <VirtualKeypad v-if="activeKeypad === 'password'" v-model="password" @close="activeKeypad = null" />
-      <button :disabled="loggingIn" type="submit">{{ loggingIn ? '확인 중...' : '등록' }}</button>
+      <div class="cf-turnstile" ref="turnstileEl"></div>
+      <button :disabled="loggingIn || !turnstileToken" type="submit">{{ loggingIn ? '확인 중...' : '등록' }}</button>
       <p v-if="error" class="error">{{ error }}</p>
     </form>
   </main>
@@ -43,7 +44,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onBeforeUnmount, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { firebaseAuth } from '../firebase'
@@ -83,10 +84,46 @@ function openKeypad(name) {
   activeKeypad.value = name
 }
 
+const turnstileToken = ref('')
+const turnstileEl = ref(null)
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY
+let widgetId = null
+
+// BranchLoginView와 동일한 이유로 마운트마다 명시적으로 render()를 호출한다 - api.js는
+// 로드 시점에 페이지를 한 번만 스캔하기 때문에 라우팅으로 재진입하면 위젯이 안 뜬다.
+function renderTurnstile() {
+  if (!window.turnstile || !turnstileEl.value) return
+  widgetId = window.turnstile.render(turnstileEl.value, {
+    sitekey: TURNSTILE_SITE_KEY,
+    theme: 'light',
+    callback: (token) => { turnstileToken.value = token },
+    'expired-callback': () => { turnstileToken.value = '' }
+  })
+}
+
 onMounted(() => {
   rotationTimer = window.setInterval(() => {
     currentAdIndex.value = (currentAdIndex.value + 1) % advertisements.length
   }, ROTATION_INTERVAL_MS)
+
+  if (window.turnstile) {
+    renderTurnstile()
+    return
+  }
+  let script = document.querySelector('script[data-turnstile-api]')
+  if (!script) {
+    script = document.createElement('script')
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+    script.async = true
+    script.defer = true
+    script.dataset.turnstileApi = 'true'
+    document.head.appendChild(script)
+  }
+  script.addEventListener('load', renderTurnstile, { once: true })
+})
+
+onBeforeUnmount(() => {
+  if (widgetId) window.turnstile?.remove(widgetId)
 })
 
 onUnmounted(() => {
@@ -106,6 +143,10 @@ function goBranchLogin() {
 // 성공하면 branchId/branchName만 기억해두고, Firebase 세션은 즉시 로그아웃한다 -
 // 손님이 만지는 키오스크 화면에 관리자 자격증명(토큰)이 남아있으면 안 되기 때문이다.
 async function loginKiosk() {
+  if (!turnstileToken.value) {
+    error.value = '본인 인증을 먼저 완료해주세요.'
+    return
+  }
   loggingIn.value = true
   error.value = ''
   try {
@@ -114,10 +155,10 @@ async function loginKiosk() {
       await setPersistence(firebaseAuth, browserLocalPersistence)
       const credential = await signInWithEmailAndPassword(firebaseAuth, loginId.value, password.value)
       const idToken = await credential.user.getIdToken(true)
-      data = (await http.post('/branch-auth/firebase-session', { idToken })).data
+      data = (await http.post('/branch-auth/firebase-session', { idToken, turnstileToken: turnstileToken.value })).data
       await signOut(firebaseAuth)
     } else {
-      data = (await http.post('/branch-auth/db-login', { loginId: loginId.value, password: password.value })).data
+      data = (await http.post('/branch-auth/db-login', { loginId: loginId.value, password: password.value, turnstileToken: turnstileToken.value })).data
     }
     const session = { branchId: data.branchId, branchName: data.branchName }
     // 영업 종료로 INACTIVE였던 키오스크도 다음 등록 성공 시 다시 주문 가능한 상태로 연다.
@@ -127,6 +168,9 @@ async function loginKiosk() {
   } catch (e) {
     console.error(e)
     error.value = e.response?.data?.message || firebaseMessage(e.code) || '로그인할 수 없습니다.'
+    // Turnstile 토큰은 1회용이라 실패한 토큰으로는 재시도해도 서버에서 다시 거부된다 - 위젯을 리셋해 새 토큰을 받게 한다.
+    if (widgetId) window.turnstile?.reset(widgetId)
+    turnstileToken.value = ''
   } finally {
     loggingIn.value = false
   }
@@ -185,6 +229,10 @@ function firebaseMessage(code) {
   border: 1px solid #dfe3e9;
   border-radius: 8px;
   font-size: 14px;
+}
+
+.setup-form .cf-turnstile {
+  margin-top: 16px;
 }
 
 .setup-form button {

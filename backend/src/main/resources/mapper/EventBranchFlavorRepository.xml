@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.event.EventBranchFlavorRepository">
+ <resultMap id="mapping" type="com.kiosk.domain.event.EventBranchFlavor"><id property="eventBranchFlavorId" column="event_branch_flavor_id"/><association property="event" resultMap="com.kiosk.domain.event.EventRepository.event" columnPrefix="e_"/><association property="branch" javaType="com.kiosk.domain.branch.Branch"><id property="branchId" column="branch_id"/><result property="branchName" column="branch_name"/></association><association property="flavor" javaType="com.kiosk.domain.flavor.Flavor"><id property="flavorId" column="flavor_id"/><result property="flavorName" column="flavor_name"/></association></resultMap>
+ <sql id="base">select ebf.*, b.branch_name, f.flavor_name, e.event_id e_event_id,e.event_name e_event_name,e.event_type e_event_type,e.benefit_type e_benefit_type,e.discount_rate e_discount_rate,e.discount_amount e_discount_amount,e.start_at e_start_at,e.end_at e_end_at,e.status e_status from event_branch_flavor ebf join branch b on b.branch_id=ebf.branch_id join flavor f on f.flavor_id=ebf.flavor_id join event e on e.event_id=ebf.event_id</sql>
+ <select id="findByEvent_EventIdAndBranch_BranchId" resultMap="mapping"><include refid="base"/> where ebf.event_id=#{eventId} and ebf.branch_id=#{branchId} limit 1</select>
+ <select id="findByBranch_BranchId" resultMap="mapping"><include refid="base"/> where ebf.branch_id=#{branchId}</select>
+ <delete id="deleteByEvent_EventIdAndBranch_BranchId">delete from event_branch_flavor where event_id=#{eventId} and branch_id=#{branchId}</delete>
+ <insert id="insert" useGeneratedKeys="true" keyProperty="eventBranchFlavorId">insert into event_branch_flavor(event_id,branch_id,flavor_id,created_at) values(#{event.eventId},#{branch.branchId},#{flavor.flavorId},now())</insert>
+</mapper>

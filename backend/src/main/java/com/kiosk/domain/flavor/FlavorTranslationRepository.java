@@ -1,6 +1,7 @@
 package com.kiosk.domain.flavor;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
 
-public interface FlavorTranslationRepository extends JpaRepository<FlavorTranslation, Long> {
+@Mapper
+public interface FlavorTranslationRepository {
 }

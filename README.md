@@ -61,8 +61,8 @@
 | 구분 | 기술 |
 | --- | --- |
 | **Frontend** | Vue 3 · Vite · Vue Router · Pinia · Axios |
-| **Backend** | Java 21 · Spring Boot 3.3 · Spring Data JPA · Spring Security · Spring Mail |
-| **Database** | MySQL 8 (25개 테이블, `ddl-auto: validate`) |
+| **Backend** | Java 21 · Spring Boot 3.3 · MyBatis · Spring Security · Spring Mail |
+| **Database** | MySQL 8 (25개 테이블, SQL 스키마 직접 관리) |
 | **인증 / 결제 / 알림** | Firebase Auth · Toss Payments · Gmail SMTP |
 | **Infra / 배포** | Docker · Nginx · AWS EC2 (ap-northeast-2) |
 | **CI/CD / 협업** | GitLab CI/CD (GitHub 미러) · GitLab Container Registry · Git |
@@ -129,7 +129,7 @@ kiosk/
 └── docs/                          # API · 요구사항 문서
 ```
 
-> **스키마가 기준(Single Source of Truth)**: `db/init/01-schema.sql`이 유일한 기준이며, `application.yml`은 `ddl-auto: validate`로 엔티티가 스키마와 일치하는지 검증만 합니다. 스키마 변경은 반드시 SQL을 먼저 고친 뒤 JPA 엔티티에 반영합니다.
+> **스키마가 기준(Single Source of Truth)**: `db/init/01-schema.sql`이 유일한 기준입니다. 스키마 변경은 SQL을 먼저 수정한 뒤 해당 MyBatis Mapper SQL과 result mapping에 반영합니다.
 
 ---
 

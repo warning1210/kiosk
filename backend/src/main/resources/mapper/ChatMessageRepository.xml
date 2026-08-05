@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kiosk.domain.chat.ChatMessageRepository">
+ <resultMap id="message" type="com.kiosk.domain.chat.ChatMessage"><id property="chatMessageId" column="chat_message_id"/><association property="chatRoom" javaType="com.kiosk.domain.chat.ChatRoom"><id property="chatRoomId" column="chat_room_id"/></association><association property="senderAdmin" javaType="com.kiosk.domain.admin.Admin"><id property="adminId" column="sender_admin_id"/><result property="name" column="sender_name"/><result property="role" column="sender_role"/></association></resultMap>
+ <sql id="base">select cm.*,a.name sender_name,a.role sender_role from chat_message cm join admin a on a.admin_id=cm.sender_admin_id</sql>
+ <select id="findByChatRoom_ChatRoomIdOrderByCreatedAtAsc" resultMap="message"><include refid="base"/> where cm.chat_room_id=#{chatRoomId} order by cm.created_at</select>
+ <select id="findFirstByChatRoom_ChatRoomIdOrderByCreatedAtDesc" resultMap="message"><include refid="base"/> where cm.chat_room_id=#{chatRoomId} order by cm.created_at desc limit 1</select>
+ <select id="countByChatRoom_ChatRoomIdAndReadAtIsNullAndSenderAdmin_Role" resultType="long">select count(*) from chat_message cm join admin a on a.admin_id=cm.sender_admin_id where cm.chat_room_id=#{chatRoomId} and cm.read_at is null and a.role=#{role}</select>
+ <insert id="insert" useGeneratedKeys="true" keyProperty="chatMessageId">insert into chat_message(chat_room_id,sender_admin_id,message_content,read_at,created_at) values(#{chatRoom.chatRoomId},#{senderAdmin.adminId},#{messageContent},#{readAt},now())</insert>
+ <update id="update">update chat_message set message_content=#{messageContent},read_at=#{readAt} where chat_message_id=#{chatMessageId}</update>
+ <update id="markReadByRoomAndRole">update chat_message cm join admin a on a.admin_id=cm.sender_admin_id set cm.read_at=#{readAt} where cm.chat_room_id=#{chatRoomId} and cm.read_at is null and a.role=#{role}</update>
+</mapper>
