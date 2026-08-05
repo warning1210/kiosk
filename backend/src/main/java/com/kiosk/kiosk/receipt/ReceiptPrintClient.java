@@ -65,14 +65,30 @@ public class ReceiptPrintClient {
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             boolean success = response.statusCode() == 200 && response.body().contains("SUCCESS");
             if (!success) {
-                log.warn("영수증 출력 실패 응답: status={}, body={}", response.statusCode(), response.body());
+            	log.warn(
+            		    "영수증 출력 실패 응답: status={}, body={}",
+            		    response.statusCode(),
+            		    sanitizeForLog(response.body())
+            		);
             }
             return success;
         } catch (Exception e) {
             // 프린터 서비스가 꺼져 있거나(집에서 개발 등) 네트워크가 안 되는 경우.
             // 주문/결제는 이미 끝났으므로 에러만 로그로 남기고 조용히 false 를 돌려준다.
-            log.warn("프린터 서비스에 연결하지 못했습니다 ({}). 영수증은 화면으로만 표시됩니다.", printerUrl);
+        	log.warn(
+        		    "프린터 서비스에 연결하지 못했습니다 ({}). 영수증은 화면으로만 표시됩니다.",
+        		    sanitizeForLog(printerUrl)
+        		);
             return false;
         }
     }
+
+	private String sanitizeForLog(String value) {
+	    if (value == null) {
+	        return null;
+	    }
+
+	    return value.replace("\r", "")
+	                .replace("\n", "");
+	}
 }

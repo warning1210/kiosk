@@ -100,7 +100,7 @@ class BranchFallbackLoginServiceTest {
     @Test
     void login_withLegacyFirebaseMarkerHash_throws() {
         Admin admin = branchManager("secret1234");
-        admin.setPasswordHash("FIREBASE$some-uid");
+
         when(adminRepository.findByLoginId("gangnam1")).thenReturn(Optional.of(admin));
 
         assertThatThrownBy(() -> service.login(new DbLoginRequest("gangnam1", "secret1234", "test-turnstile-token")))

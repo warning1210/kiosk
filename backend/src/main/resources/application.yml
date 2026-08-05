@@ -68,6 +68,8 @@ firebase:
 logging:
   level:
     org.hibernate.SQL: debug
+    com.zaxxer.hikari: DEBUG
+    org.springframework.boot.context.config: DEBUG
 
 # 영수증 프린터 서비스 주소 (강사님 PC에서 도는 서비스)
 # 실습실 기본값은 강사님 PC(172.16.15.97:8888). 다른 환경에서는 환경변수 PRINTER_URL로 교체.

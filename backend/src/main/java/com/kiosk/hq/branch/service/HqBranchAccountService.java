@@ -210,7 +210,10 @@ public class HqBranchAccountService {
     // 이미 Firebase에서 사라진 사용자는 폐업 완료로 간주하고 그 밖의 오류만 사용자에게 전달한다.
     private void deleteFirebaseUser(String email) {
         if (FirebaseApp.getApps().isEmpty()) {
-            log.warn("Firebase가 초기화되지 않아 {} 계정의 Firebase 삭제를 건너뜁니다.", email);
+        	log.warn(
+        		    "Firebase 사용자 삭제 실패: {}",
+        		    sanitizeForLog(email)
+        		);
             return;
         }
         try {
@@ -221,5 +224,14 @@ public class HqBranchAccountService {
                 throw new IllegalStateException("Firebase 계정을 삭제하지 못했습니다: " + e.getMessage());
             }
         }
+    }
+
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        return value.replace("\r", "")
+                    .replace("\n", "");
     }
 }
