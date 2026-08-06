@@ -1,6 +1,7 @@
 package com.kiosk.kiosk.receipt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiosk.global.security.CrlfUtils;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -30,7 +31,7 @@ public class ReceiptPrintClient {
 
     private static final Logger log = LoggerFactory.getLogger(ReceiptPrintClient.class);
 
-    // 프린터 서비스 주소. 기본값은 강사님 PC(172.16.15.97:8888)이고,
+    // 프린터 서비스 주소. 기본값은 강사님 PC(172.16.15.97:7777)이고,
     // 다른 환경에서는 환경변수 PRINTER_URL 로 바꿔 끼울 수 있다.
     // 예) 집에서 테스트: PRINTER_URL=http://localhost:8888/receipt
     private final String printerUrl;
@@ -48,7 +49,7 @@ public class ReceiptPrintClient {
 
     /**
      * 프린터 서비스로 영수증 출력을 요청한다.
-     * 
+     *
      * @return 프린터가 SUCCESS 를 돌려주면 true, 그 외(오프라인/실패)면 false
      */
     public boolean print(PrinterReceiptRequest request) {
@@ -65,30 +66,17 @@ public class ReceiptPrintClient {
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             boolean success = response.statusCode() == 200 && response.body().contains("SUCCESS");
             if (!success) {
-            	log.warn(
-            		    "영수증 출력 실패 응답: status={}, body={}",
-            		    response.statusCode(),
-            		    sanitizeForLog(response.body())
-            		);
+                // 프린터 서비스 응답 본문은 외부(신뢰 불가) 입력이므로 로그 위조(CRLF)를 막기 위해 정제한다.
+                log.warn("영수증 출력 실패 응답: status={}, body={}",
+                        response.statusCode(), CrlfUtils.forLog(response.body()));
             }
             return success;
         } catch (Exception e) {
             // 프린터 서비스가 꺼져 있거나(집에서 개발 등) 네트워크가 안 되는 경우.
             // 주문/결제는 이미 끝났으므로 에러만 로그로 남기고 조용히 false 를 돌려준다.
-        	log.warn(
-        		    "프린터 서비스에 연결하지 못했습니다 ({}). 영수증은 화면으로만 표시됩니다.",
-        		    sanitizeForLog(printerUrl)
-        		);
+            log.warn("프린터 서비스에 연결하지 못했습니다 ({}). 영수증은 화면으로만 표시됩니다.",
+                    CrlfUtils.forLog(printerUrl));
             return false;
         }
     }
-
-	private String sanitizeForLog(String value) {
-	    if (value == null) {
-	        return null;
-	    }
-
-	    return value.replace("\r", "")
-	                .replace("\n", "");
-	}
 }

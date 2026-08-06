@@ -47,7 +47,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TossPaymentException.class)
     public ResponseEntity<Map<String, String>> handleTossPayment(TossPaymentException e) {
-        log.error("토스 결제 처리 중 예외가 발생했습니다. code={}", e.getTossErrorCode(), e);
-        return ResponseEntity.status(e.getHttpStatus()).body(Map.of("message", "결제 처리 중 오류가 발생했습니다."));
+
+    	log.error(
+    		    "Toss payment failed. code={}",
+    		    sanitizeForLog(e.getTossErrorCode()),
+    		    e
+    		);
+
+        return ResponseEntity.status(e.getHttpStatus())
+                .body(Map.of("message", "결제 처리 중 오류가 발생했습니다."));
+    }
+    
+    private static String sanitizeForLog(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\r", "")
+                    .replace("\n", "");
     }
 }
