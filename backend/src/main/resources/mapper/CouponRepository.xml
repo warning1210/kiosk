@@ -11,9 +11,9 @@
     <result property="couponStatus" column="coupon_status"/>
     <result property="expiresAt" column="expires_at"/>
     <association property="usedOrder" javaType="com.kiosk.domain.order.Order"><id property="orderId" column="used_order_id"/></association>
-    <association property="customer" javaType="com.kiosk.domain.customer.Customer"><id property="customerId" column="customer_id"/><result property="mobileNumberHash" column="mobile_number_hash"/><result property="mobileNumberEnc" column="mobile_number_enc"/></association>
+    <association property="customer" javaType="com.kiosk.domain.customer.Customer"><id property="customerId" column="customer_id"/><result property="mobileNumberHash" column="mobile_number_hash"/><result property="mobileNumberMasked" column="mobile_number_masked"/></association>
   </resultMap>
-  <sql id="base">select c.*, cu.mobile_number_hash, cu.mobile_number_enc from coupon c left join customer cu on cu.customer_id=c.customer_id</sql>
+  <sql id="base">select c.*, cu.mobile_number_hash, cu.mobile_number_masked from coupon c left join customer cu on cu.customer_id=c.customer_id</sql>
   <select id="findByQrToken" resultMap="coupon"><include refid="base"/> where c.qr_token=#{qrToken}</select>
   <select id="findByUsedOrder_OrderId" resultMap="coupon"><include refid="base"/> where c.used_order_id=#{orderId}</select>
   <select id="findAllByOrderByCouponIdDesc" resultMap="coupon"><include refid="base"/> order by c.coupon_id desc</select>

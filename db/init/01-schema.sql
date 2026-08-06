@@ -112,10 +112,11 @@ CREATE TABLE `branch_inventory` (
 
 CREATE TABLE `customer` (
   `customer_id` bigint PRIMARY KEY NOT NULL AUTO_INCREMENT,
-  -- 전화번호를 평문으로 저장하지 않는다: hash는 조회 전용(HMAC-SHA256, 단방향), enc는 필요할 때 복호화하는 저장용(AES-256-GCM).
+  -- 전화번호를 평문으로 저장하지 않는다: hash는 조회 전용(HMAC-SHA256, 단방향, 원본 복원 불가),
+  -- masked는 화면 표시용(뒤 4자리만 노출, 예: 010****5678, 키 없이 순수 문자열 변환).
   -- MobileNumberCrypto(backend/src/main/java/com/kiosk/global/security) 참고.
   `mobile_number_hash` char(64) UNIQUE NOT NULL,
-  `mobile_number_enc` varchar(255) NOT NULL,
+  `mobile_number_masked` varchar(20) NOT NULL,
   `point_balance` int NOT NULL DEFAULT 0,
   `grade` ENUM ('FRIEND', 'FAMILY', 'VIP') NOT NULL DEFAULT 'FRIEND',
   `created_at` datetime NOT NULL,

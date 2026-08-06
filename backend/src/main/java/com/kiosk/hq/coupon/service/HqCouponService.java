@@ -7,7 +7,6 @@ import com.kiosk.domain.coupon.CouponStatus;
 import com.kiosk.domain.customer.Customer;
 import com.kiosk.domain.customer.CustomerGrade;
 import com.kiosk.domain.customer.CustomerRepository;
-import com.kiosk.global.security.MobileNumberCrypto;
 import com.kiosk.hq.coupon.dto.HqCouponIssueRequest;
 import com.kiosk.hq.coupon.dto.HqCouponResponse;
 import java.math.BigDecimal;
@@ -26,7 +25,6 @@ public class HqCouponService {
 
     private final CouponRepository couponRepository;
     private final CustomerRepository customerRepository;
-    private final MobileNumberCrypto mobileNumberCrypto;
 
     public List<HqCouponResponse> issue(HqCouponIssueRequest request) {
         CouponDiscountType discountType;
@@ -77,14 +75,14 @@ public class HqCouponService {
                 .toList();
 
         return couponRepository.saveAll(coupons).stream()
-                .map(coupon -> HqCouponResponse.from(coupon, mobileNumberCrypto))
+                .map(coupon -> HqCouponResponse.from(coupon))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<HqCouponResponse> list() {
         return couponRepository.findAllByOrderByCouponIdDesc().stream()
-                .map(coupon -> HqCouponResponse.from(coupon, mobileNumberCrypto))
+                .map(coupon -> HqCouponResponse.from(coupon))
                 .toList();
     }
 }

@@ -74,7 +74,7 @@ public class OrderService {
                                         .orElseGet(() -> customerRepository.save(
                                                         Customer.builder()
                                                                         .mobileNumberHash(mobileNumberHash)
-                                                                        .mobileNumberEnc(mobileNumberCrypto.encrypt(rawMobileNumber))
+                                                                        .mobileNumberMasked(MobileNumberCrypto.mask(rawMobileNumber))
                                                                         .build()));
                 }
 

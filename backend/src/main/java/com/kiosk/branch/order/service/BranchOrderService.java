@@ -8,6 +8,7 @@ import com.kiosk.branch.order.dto.BranchOrderDetailPaymentResponse;
 import com.kiosk.branch.order.dto.BranchOrderDetailResponse;
 import com.kiosk.domain.order.OrderItemFlavor;
 import com.kiosk.domain.order.OrderItemFlavorRepository;
+import com.kiosk.domain.order.OrderItemRepository;
 import com.kiosk.domain.payment.Payment;
 import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +34,7 @@ public class BranchOrderService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final OrderItemFlavorRepository orderItemFlavorRepository;
+    private final OrderItemRepository orderItemRepository;
     private final PaymentService paymentService;
     private final BranchEventPublisher branchEventPublisher;
 
@@ -56,30 +59,40 @@ public class BranchOrderService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        // 주문마다 결제를 따로 조회하면(N+1) Payment의 order 매핑이 서브쿼리로 Order+OrderItem을
+        // 통째로 재조회해서 주문 수만큼 증폭돼 심각하게 느려진다 - 결제수단만 한 번에 벌크 조회한다.
+        List<Long> orderIds = orders.stream().map(Order::getOrderId).toList();
+        Map<Long, PaymentMethod> paymentMethodByOrderId = orderIds.isEmpty() ? Map.of()
+                : paymentRepository.findMethodsByOrderIds(orderIds).stream()
+                        .collect(Collectors.toMap(p -> p.getOrder().getOrderId(), Payment::getPaymentMethod));
+
+        // 이 목록 조회(listMap)는 orderItems를 안 채우므로(같은 이유의 N+1 방지) 메뉴 요약에 쓸
+        // 주문상품도 한 번에 벌크 조회해 주문ID별로 묶어둔다.
+        Map<Long, List<OrderItem>> orderItemsByOrderId = orderIds.isEmpty() ? Map.of()
+                : orderItemRepository.findByOrder_OrderIdIn(orderIds).stream()
+                        .collect(Collectors.groupingBy(item -> item.getOrder().getOrderId()));
+
         return orders.stream()
                 // PENDING_PAYMENT 상태는 현금 주문만 주문관리에 미리 보여준다.
                 // 카드/QR 주문은 결제가 승인되어 PAID가 된 뒤 나타나므로 기존처럼 곧바로
                 // "제조 시작" 버튼이 보이고, 카운터 결제 확인 단계는 거치지 않는다.
                 .filter(order -> order.getOrderStatus() != OrderStatus.PENDING_PAYMENT
-                        || paymentRepository.findByOrder_OrderId(order.getOrderId())
-                                .map(payment -> payment.getPaymentMethod() == PaymentMethod.CASH)
-                                .orElse(false))
+                        || paymentMethodByOrderId.get(order.getOrderId()) == PaymentMethod.CASH)
                 .map(order -> {
             long elapsedMinutes = Duration.between(order.getCreatedAt(), now).toMinutes();
 
             // 메뉴 요약 문자열 생성 로직 (ex: 바닐라 파인트 외 2건)
+            List<OrderItem> items = orderItemsByOrderId.getOrDefault(order.getOrderId(), List.of());
             String menuSummary = "주문 내역 없음";
-            if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
-                OrderItem firstItem = order.getOrderItems().get(0);
-                if (order.getOrderItems().size() > 1) {
-                    menuSummary = firstItem.getProductNameSnapshot() + " 외 " + (order.getOrderItems().size() - 1) + "건";
-                } else {
-                    menuSummary = firstItem.getProductNameSnapshot();
-                }
+            if (!items.isEmpty()) {
+                OrderItem firstItem = items.get(0);
+                menuSummary = items.size() > 1
+                        ? firstItem.getProductNameSnapshot() + " 외 " + (items.size() - 1) + "건"
+                        : firstItem.getProductNameSnapshot();
             }
 
             // 결제수단을 목록 DTO에 포함하면 프론트가 현금 주문을 별도 배지로 표시할 수 있다.
-            Payment payment = paymentRepository.findByOrder_OrderId(order.getOrderId()).orElse(null);
+            PaymentMethod paymentMethod = paymentMethodByOrderId.get(order.getOrderId());
             return BranchOrderListResponse.builder()
                     .orderId(order.getOrderId())
                     .orderNumber(order.getOrderNumber())
@@ -90,7 +103,7 @@ public class BranchOrderService {
                     .status(order.getOrderStatus())
                     .createdAt(order.getCreatedAt())
                     .finalAmount(order.getFinalAmount())
-                    .paymentMethod(payment != null ? payment.getPaymentMethod().name() : null)
+                    .paymentMethod(paymentMethod != null ? paymentMethod.name() : null)
                     .build();
         }).collect(Collectors.toList());
     }

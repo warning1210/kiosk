@@ -95,8 +95,8 @@ toss:
 turnstile:
   secret-key: ${TURNSTILE_SECRET_KEY:}
 
-# 고객 전화번호를 평문으로 저장하지 않기 위한 해시(조회용)/암호화(저장용) 키다. 둘 다 32바이트 이상,
-# 서로 다른 값이어야 하며 기본값을 두지 않아 누락되면 서버가 기동을 중단한다.
+# 고객 전화번호를 평문으로 저장하지 않기 위한 조회용 해시 키다. 32바이트 이상이어야 하며
+# 기본값을 두지 않아 누락되면 서버가 기동을 중단한다. 화면 표시용 원본 복원은 안 하므로
+# (MobileNumberCrypto.mask() 참고) 암호화 키는 별도로 없다.
 mobile-number:
   hash-secret: ${MOBILE_NUMBER_HASH_SECRET:}
-  enc-secret: ${MOBILE_NUMBER_ENC_SECRET:}

@@ -66,11 +66,18 @@ public class BranchInventoryService {
     }
 
     // 판매 중인 맛을 각각 2통(6kg)으로 시작하게 하며, 이미 주문으로 차감된 행은 절대 초기화하지 않는다.
+    // getInventory()가 호출될 때마다(대시보드 로드마다) 도는 메서드라, 맛 하나하나 존재 여부를
+    // 개별 쿼리로 확인하면(과거 방식) 판매중 맛 수만큼 매번 쿼리가 증폭된다 - 지점 재고를 한 번에
+    // 벌크로 읽어 메모리에서 비교한다.
     public void initializeMissingInventory(Branch branch) {
+        java.util.Set<Long> existingFlavorIds = inventoryRepository
+                .findByBranch_BranchIdOrderByFlavor_FlavorNameAsc(branch.getBranchId()).stream()
+                .map(bi -> bi.getFlavor().getFlavorId())
+                .collect(java.util.stream.Collectors.toSet());
+
         List<BranchInventory> missingInventories = flavorRepository
                 .findByIsVisibleTrueAndSaleStatusOrderByFlavorNameAsc(com.kiosk.domain.common.SaleStatus.ON_SALE).stream()
-                .filter(flavor -> inventoryRepository
-                        .findByBranch_BranchIdAndFlavor_FlavorId(branch.getBranchId(), flavor.getFlavorId()).isEmpty())
+                .filter(flavor -> !existingFlavorIds.contains(flavor.getFlavorId()))
                 .map(flavor -> BranchInventory.builder()
                         .branch(branch)
                         .flavor(flavor)
