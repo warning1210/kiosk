@@ -1,13 +1,14 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import http from '../api/branch'
+import { useBranchEventStream } from './useBranchEventStream'
 
 const newOrdersCount = ref(0)
-let timer = null
 let subscribers = 0
-
-const POLL_INTERVAL = 3000
+let unsubscribeOrder = null
 
 export function useNewOrderAlert() {
+  const { onOrder } = useBranchEventStream()
+
   async function refresh() {
     try {
       const res = await http.get('/orders')
@@ -24,15 +25,15 @@ export function useNewOrderAlert() {
     subscribers++
     if (subscribers === 1) {
       refresh()
-      timer = window.setInterval(refresh, POLL_INTERVAL)
+      unsubscribeOrder = onOrder(refresh)
     }
   })
 
   onUnmounted(() => {
     subscribers--
     if (subscribers === 0) {
-      window.clearInterval(timer)
-      timer = null
+      unsubscribeOrder?.()
+      unsubscribeOrder = null
     }
   })
 

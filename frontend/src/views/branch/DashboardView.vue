@@ -98,6 +98,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../../api/branch'
 import BranchSidebar from '../../components/branch/BranchSidebar.vue'
+import { useBranchEventStream } from '../../composables/useBranchEventStream'
 
 const router = useRouter()
 
@@ -107,7 +108,9 @@ const orders = ref([])
 const inventory = ref([])
 const notices = ref([])
 const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
-let timer
+const { onOrder, onNotice } = useBranchEventStream()
+let unsubscribeOrder = null
+let unsubscribeNotice = null
 
 function goToNotice(notice) {
   router.push(`/branch/notices/${notice.noticeType}/${notice.id}`)
@@ -173,13 +176,15 @@ async function load() {
 
 onMounted(() => {
   load()
-  timer = setInterval(load, 3000)
+  unsubscribeOrder = onOrder(load)
+  unsubscribeNotice = onNotice(load)
   startRotation()
   document.addEventListener('click', handleOutsideClick)
 })
 
 onBeforeUnmount(() => {
-  clearInterval(timer)
+  unsubscribeOrder?.()
+  unsubscribeNotice?.()
   clearInterval(rotateTimer)
   document.removeEventListener('click', handleOutsideClick)
 })

@@ -3,6 +3,13 @@
 <mapper namespace="com.kiosk.domain.coupon.CouponRepository">
   <resultMap id="coupon" type="com.kiosk.domain.coupon.Coupon">
     <id property="couponId" column="coupon_id"/>
+    <result property="couponName" column="coupon_name"/>
+    <result property="qrToken" column="qr_token"/>
+    <result property="discountType" column="discount_type"/>
+    <result property="discountRate" column="discount_rate"/>
+    <result property="discountAmount" column="discount_amount"/>
+    <result property="couponStatus" column="coupon_status"/>
+    <result property="expiresAt" column="expires_at"/>
     <association property="usedOrder" javaType="com.kiosk.domain.order.Order"><id property="orderId" column="used_order_id"/></association>
     <association property="customer" javaType="com.kiosk.domain.customer.Customer"><id property="customerId" column="customer_id"/><result property="mobileNumberHash" column="mobile_number_hash"/><result property="mobileNumberEnc" column="mobile_number_enc"/></association>
   </resultMap>

@@ -159,9 +159,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import http from '../../api/branch';
 import BranchSidebar from '../../components/branch/BranchSidebar.vue';
+import { useBranchEventStream } from '../../composables/useBranchEventStream';
+const { onOrder } = useBranchEventStream();
+let unsubscribeOrder = null;
 const orders = ref([]);
 const oldest = ref(true);
-let timer;
 const waitTime = ref(0);
 const showPopup = ref(false);
 const tempWaitTime = ref(20);
@@ -272,9 +274,9 @@ async function confirmCash(o) {
 onMounted(() => {
   load();
   loadStatus();
-  timer = setInterval(load, 2000);
+  unsubscribeOrder = onOrder(load);
 });
-onBeforeUnmount(() => clearInterval(timer));
+onBeforeUnmount(() => unsubscribeOrder?.());
 </script>
 <style scoped>
 .shell { min-height: 100vh; color: #202a39; background: #f3f6fa; }

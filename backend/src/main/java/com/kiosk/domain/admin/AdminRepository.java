@@ -12,6 +12,18 @@ public interface AdminRepository {
 
     @Results(id="adminMap", value={
         @Result(column="admin_id",property="adminId",id=true),
+        @Result(column="login_id",property="loginId"),
+        @Result(column="password_hash",property="passwordHash"),
+        @Result(column="name",property="name"),
+        @Result(column="phone",property="phone"),
+        @Result(column="email",property="email"),
+        @Result(column="role",property="role"),
+        @Result(column="account_status",property="accountStatus"),
+        @Result(column="invite_token",property="inviteToken"),
+        @Result(column="invite_expires_at",property="inviteExpiresAt"),
+        @Result(column="last_login_at",property="lastLoginAt"),
+        @Result(column="created_at",property="createdAt"),
+        @Result(column="updated_at",property="updatedAt"),
         @Result(column="branch_id",property="branch",javaType=Branch.class,one=@One(select="com.kiosk.domain.branch.BranchRepository.findById")),
         @Result(column="inviter_admin_id",property="inviterAdmin",javaType=Admin.class,one=@One(select="findById"))
     })

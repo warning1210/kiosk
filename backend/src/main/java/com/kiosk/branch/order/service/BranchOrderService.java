@@ -1,5 +1,6 @@
 package com.kiosk.branch.order.service;
 
+import com.kiosk.branch.dashboard.service.BranchEventPublisher;
 import com.kiosk.branch.order.dto.BranchOrderListResponse;
 import com.kiosk.branch.order.dto.OrderStatusUpdateRequest;
 import com.kiosk.branch.order.dto.BranchOrderDetailItemResponse;
@@ -32,6 +33,7 @@ public class BranchOrderService {
     private final PaymentRepository paymentRepository;
     private final OrderItemFlavorRepository orderItemFlavorRepository;
     private final PaymentService paymentService;
+    private final BranchEventPublisher branchEventPublisher;
 
     @Transactional(readOnly = true)
     public List<BranchOrderListResponse> getBranchOrders(
@@ -104,7 +106,15 @@ public class BranchOrderService {
         if (request.getStatus() == OrderStatus.CANCELLED) {
             order.setCancellationReason(request.getCancelReason());
         }
+        if (request.getStatus() == OrderStatus.COMPLETED) {
+            order.setOrderCompletedAt(LocalDateTime.now());
+        }
         order.setOrderStatus(request.getStatus());
+        // MyBatis는 JPA와 달리 트랜잭션 커밋 시 변경분을 자동 flush하지 않는다 - 명시적으로 저장해야
+        // DB에 실제로 반영된다 (이게 빠져 있으면 상태 변경 버튼을 눌러도 DB는 그대로였다).
+        orderRepository.update(order);
+
+        branchEventPublisher.publish(branchId, "order");
     }
 
     /**

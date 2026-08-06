@@ -1,5 +1,6 @@
 package com.kiosk.branch.order.service;
 
+import com.kiosk.branch.dashboard.service.BranchEventPublisher;
 import com.kiosk.domain.order.Order;
 import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.order.OrderStatus;
@@ -12,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -19,6 +22,7 @@ import java.util.List;
 public class OrderCleanupService {
 
     private final OrderRepository orderRepository;
+    private final BranchEventPublisher branchEventPublisher;
 
     /**
      * 자정부터 생성된 주문이 아니면서, 아직 처리가 완료되지 않은(PAID, MAKING, READY) 주문들을
@@ -40,6 +44,11 @@ public class OrderCleanupService {
                 log.info("자동 취소 처리된 주문 ID: {}", order.getOrderId());
             }
             orderRepository.saveAll(oldOrders);
+
+            Set<Long> affectedBranchIds = oldOrders.stream()
+                    .map(order -> order.getBranch().getBranchId())
+                    .collect(Collectors.toSet());
+            affectedBranchIds.forEach(branchId -> branchEventPublisher.publish(branchId, "order"));
         }
     }
 }

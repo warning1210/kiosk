@@ -12,6 +12,20 @@ public interface BranchApplicationRepository {
     String SELECT="SELECT branch_application_id,branch_name,manager_name,phone,email,address,business_number,invite_token,invite_expires_at,issued_by_admin_id,approval_status,rejection_reason,processed_admin_id,processed_at,approved_branch_id,applied_at,created_at,updated_at FROM branch_application ";
     @Results(id="applicationMap",value={
       @Result(column="branch_application_id",property="branchApplicationId",id=true),
+      @Result(column="branch_name",property="branchName"),
+      @Result(column="manager_name",property="managerName"),
+      @Result(column="phone",property="phone"),
+      @Result(column="email",property="email"),
+      @Result(column="address",property="address"),
+      @Result(column="business_number",property="businessNumber"),
+      @Result(column="invite_token",property="inviteToken"),
+      @Result(column="invite_expires_at",property="inviteExpiresAt"),
+      @Result(column="approval_status",property="approvalStatus"),
+      @Result(column="rejection_reason",property="rejectionReason"),
+      @Result(column="processed_at",property="processedAt"),
+      @Result(column="applied_at",property="appliedAt"),
+      @Result(column="created_at",property="createdAt"),
+      @Result(column="updated_at",property="updatedAt"),
       @Result(column="issued_by_admin_id",property="issuedByAdmin",javaType=Admin.class,one=@One(select="com.kiosk.domain.admin.AdminRepository.findById")),
       @Result(column="processed_admin_id",property="processedAdmin",javaType=Admin.class,one=@One(select="com.kiosk.domain.admin.AdminRepository.findById")),
       @Result(column="approved_branch_id",property="approvedBranch",javaType=Branch.class,one=@One(select="com.kiosk.domain.branch.BranchRepository.findById"))})

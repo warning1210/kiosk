@@ -1,5 +1,6 @@
 package com.kiosk.hq.notice.service;
 
+import com.kiosk.branch.dashboard.service.BranchEventPublisher;
 import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.notice.Notice;
 import com.kiosk.domain.notice.NoticeRepository;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class HqNoticeService {
 
     private final NoticeRepository noticeRepository;
+    private final BranchEventPublisher branchEventPublisher;
 
     @Transactional(readOnly = true)
     public List<HqNoticeResponse> list() {
@@ -43,7 +45,9 @@ public class HqNoticeService {
                 .authorAdmin(author)
                 .build();
 
-        return HqNoticeResponse.from(noticeRepository.save(notice));
+        HqNoticeResponse response = HqNoticeResponse.from(noticeRepository.save(notice));
+        branchEventPublisher.broadcast("notice");
+        return response;
     }
 
     public HqNoticeResponse update(Long noticeId, HqNoticeUpsertRequest request) {
@@ -62,6 +66,7 @@ public class HqNoticeService {
         notice.setImageUrl(request.imageUrl());
         notice.setStatus(parseStatus(request.status()));
         noticeRepository.update(notice);
+        branchEventPublisher.broadcast("notice");
         return HqNoticeResponse.from(notice);
     }
 

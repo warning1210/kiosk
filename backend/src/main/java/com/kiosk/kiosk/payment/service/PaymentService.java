@@ -11,6 +11,7 @@ import com.kiosk.domain.payment.Payment;
 import com.kiosk.domain.payment.PaymentMethod;
 import com.kiosk.domain.payment.PaymentRepository;
 import com.kiosk.domain.payment.PaymentStatus;
+import com.kiosk.branch.dashboard.service.BranchEventPublisher;
 import com.kiosk.branch.inventory.service.BranchInventoryService;
 import com.kiosk.kiosk.payment.dto.PaymentCheckoutResponse;
 import com.kiosk.kiosk.payment.dto.CashPaymentResponse;
@@ -37,6 +38,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final CouponRepository couponRepository;
     private final BranchInventoryService branchInventoryService;
+    private final BranchEventPublisher branchEventPublisher;
     private final TossPaymentGateway tossPaymentGateway;
     private final TossPaymentsProperties tossProperties;
 
@@ -255,6 +257,12 @@ public class PaymentService {
                 });
 
         branchInventoryService.deductForOrder(order);
+
+        // "order"는 목록 갱신용 범용 신호(상태변경/자동취소도 같이 씀), "newOrder"는 데스크톱 알림
+        // 전용 - 상태변경까지 "새 주문 왔어요"로 잘못 뜨는 걸 막기 위해 결제 확정 시점에만 따로 쏜다.
+        Long branchId = order.getBranch().getBranchId();
+        branchEventPublisher.publish(branchId, "order");
+        branchEventPublisher.publish(branchId, "newOrder");
     }
 
     private String resolveApprovalNumber(JsonNode tossPayment, String paymentKey) {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.kiosk.domain.flavor.FlavorRepository">
-  <resultMap id="flavorMap" type="com.kiosk.domain.flavor.Flavor"><id property="flavorId" column="flavor_id"/><association property="category" javaType="com.kiosk.domain.category.Category"><id property="categoryId" column="category_id"/><result property="categoryName" column="category_name"/></association></resultMap>
+  <resultMap id="flavorMap" type="com.kiosk.domain.flavor.Flavor"><id property="flavorId" column="flavor_id"/><result property="flavorName" column="flavor_name"/><result property="imageUrl" column="image_url"/><result property="description" column="description"/><result property="allergyInfo" column="allergy_info"/><result property="saleStatus" column="sale_status"/><result property="isVisible" column="is_visible"/><result property="createdAt" column="created_at"/><result property="updatedAt" column="updated_at"/><association property="category" javaType="com.kiosk.domain.category.Category"><id property="categoryId" column="category_id"/><result property="categoryName" column="category_name"/></association></resultMap>
   <sql id="base">SELECT f.*,c.category_name FROM flavor f LEFT JOIN category c ON c.category_id=f.category_id</sql>
   <select id="findAll" resultMap="flavorMap"><include refid="base"/> ORDER BY f.flavor_id</select>
   <select id="selectById" resultMap="flavorMap"><include refid="base"/> WHERE f.flavor_id=#{id}</select>
