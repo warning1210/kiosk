@@ -12,7 +12,9 @@ public interface BranchSalesMapper {
     Map<String,Object> findSummary(@Param("branchId") Long branchId);
     @Select("SELECT oif.flavor_name_snapshot label, SUM(oif.quantity) quantity FROM order_item_flavor oif JOIN order_item oi ON oi.order_item_id=oif.order_item_id JOIN `order` o ON o.order_id=oi.order_id WHERE o.branch_id=#{branchId} AND o.order_status IN ('PAID','MAKING','READY','COMPLETED') GROUP BY oif.flavor_name_snapshot ORDER BY quantity DESC LIMIT 10")
     List<Map<String,Object>> findFlavorSales(@Param("branchId") Long branchId);
-    @Select("SELECT oi.product_name_snapshot label, SUM(oi.quantity) quantity FROM order_item oi JOIN `order` o ON o.order_id=oi.order_id WHERE o.branch_id=#{branchId} AND o.order_status IN ('PAID','MAKING','READY','COMPLETED') GROUP BY oi.product_name_snapshot ORDER BY quantity DESC")
+    // requires_flavor_selection=1인 상품만 아이스크림 "사이즈"(싱글레귤러/싱글킹/.../하프갤런)다 -
+    // 커피 등 맛 선택이 없는 상품(product.requires_flavor_selection=0)은 사이즈 개념이 아니라서 제외한다.
+    @Select("SELECT oi.product_name_snapshot label, SUM(oi.quantity) quantity FROM order_item oi JOIN `order` o ON o.order_id=oi.order_id JOIN product p ON p.product_id=oi.product_id WHERE o.branch_id=#{branchId} AND o.order_status IN ('PAID','MAKING','READY','COMPLETED') AND p.requires_flavor_selection=1 GROUP BY oi.product_name_snapshot ORDER BY quantity DESC")
     List<Map<String,Object>> findSizeSales(@Param("branchId") Long branchId);
     @Select("SELECT CONCAT(LPAD(HOUR(created_at),2,'0'),'시') label, COUNT(*) quantity FROM `order` WHERE branch_id=#{branchId} AND order_status IN ('PAID','MAKING','READY','COMPLETED') GROUP BY CONCAT(LPAD(HOUR(created_at),2,'0'),'시') ORDER BY MIN(HOUR(created_at))")
     List<Map<String,Object>> findHourlySales(@Param("branchId") Long branchId);
