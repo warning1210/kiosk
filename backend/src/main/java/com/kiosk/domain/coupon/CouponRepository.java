@@ -12,7 +12,7 @@ public interface CouponRepository {
 
     List<Coupon> findAllByOrderByCouponIdDesc();
 
-    List<Coupon> findByCustomer_MobileNumberAndCouponStatus(String mobileNumber, CouponStatus couponStatus);
+    List<Coupon> findByCustomer_MobileNumberHashAndCouponStatus(String mobileNumberHash, CouponStatus couponStatus);
     Optional<Coupon> findById(Long id);
     List<Coupon> findAll();
     int insert(Coupon coupon);

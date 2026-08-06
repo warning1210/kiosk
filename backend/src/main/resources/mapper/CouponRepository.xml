@@ -4,15 +4,15 @@
   <resultMap id="coupon" type="com.kiosk.domain.coupon.Coupon">
     <id property="couponId" column="coupon_id"/>
     <association property="usedOrder" javaType="com.kiosk.domain.order.Order"><id property="orderId" column="used_order_id"/></association>
-    <association property="customer" javaType="com.kiosk.domain.customer.Customer"><id property="customerId" column="customer_id"/><result property="mobileNumber" column="mobile_number"/></association>
+    <association property="customer" javaType="com.kiosk.domain.customer.Customer"><id property="customerId" column="customer_id"/><result property="mobileNumberHash" column="mobile_number_hash"/><result property="mobileNumberEnc" column="mobile_number_enc"/></association>
   </resultMap>
-  <sql id="base">select c.*, cu.mobile_number from coupon c left join customer cu on cu.customer_id=c.customer_id</sql>
+  <sql id="base">select c.*, cu.mobile_number_hash, cu.mobile_number_enc from coupon c left join customer cu on cu.customer_id=c.customer_id</sql>
   <select id="findByQrToken" resultMap="coupon"><include refid="base"/> where c.qr_token=#{qrToken}</select>
   <select id="findByUsedOrder_OrderId" resultMap="coupon"><include refid="base"/> where c.used_order_id=#{orderId}</select>
   <select id="findAllByOrderByCouponIdDesc" resultMap="coupon"><include refid="base"/> order by c.coupon_id desc</select>
   <select id="findAll" resultMap="coupon"><include refid="base"/></select>
   <select id="findById" resultMap="coupon"><include refid="base"/> where c.coupon_id=#{id}</select>
-  <select id="findByCustomer_MobileNumberAndCouponStatus" resultMap="coupon"><include refid="base"/> where cu.mobile_number=#{mobileNumber} and c.coupon_status=#{couponStatus}</select>
+  <select id="findByCustomer_MobileNumberHashAndCouponStatus" resultMap="coupon"><include refid="base"/> where cu.mobile_number_hash=#{mobileNumberHash} and c.coupon_status=#{couponStatus}</select>
   <insert id="insert" useGeneratedKeys="true" keyProperty="couponId">insert into coupon(coupon_name,qr_token,discount_type,discount_rate,discount_amount,coupon_status,used_order_id,customer_id,event_id,expires_at) values(#{couponName},#{qrToken},#{discountType},#{discountRate},#{discountAmount},#{couponStatus},#{usedOrder.orderId},#{customer.customerId},#{event.eventId},#{expiresAt})</insert>
   <update id="update">update coupon set coupon_name=#{couponName}, qr_token=#{qrToken}, discount_type=#{discountType}, discount_rate=#{discountRate}, discount_amount=#{discountAmount}, coupon_status=#{couponStatus}, used_order_id=#{usedOrder.orderId}, customer_id=#{customer.customerId}, event_id=#{event.eventId}, expires_at=#{expiresAt} where coupon_id=#{couponId}</update>
 </mapper>

@@ -21,6 +21,7 @@ import com.kiosk.domain.order.OrderRepository;
 import com.kiosk.domain.order.OrderStatus;
 import com.kiosk.domain.product.Product;
 import com.kiosk.domain.product.ProductRepository;
+import com.kiosk.global.security.MobileNumberCrypto;
 import com.kiosk.kiosk.coupon.service.CouponValidationService;
 import com.kiosk.kiosk.event.service.KioskFlavorDiscountService;
 import com.kiosk.kiosk.order.dto.OrderCheckoutRequest;
@@ -48,6 +49,7 @@ public class OrderService {
         private final FlavorRepository flavorRepository;
         private final CustomerRepository customerRepository;
         private final CouponRepository couponRepository;
+        private final MobileNumberCrypto mobileNumberCrypto;
         private final CouponValidationService couponValidationService;
         private final KioskFlavorDiscountService kioskFlavorDiscountService;
 
@@ -65,10 +67,14 @@ public class OrderService {
 
                 Customer customer = null;
                 if (request.customerMobileNumber() != null && !request.customerMobileNumber().isBlank()) {
+                        String rawMobileNumber = request.customerMobileNumber();
+                        String mobileNumberHash = mobileNumberCrypto.hash(rawMobileNumber);
                         // 미등록 번호는 최하위 등급(FRIEND)·포인트 0으로 즉시 신규 가입시켜 이번 결제부터 적립 대상이 되게 함
-                        customer = customerRepository.findByMobileNumber(request.customerMobileNumber())
+                        customer = customerRepository.findByMobileNumberHash(mobileNumberHash)
                                         .orElseGet(() -> customerRepository.save(
-                                                        Customer.builder().mobileNumber(request.customerMobileNumber())
+                                                        Customer.builder()
+                                                                        .mobileNumberHash(mobileNumberHash)
+                                                                        .mobileNumberEnc(mobileNumberCrypto.encrypt(rawMobileNumber))
                                                                         .build()));
                 }
 

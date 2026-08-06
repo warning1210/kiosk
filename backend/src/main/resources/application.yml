@@ -94,3 +94,9 @@ toss:
 # 지점 및 본사 로그인 캡차의 서버 검증용 시크릿 키다.
 turnstile:
   secret-key: ${TURNSTILE_SECRET_KEY:}
+
+# 고객 전화번호를 평문으로 저장하지 않기 위한 해시(조회용)/암호화(저장용) 키다. 둘 다 32바이트 이상,
+# 서로 다른 값이어야 하며 기본값을 두지 않아 누락되면 서버가 기동을 중단한다.
+mobile-number:
+  hash-secret: ${MOBILE_NUMBER_HASH_SECRET:}
+  enc-secret: ${MOBILE_NUMBER_ENC_SECRET:}

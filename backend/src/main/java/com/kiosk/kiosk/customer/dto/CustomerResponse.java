@@ -12,10 +12,12 @@ public record CustomerResponse(
         List<CustomerCouponResponse> coupons
 ) {
 
-    public static CustomerResponse from(Customer customer, List<CustomerCouponResponse> coupons) {
+    // Customer는 이제 평문 전화번호를 안 들고 있다 - 조회에 성공했다는 건 호출자가 넘긴 mobileNumber가
+    // 이미 맞다는 뜻이라, DB 값을 복호화할 필요 없이 그 입력값을 그대로 돌려준다.
+    public static CustomerResponse from(Customer customer, String mobileNumber, List<CustomerCouponResponse> coupons) {
         return new CustomerResponse(
                 customer.getCustomerId(),
-                customer.getMobileNumber(),
+                mobileNumber,
                 customer.getPointBalance(),
                 customer.getGrade(),
                 coupons

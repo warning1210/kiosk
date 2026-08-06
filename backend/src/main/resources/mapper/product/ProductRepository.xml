@@ -3,6 +3,23 @@
 <mapper namespace="com.kiosk.domain.product.ProductRepository">
   <resultMap id="productMap" type="com.kiosk.domain.product.Product">
     <id property="productId" column="product_id"/>
+    <result property="productName" column="product_name"/>
+    <result property="basePrice" column="base_price"/>
+    <result property="imageUrl" column="image_url"/>
+    <result property="description" column="description"/>
+    <result property="requiresFlavorSelection" column="requires_flavor_selection"/>
+    <result property="selectableFlavorCount" column="selectable_flavor_count"/>
+    <result property="containerPolicy" column="container_policy"/>
+    <result property="isLarge" column="is_large"/>
+    <result property="isNew" column="is_new"/>
+    <result property="releaseDate" column="release_date"/>
+    <result property="saleStatus" column="sale_status"/>
+    <result property="isVisible" column="is_visible"/>
+    <result property="createdAt" column="created_at"/>
+    <result property="updatedAt" column="updated_at"/>
+    <!-- LEFT JOIN이라 category_id가 NULL인 상품(카테고리 미지정)에서는 이 association 컬럼들이 전부 NULL이 된다.
+         그 경우 나머지 필드(productName 등)를 자동매핑에만 맡기면 MyBatis가 값을 채우지 못해 null이 새서
+         Comparator.comparing(Product::getProductName)에서 NPE가 났다 - 그래서 전 컬럼을 명시적으로 매핑한다. -->
     <association property="category" javaType="com.kiosk.domain.category.Category">
       <id property="categoryId" column="category_id"/><result property="categoryName" column="category_name"/>
     </association>

@@ -16,7 +16,10 @@ public class Customer {
 
     private Long customerId;
 
-    private String mobileNumber;
+    // 전화번호는 평문으로 들고 있지 않는다 - hash는 조회 전용, enc는 필요할 때만 MobileNumberCrypto로 복호화하는 저장용.
+    private String mobileNumberHash;
+
+    private String mobileNumberEnc;
 
     @Builder.Default
     private Integer pointBalance = 0;

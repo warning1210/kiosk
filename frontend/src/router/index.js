@@ -30,6 +30,7 @@ import EventsView from '../views/branch/EventsView.vue'
 import NoticeDetailView from '../views/branch/NoticeDetailView.vue'
 import BranchProductView from '../views/branch/BranchProductView.vue'
 import { resetKioskLocale } from '../composables/useKioskI18n'
+import { resolveGuard } from './authGuard'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -86,17 +87,10 @@ const router = createRouter({
   ]
 })
 
-// 본점 주소를 직접 입력해도 본점 로그인 토큰이 없는 사용자는 로그인 화면으로 보낸다.
-router.beforeEach((to) => {
-  // /admin/login은 실제 공용 로그인 화면으로 이동시키는 경로이므로 검사 대상에서 제외한다.
-  if (!to.path.startsWith('/admin/') || to.path === '/admin/login') return true
-  // 본점 로그인 응답에 저장된 서명 토큰이 있는지 확인한다.
-  const session = JSON.parse(localStorage.getItem('hq-session') || 'null')
-  // 토큰이 있으면 요청한 본점 화면으로 정상 진입시킨다.
-  if (session?.token) return true
-  // 토큰이 없으면 공용 로그인 화면으로 이동시킨다.
-  return { path: '/branch/login', query: { redirect: to.fullPath } }
-})
+// 본사/지점 주소를 직접 입력해도 로그인 토큰이 없는 사용자는 로그인 화면으로 보낸다.
+router.beforeEach((to) =>
+  resolveGuard(to.path, to.fullPath, (key) => JSON.parse(localStorage.getItem(key) || 'null'))
+)
 
 // 주문 완료·취소·시간 초과 등 어떤 경로로든 광고 화면에 돌아오면
 // 다음 고객은 항상 한국어에서 새 주문을 시작합니다.

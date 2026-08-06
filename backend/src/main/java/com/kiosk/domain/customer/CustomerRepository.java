@@ -11,13 +11,14 @@ import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface CustomerRepository {
-    String COLUMNS = "customer_id, mobile_number, point_balance, grade, created_at, updated_at";
+    String COLUMNS = "customer_id, mobile_number_hash, mobile_number_enc, point_balance, grade, created_at, updated_at";
     @Select("SELECT " + COLUMNS + " FROM customer WHERE customer_id=#{id}") Optional<Customer> findById(Long id);
-    @Select("SELECT " + COLUMNS + " FROM customer WHERE mobile_number=#{mobileNumber}") Optional<Customer> findByMobileNumber(String mobileNumber);
+    // 평문 전화번호로는 조회할 수 없다 - 호출하는 쪽(Service)에서 MobileNumberCrypto.hash()로 변환한 값을 넘겨야 한다.
+    @Select("SELECT " + COLUMNS + " FROM customer WHERE mobile_number_hash=#{mobileNumberHash}") Optional<Customer> findByMobileNumberHash(String mobileNumberHash);
     @Select("SELECT " + COLUMNS + " FROM customer WHERE grade=#{grade} ORDER BY customer_id") List<Customer> findByGrade(CustomerGrade grade);
     @Select("SELECT " + COLUMNS + " FROM customer ORDER BY customer_id") List<Customer> findAll();
-    @Insert("INSERT INTO customer (mobile_number,point_balance,grade,created_at,updated_at) VALUES (#{mobileNumber},#{pointBalance},#{grade},#{createdAt},#{updatedAt})")
+    @Insert("INSERT INTO customer (mobile_number_hash,mobile_number_enc,point_balance,grade,created_at,updated_at) VALUES (#{mobileNumberHash},#{mobileNumberEnc},#{pointBalance},#{grade},#{createdAt},#{updatedAt})")
     @Options(useGeneratedKeys=true,keyProperty="customerId",keyColumn="customer_id") int insert(Customer customer);
-    @Update("UPDATE customer SET mobile_number=#{mobileNumber},point_balance=#{pointBalance},grade=#{grade},updated_at=#{updatedAt} WHERE customer_id=#{customerId}") int update(Customer customer);
+    @Update("UPDATE customer SET mobile_number_hash=#{mobileNumberHash},mobile_number_enc=#{mobileNumberEnc},point_balance=#{pointBalance},grade=#{grade},updated_at=#{updatedAt} WHERE customer_id=#{customerId}") int update(Customer customer);
     default Customer save(Customer customer) { LocalDateTime now=LocalDateTime.now(); customer.setUpdatedAt(now); if(customer.getCustomerId()==null){customer.setCreatedAt(now);insert(customer);}else update(customer); return customer; }
 }

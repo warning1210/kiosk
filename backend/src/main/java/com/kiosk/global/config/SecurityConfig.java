@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -39,10 +38,12 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> {})
-           //.csrf(csrf -> csrf.disable());
-            .csrf(csrf -> csrf
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                );
+            // 이 API는 쿠키 세션 인증이 아니라 각 컨트롤러가 Authorization 헤더 토큰을 직접 검증하는
+            // 방식이라(위 클래스 주석 참고) 브라우저가 자격증명을 자동으로 실어보내는 상황 자체가 없다 -
+            // CSRF가 막으려는 공격 시나리오가 애초에 성립하지 않는다. SpotBugs가 .csrf().disable()을
+            // 기계적으로 지적해서 켰다가, 프론트가 XSRF 토큰을 보낼 방법이 없어 모든 쓰기 요청이 403으로
+            // 막히는 회귀가 나서 되돌린다.
+            .csrf(csrf -> csrf.disable());
 
         return http.build();
     }
