@@ -9,6 +9,7 @@ import com.kiosk.domain.branch.BranchRepository;
 import com.kiosk.domain.branchapplication.ApprovalStatus;
 import com.kiosk.domain.branchapplication.BranchApplication;
 import com.kiosk.domain.branchapplication.BranchApplicationRepository;
+import com.kiosk.global.security.CrlfUtils;
 import com.kiosk.hq.branch.dto.HqBranchAccountResponse;
 import com.kiosk.hq.branch.mapper.HqBranchAccountMapper;
 import com.google.firebase.auth.AuthErrorCode;
@@ -212,7 +213,7 @@ public class HqBranchAccountService {
         if (FirebaseApp.getApps().isEmpty()) {
         	log.warn(
         		    "Firebase 사용자 삭제 실패: {}",
-        		    sanitizeForLog(email)
+        		    CrlfUtils.forLog(email)
         		);
             return;
         }
@@ -226,12 +227,4 @@ public class HqBranchAccountService {
         }
     }
 
-    private String sanitizeForLog(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        return value.replace("\r", "")
-                    .replace("\n", "");
-    }
 }

@@ -20,10 +20,12 @@ import com.kiosk.domain.branch.KioskStatus;
 import com.kiosk.domain.branch.OperationStatus;
 import com.kiosk.domain.branchapplication.BranchApplication;
 import com.kiosk.domain.branchapplication.BranchApplicationRepository;
+import com.kiosk.global.security.CrlfUtils;
 import com.kiosk.global.security.TurnstileVerifier;
 import java.time.LocalDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 // 본점은 이메일로 가입 초대 URL만 발급하고(BranchApplicationService.issueInvite),
 // 지점명/주소/지점장 정보/로그인 계정은 전부 지점이 join()할 때 직접 입력한다 (BR-018/HQ-017).
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class BranchAuthService {
@@ -154,7 +157,12 @@ public class BranchAuthService {
     @Transactional(readOnly = true)
     public LoginIdentityResponse loginIdentity(String loginId) {
         Admin admin = adminRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 아이디입니다."));
+                .orElseThrow(() -> {
+                    // 존재하지 않는 아이디 조회는 계정 탐색(enumeration) 시도일 수 있어 감사 로그로 남긴다.
+                    // loginId는 검증되지 않은 사용자 입력(PathVariable)이므로 CrlfUtils로 개행을 제거해 로그 위조를 막는다.
+                    log.warn("존재하지 않는 지점 로그인 아이디 조회 시도: loginId={}", CrlfUtils.forLog(loginId));
+                    return new IllegalArgumentException("등록되지 않은 아이디입니다.");
+                });
         if (admin.getRole() != AdminRole.BRANCH_MANAGER || admin.getAccountStatus() != AccountStatus.ACTIVE) {
             throw new IllegalArgumentException("사용할 수 없는 계정입니다.");
         }
