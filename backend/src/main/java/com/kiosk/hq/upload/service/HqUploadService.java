@@ -42,6 +42,7 @@ public class HqUploadService {
                     .toAbsolutePath()
                     .normalize();
 
+            // 파일이 없으면 생성
             Files.createDirectories(uploadPath);
 
             // UUID 기반 신규 파일명 생성
