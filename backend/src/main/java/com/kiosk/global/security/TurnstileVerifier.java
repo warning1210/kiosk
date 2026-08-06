@@ -1,6 +1,9 @@
 package com.kiosk.global.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -21,8 +24,15 @@ public class TurnstileVerifier {
 
     private static final String SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
+    // Turnstile 토큰은 Cloudflare 쪽에서 1회용이라, 두 번째 siteverify 호출은 항상 실패로 돌아온다.
+    // 프론트 로그인 화면은 "HQ 로그인 시도 -> 실패하면 같은 토큰으로 지점 로그인 폴백" 순서로 여러
+    // 엔드포인트를 시도하는데, 각 엔드포인트가 독립적으로 재검증하면 두 번째 시도부터는 사람인증을
+    // 이미 통과했음에도 항상 막힌다. 그래서 한 번 통과한 토큰은 짧은 시간 동안 재검증 없이 통과시킨다.
+    private static final Duration REUSE_WINDOW = Duration.ofSeconds(60);
+
     private final RestTemplate restTemplate;
     private final String secretKey;
+    private final ConcurrentHashMap<String, Instant> verifiedUntil = new ConcurrentHashMap<>();
 
     @Autowired
     public TurnstileVerifier(@Value("${turnstile.secret-key:}") String secretKey) {
@@ -43,6 +53,12 @@ public class TurnstileVerifier {
             throw new IllegalArgumentException("본인 인증을 먼저 완료해주세요.");
         }
 
+        verifiedUntil.entrySet().removeIf(e -> Instant.now().isAfter(e.getValue()));
+        Instant cached = verifiedUntil.get(token);
+        if (cached != null && Instant.now().isBefore(cached)) {
+            return;
+        }
+
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("secret", secretKey);
         form.add("response", token);
@@ -60,5 +76,7 @@ public class TurnstileVerifier {
         if (result == null || !result.path("success").asBoolean(false)) {
             throw new IllegalArgumentException("본인 인증에 실패했습니다. 다시 시도해주세요.");
         }
+
+        verifiedUntil.put(token, Instant.now().plus(REUSE_WINDOW));
     }
 }

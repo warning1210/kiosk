@@ -6,20 +6,18 @@
             본점 id/pw는 hadmin/hadmin1234 입니다!!
         </p><h2>로그인</h2><p>계정 정보를 입력하세요</p>
 <label>아이디 또는 이메일
-    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력" @focus="openKeypad('id')">
+    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력">
 </label>
-<VirtualKeypad v-if="activeKeypad === 'id'" v-model="loginId" @close="activeKeypad = null" />
 <label>비밀번호
-    <input v-model="password" required type="password" placeholder="비밀번호 입력" @focus="openKeypad('password')">
+    <input v-model="password" required type="password" placeholder="비밀번호 입력">
 </label>
-<VirtualKeypad v-if="activeKeypad === 'password'" v-model="password" @close="activeKeypad = null" />
 <div class="options">
     <label>
         <input v-model="remember" type="checkbox"> 로그인 상태 유지
     </label>
     <a href="#">ID / PW 찾기</a>  
 </div>
-    <div class="cf-turnstile" ref="turnstileEl"></div>
+    <div class="turnstile-box" ref="turnstileEl"></div>
     <button :disabled="!turnstileToken">로그인</button>
     <p v-if="error" class="error">{{ error }}</p>
     </form>
@@ -32,7 +30,6 @@ import{useRoute,useRouter}from'vue-router';
 import{setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword}from'firebase/auth';
 import{firebaseAuth}from'../../firebase';
 import http from'../../api/http';
-import VirtualKeypad from'../../components/common/VirtualKeypad.vue';
 
 const router = useRouter()
 // 로그인 전에 사용자가 열려고 했던 본점 주소를 확인하기 위해 현재 경로 정보를 받는다.
@@ -68,7 +65,7 @@ onMounted(() => {
   let script = document.querySelector('script[data-turnstile-api]')
   if (!script) {
     script = document.createElement('script')
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
     script.async = true
     script.defer = true
     script.dataset.turnstileApi = 'true'
@@ -80,12 +77,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (widgetId) window.turnstile?.remove(widgetId)
 })
-
-// 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
-// const activeKeypad = ref(null)
-// function openKeypad(name) {
-//   activeKeypad.value = name
-// }
 
 // 본사/지점 로그인 페이지를 하나로 합친 것 - 아이디가 본사 계정인지 지점 계정인지는
 // 미리 나누지 않고, 각 경로를 순서대로 시도해보고 "성공한 경로"로 role을 판단한다.
@@ -199,4 +190,4 @@ function firebaseMessage(code) {
     display:grid;
     place-items:center
     }
-form{width:min(440px,80%)}h2{margin:0;font-size:25px}form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}input:focus{border-color:#6266ef}.options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}.options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}.options a,.apply a{color:#5f64ee;text-decoration:none}form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}form>button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}.cf-turnstile{margin:13px 0 20px}.error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}.apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}@media(max-width:700px){.auth{grid-template-columns:1fr}.auth aside{display:none}}</style>
+form{width:min(440px,80%)}h2{margin:0;font-size:25px}form>p{margin:8px 0 28px;color:#8a94a1;font-size:11px}label{display:grid;gap:7px;margin-top:15px;font-size:10px;font-weight:800}input{padding:13px;border:1px solid #dfe3e9;border-radius:8px;outline:none}input:focus{border-color:#6266ef}.options{display:flex;align-items:center;justify-content:space-between;margin:13px 0 20px}.options label{display:flex;align-items:center;gap:6px;margin:0;color:#788391}.options a,.apply a{color:#5f64ee;text-decoration:none}form>button{width:100%;padding:13px;color:#fff;border:0;background:#6266ef;border-radius:8px;font-weight:800;box-shadow:0 8px 18px rgb(98 102 239/22%)}form>button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}.turnstile-box{margin:13px 0 20px}.error{padding:10px;color:#c52f47;background:#ffecef;border-radius:7px}.apply{text-align:center;margin-top:20px;color:#7f8995;font-size:10px}@media(max-width:700px){.auth{grid-template-columns:1fr}.auth aside{display:none}}</style>

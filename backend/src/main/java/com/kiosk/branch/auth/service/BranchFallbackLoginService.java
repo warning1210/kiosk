@@ -28,7 +28,7 @@ public class BranchFallbackLoginService {
     private final TurnstileVerifier turnstileVerifier;
 
     public DbLoginResponse login(DbLoginRequest request) {
-       // turnstileVerifier.verify(request.turnstileToken());
+        turnstileVerifier.verify(request.turnstileToken());
 
         Admin admin = adminRepository.findByLoginId(request.loginId())
                 .filter(a -> a.getRole() == AdminRole.BRANCH_MANAGER)

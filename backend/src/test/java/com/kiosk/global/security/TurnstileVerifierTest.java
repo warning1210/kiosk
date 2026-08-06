@@ -54,6 +54,19 @@ class TurnstileVerifierTest {
     }
 
     @Test
+    void verify_calledTwiceWithSameToken_secondCallSkipsCloudflare() {
+        server.expect(requestTo(SITEVERIFY_URL))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("{\"success\":true}", MediaType.APPLICATION_JSON));
+
+        TurnstileVerifier verifier = new TurnstileVerifier(restTemplate, "test-secret");
+        verifier.verify("reused-token");
+        verifier.verify("reused-token");
+
+        server.verify(); // 두 번째 verify()가 실제 요청을 또 보냈다면 기대한 요청 1개를 초과해 여기서 실패한다
+    }
+
+    @Test
     void verify_withBlankSecretKey_throwsIllegalState() {
         assertThatThrownBy(() -> new TurnstileVerifier(restTemplate, "").verify("some-token"))
                 .isInstanceOf(IllegalStateException.class);
