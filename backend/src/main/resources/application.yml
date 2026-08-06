@@ -2,6 +2,11 @@ server:
   port: 8080
 
 spring:
+  config:
+    # Local development secrets. The file is optional and excluded from Git.
+    # OS/container environment variables with the same names take precedence.
+    import: optional:file:./.env[.properties]
+
   application:
     name: kiosk-backend
 
@@ -13,7 +18,7 @@ spring:
 
     url: jdbc:mysql://${DB_HOST:3.35.218.189}:${DB_PORT:3307}/${DB_NAME:kiosk}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
     username: ${DB_USERNAME:kiosk}
-    password: ${DB_PASSWORD:kiosk6578}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   servlet:
