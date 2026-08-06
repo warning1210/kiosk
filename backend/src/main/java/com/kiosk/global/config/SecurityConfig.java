@@ -43,7 +43,9 @@ public class SecurityConfig {
             // CSRF가 막으려는 공격 시나리오가 애초에 성립하지 않는다. SpotBugs가 .csrf().disable()을
             // 기계적으로 지적해서 켰다가, 프론트가 XSRF 토큰을 보낼 방법이 없어 모든 쓰기 요청이 403으로
             // 막히는 회귀가 나서 되돌린다.
-            .csrf(csrf -> csrf.disable());
+            .csrf(csrf -> csrf
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                );
 
         return http.build();
     }

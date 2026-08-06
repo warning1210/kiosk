@@ -39,8 +39,13 @@ public class MobileNumberCrypto {
     ) {
         requireStrongSecret("MOBILE_NUMBER_HASH_SECRET", hashSecret);
         requireStrongSecret("MOBILE_NUMBER_ENC_SECRET", encSecret);
-        if (hashSecret.equals(encSecret)) {
-            throw new IllegalStateException("MOBILE_NUMBER_HASH_SECRET과 MOBILE_NUMBER_ENC_SECRET은 서로 다른 값이어야 합니다.");
+        if (MessageDigest.isEqual(
+                hashSecret.getBytes(StandardCharsets.UTF_8),
+                encSecret.getBytes(StandardCharsets.UTF_8)
+        )) {
+            throw new IllegalStateException(
+                "MOBILE_NUMBER_HASH_SECRET과 MOBILE_NUMBER_ENC_SECRET은 서로 다른 값이어야 합니다."
+            );
         }
         this.hmacKey = new SecretKeySpec(hashSecret.getBytes(StandardCharsets.UTF_8), HMAC_ALGO);
         // AES는 키 길이가 정확히 16/24/32바이트여야 해서, 임의 길이 시크릿 문자열을 SHA-256으로 정규화해 32바이트(AES-256) 키로 쓴다.

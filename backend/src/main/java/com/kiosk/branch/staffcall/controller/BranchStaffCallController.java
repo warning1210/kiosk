@@ -16,14 +16,14 @@ public class BranchStaffCallController {
 
     @GetMapping
     public StaffCallStatusResponse getStatus(
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+            @RequestHeader(value = "Authorization", required = true) String authorization) {
         Long branchId = branchAccessService.requireBranchId(authorization);
         return branchStaffCallService.getStatus(branchId);
     }
 
     @DeleteMapping
     public void acknowledge(
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+            @RequestHeader(value = "Authorization", required = true) String authorization) {
         Long branchId = branchAccessService.requireBranchId(authorization);
         branchStaffCallService.acknowledge(branchId);
     }
