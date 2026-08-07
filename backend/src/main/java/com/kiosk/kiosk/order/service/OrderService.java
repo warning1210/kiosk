@@ -49,7 +49,6 @@ public class OrderService {
         private final FlavorRepository flavorRepository;
         private final CustomerRepository customerRepository;
         private final CouponRepository couponRepository;
-        private final MobileNumberCrypto mobileNumberCrypto;
         private final CouponValidationService couponValidationService;
         private final KioskFlavorDiscountService kioskFlavorDiscountService;
 
@@ -68,7 +67,7 @@ public class OrderService {
                 Customer customer = null;
                 if (request.customerMobileNumber() != null && !request.customerMobileNumber().isBlank()) {
                         String rawMobileNumber = request.customerMobileNumber();
-                        String mobileNumberHash = mobileNumberCrypto.hash(rawMobileNumber);
+                        String mobileNumberHash = MobileNumberCrypto.hash(rawMobileNumber);
                         // 미등록 번호는 최하위 등급(FRIEND)·포인트 0으로 즉시 신규 가입시켜 이번 결제부터 적립 대상이 되게 함
                         customer = customerRepository.findByMobileNumberHash(mobileNumberHash)
                                         .orElseGet(() -> customerRepository.save(
