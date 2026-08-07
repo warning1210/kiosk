@@ -31,6 +31,12 @@
     </appender>
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
     </root>
+
+    <!-- com.kiosk 패키지 하위에서 개발자가 직접 작성한 로그만 파일에 저장합니다. -->
+    <!-- (프레임워크나 톰캣 등 외부 라이브러리 로그는 제외됨) -->
+    <logger name="com.kiosk" level="INFO">
+        <appender-ref ref="FILE"/>
+    </logger>
+
 </configuration>

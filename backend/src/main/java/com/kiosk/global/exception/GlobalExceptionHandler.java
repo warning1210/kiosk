@@ -19,8 +19,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException e) {
-        log.warn("잘못된 요청 처리 중 예외가 발생했습니다.", e);
-        return ResponseEntity.badRequest().body(Map.of("message", "잘못된 요청입니다."));
+        log.warn("잘못된 요청 처리 중 예외가 발생했습니다. 사유: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "잘못된 요청입니다."));
     }
 
     // @Valid 검증에 걸리면 Spring 기본 응답은 필드 오류가 잔뜩 담긴 큰 JSON이라 화면에 그대로 못 쓴다.
@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleConflict(IllegalStateException e) {
-        log.error("요청 상태 충돌 처리 중 예외가 발생했습니다.", e);
+        log.error("요청 상태 충돌 처리 중 예외가 발생했습니다. 사유: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "요청을 처리할 수 없습니다."));
     }
 
