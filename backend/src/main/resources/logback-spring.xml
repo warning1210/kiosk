@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   CRLF(로그 위조, CWE-117) 전역 방어 설정.
-
   로그 메시지(%m)에 들어 있는 개행 문자(\r, \n)를 공백으로 치환한다.
   호출 지점의 CrlfUtils.forLog() 와 함께 이중(2중)으로 막으며,
   이 설정은 우리 코드뿐 아니라 스프링/마이바티스 등 프레임워크 로그까지 모두 보호한다.
-
   참고: 파일명을 logback-spring.xml 로 두면 스프링부트가 이 설정을 자동으로 읽는다.
 -->
 <configuration>
-
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <charset>UTF-8</charset>
@@ -17,9 +14,23 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
         </encoder>
     </appender>
-
+    <property name="LOG_PATH" value="logs" />
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/application.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 매일 새로운 파일로 로그를 저장합니다. -->
+            <fileNamePattern>${LOG_PATH}/application-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 지난 30일 간의 로그만 보관합니다. -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <!-- 파일에 저장될 때도 동일한 보안 포맷(CRLF 방어)을 적용합니다. -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
+        </encoder>
+    </appender>
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
     </root>
-
 </configuration>

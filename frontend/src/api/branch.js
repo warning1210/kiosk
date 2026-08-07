@@ -27,4 +27,22 @@ api.interceptors.request.use(async (config) => {
     return config;
 });
 
+// 지점 토큰이 없거나 만료되어 서버가 401을 반환하면 잘못 남은 세션을 제거하고 로그인 화면으로 리다이렉트한다.
+api.interceptors.response.use(
+    (response) => response,
+    async (requestError) => {
+        if (requestError.response?.status === 401) {
+            localStorage.removeItem('branch-session');
+            // Firebase 세션도 로그아웃 시켜서 다시 로그인하도록 유도한다.
+            if (firebaseAuth.currentUser) {
+                await firebaseAuth.signOut();
+            }
+            if (window.location.pathname !== '/branch/login') {
+                window.location.replace('/branch/login');
+            }
+        }
+        return Promise.reject(requestError);
+    }
+);
+
 export default api;
