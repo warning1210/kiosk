@@ -54,7 +54,7 @@ public class BranchApplicationService {
         String base = frontendBaseUrl(origin);
         return applicationRepository.findAllByOrderByAppliedAtDesc().stream()
                 // 승인까지 끝난 가입은 초대 메일의 역할이 끝났으므로 발송 내역에서 제외한다.
-                .filter(application -> application.getApprovalStatus() != ApprovalStatus.APPROVED)
+                .filter(application -> application.getApprovalStatus() == ApprovalStatus.PENDING)
                 .map(a -> toResponse(a, inviteUrl(a, base)))
                 .toList();
     }

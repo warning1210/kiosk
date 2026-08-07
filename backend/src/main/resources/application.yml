@@ -52,11 +52,9 @@ mybatis:
 app:
   # 초대 이메일에 들어갈 프론트엔드 주소다.
   frontend:
-    base-url: ${APP_FRONTEND_URL:http://localhost:5173}
+    base-url: ${APP_FRONTEND_URL:https://icekiosk.shop}
 
-  # MAIL_ENABLED=true일 때만 실제 이메일을 발송한다.
   mail:
-    enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
 
   upload:
