@@ -29,6 +29,58 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
         </encoder>
     </appender>
+    <!-- 시스템 메세지 로그 (요청, 응답) -->
+    <appender name="SYSTEM_MSG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/system-msg.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/system-msg-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 접속정보 로그 (IP, URI, 지점명 등) -->
+    <appender name="ACCESS_INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/access-info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/access-info-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 지점 로그 (수정된 값 등) -->
+    <appender name="BRANCH_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/branch.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/branch-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 본점 로그 (입력/수정된 값 등) -->
+    <appender name="HQ_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/hq.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/hq-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n</pattern>
+        </encoder>
+    </appender>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
     </root>
@@ -37,6 +89,28 @@
     <!-- (프레임워크나 톰캣 등 외부 라이브러리 로그는 제외됨) -->
     <logger name="com.kiosk" level="INFO">
         <appender-ref ref="FILE"/>
+    </logger>
+
+    <!-- 목적별 커스텀 로거 -->
+    <!-- additivity="false"로 설정하여 루트 로거로 중복 출력되는 것을 방지합니다. -->
+    <logger name="SYSTEM_MSG" level="INFO" additivity="false">
+        <appender-ref ref="SYSTEM_MSG_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="ACCESS_INFO" level="INFO" additivity="false">
+        <appender-ref ref="ACCESS_INFO_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="BRANCH_LOG" level="INFO" additivity="false">
+        <appender-ref ref="BRANCH_LOG_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="HQ_LOG" level="INFO" additivity="false">
+        <appender-ref ref="HQ_LOG_FILE"/>
+        <appender-ref ref="CONSOLE"/>
     </logger>
 
 </configuration>

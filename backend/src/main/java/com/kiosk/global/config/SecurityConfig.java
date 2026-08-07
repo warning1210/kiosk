@@ -54,7 +54,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         List<String> originPatterns = new ArrayList<>(List.of(
-                "http://localhost:*", "http://127.0.0.1:*", "http://192.168.*.*:*", "http://10.*.*.*:*"));
+                "http://localhost:*", "http://127.0.0.1:*", "http://192.168.*.*:*", "http://10.*.*.*:*", "http://26.*.*.*:*"));
         originPatterns.addAll(PRIVATE_172_ORIGIN_PATTERNS);
 
         CorsConfiguration configuration = new CorsConfiguration();
