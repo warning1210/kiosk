@@ -23,10 +23,9 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final CouponRepository couponRepository;
-    private final MobileNumberCrypto mobileNumberCrypto;
 
     public CustomerResponse getByMobileNumber(String mobileNumber) {
-        String mobileNumberHash = mobileNumberCrypto.hash(mobileNumber);
+        String mobileNumberHash = MobileNumberCrypto.hash(mobileNumber);
         Customer customer = customerRepository.findByMobileNumberHash(mobileNumberHash)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "등록된 회원이 아닙니다."));
 
