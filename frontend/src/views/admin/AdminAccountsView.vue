@@ -312,10 +312,15 @@ async function review(application, approved) {
     const action = approved ? 'approve' : 'reject'
     // 서버가 Firebase와 DB 계정 상태를 함께 처리하도록 요청한다.
     const { data } = await http.post(`/hq/branch-applications/${application.applicationId}/${action}`, approved ? {} : { reason: reason.trim() })
-    // 수락이면 최신 결과를 반영하고, 반려이면 서버에서 삭제됐으므로 전체 목록만 갱신한다.
-    if (approved) Object.assign(application, data)
-    // 수락 계정 표시와 반려 데이터 제거를 위해 전체 목록을 다시 읽는다.
-    await load()
+    if (approved) {
+      Object.assign(application, data)
+      await load()
+    } else {
+      // 반려 API가 성공하면 재조회를 기다리지 않고 해당 신청을 화면에서 즉시 제거한다.
+      applications.value = applications.value.filter(
+        item => item.applicationId !== application.applicationId
+      )
+    }
   // 승인 또는 반려 처리에 실패한 경우다.
   } catch (requestError) {
     // 서버가 전달한 구체적인 오류가 있으면 우선 표시한다.

@@ -16,15 +16,18 @@ public class BranchInviteMailService {
 
     // 실제 SMTP 발송을 담당하는 Spring 객체다.
     private final JavaMailSender mailSender;
-    // 환경변수로 실제 발송 여부를 켜고 끈다.
-    private final boolean enabled;
     // 수신자에게 표시할 발신 이메일 주소다.
     private final String from;
 
     // 메일 발송에 필요한 설정값을 생성자로 받는다.
     public BranchInviteMailService(JavaMailSender mailSender,
-            @Value("${app.mail.enabled:false}") boolean enabled,
+            @Value("${spring.mail.username:}") String username,
+            @Value("${spring.mail.password:}") String password,
             @Value("${app.mail.from:}") String from) {
+        if (username == null || username.isBlank() || password == null || password.isBlank()) {
+            throw new IllegalStateException(
+                    "메일 발송 설정이 필수입니다. MAIL_USERNAME과 MAIL_APP_PASSWORD를 설정해주세요.");
+        }
         // Spring SMTP 발송기를 보관한다.
         this.mailSender = mailSender;
         // SMTP 서버가 응답하지 않을 때 API가 무기한 멈추지 않도록 모든 네트워크 단계에 제한시간을 둔다.
@@ -33,16 +36,12 @@ public class BranchInviteMailService {
             sender.getJavaMailProperties().putIfAbsent("mail.smtp.timeout", "10000");
             sender.getJavaMailProperties().putIfAbsent("mail.smtp.writetimeout", "10000");
         }
-        // 실제 발송 설정을 보관한다.
-        this.enabled = enabled;
         // 발신 이메일 주소를 보관한다.
         this.from = from;
     }
 
     // 예비 지점장에게 지점 개설 신청서 링크를 보낸다.
     public void sendInvite(String email, String inviteUrl) {
-        // 메일 기능을 끈 개발 환경에서는 발송을 건너뛴다.
-        if (!enabled) return;
         // 메일 앱에서 초대 링크가 버튼으로 분명하게 보이도록 HTML 메일을 만든다.
         MimeMessage message = mailSender.createMimeMessage();
         try {
@@ -104,8 +103,6 @@ public class BranchInviteMailService {
 
     // 신청 승인 또는 반려 결과를 지점장에게 알린다.
     public void sendResult(String email, boolean approved, String rejectionReason) {
-        // 메일 기능을 끈 환경에서는 결과 메일을 건너뛴다.
-        if (!enabled) return;
         // 결과 안내 메일 객체를 만든다.
         SimpleMailMessage message = new SimpleMailMessage();
         // 발신 주소가 설정된 경우에만 From 값을 넣는다.
