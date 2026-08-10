@@ -1,0 +1,27 @@
+# 의존성 취약점 자동 감지 (OWASP A03: Software Supply Chain Failures 대응).
+# GitHub가 매주 Maven/npm 의존성을 검사해 취약하거나 오래된 버전이 있으면 업데이트 PR을 열어준다.
+# 빌드 설정에는 영향이 없고, PR을 검토해서 머지할지 말지는 사람이 정한다.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    # 한 번에 PR이 쏟아지지 않도록 제한 - 밀리면 다음 주에 이어서 열린다.
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  # 배포 워크플로가 쓰는 GitHub Actions 자체도 버전이 고정돼 있어 같이 갱신 대상에 넣는다.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

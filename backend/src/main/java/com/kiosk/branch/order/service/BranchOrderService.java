@@ -41,8 +41,7 @@ public class BranchOrderService {
     @Transactional(readOnly = true)
     public List<BranchOrderListResponse> getBranchOrders(
             Long branchId, java.time.LocalDate date, boolean activeOnly) {
-        // 주문관리 화면은 2초마다 갱신된다. activeOnly 요청에서는 이미 끝난 수백 건을
-        // 매번 읽지 않고 현재 처리할 주문만 조회해 제조 시작 버튼의 응답 지연을 막는다.
+
         List<OrderStatus> statuses = activeOnly
                 ? List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.MAKING, OrderStatus.READY)
                 : List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.MAKING, OrderStatus.READY,

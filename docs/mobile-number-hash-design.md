@@ -146,6 +146,17 @@ public CustomerResponse getByMobileNumber(String mobileNumber) {
 - `mask_withWrongLength_throwsIllegalArgument`: 7자리 등 11자리가 아니면 즉시 예외
 - `mask_withNonDigits_throwsIllegalArgument`: `010-1234-5678`처럼 숫자가 아닌 문자가 섞이면 즉시 예외
 
+## 마이그레이션 이력 (HMAC → 키 없는 SHA-256 전환)
+
+해시 알고리즘을 HMAC-SHA256(키 있음)에서 키 없는 SHA-256으로 바꾸면서, 공유 DB(`3.35.218.189`)에 이미 저장돼 있던 기존 고객 9명의 `mobile_number_hash`가 예전 알고리즘으로 계산된 값이라 새 알고리즘과 더 이상 일치하지 않게 됐다. 해시는 일방향이라 예전 값에서 원본 전화번호를 복원할 방법이 없어(비밀키를 알아도 마찬가지), 기존 행을 새 알고리즘으로 다시 계산해 넣는 마이그레이션 자체가 불가능했다.
+
+그래서 다음과 같이 처리했다:
+1. `order.customer_id`, `coupon.customer_id`가 해당 9명을 참조하고 있어서 (둘 다 nullable) 먼저 `order.customer_id`를 NULL로 바꿔 주문 이력(51건)은 그대로 보존하고, 그 9명에게 발급됐던 쿠폰 10건은 삭제.
+2. 고객 9명 삭제.
+3. 테스트용 번호 `01012345678`(VIP, 5000P), `01041913461`(FAMILY, 8115P) 2명을 새 알고리즘으로 재생성 — 예전 1·2번 고객이 쓰던 마스킹 값(`010****5678`, `010****3461`)과 동일해서 원래 팀 테스트용 번호였던 것으로 보여 등급/포인트도 기존 값을 그대로 맞춰 넣었다.
+
+마이그레이션 과정에서 라이브 DB의 `customer` 테이블에 `01-schema.sql`엔 없는 **죽은 컬럼 `mobile_number`**(과거 버전의 잔재, NOT NULL, 코드 어디서도 참조 안 함)가 남아있어 INSERT가 막히는 걸 발견해서 `ALTER TABLE customer DROP COLUMN mobile_number`로 같이 제거했다.
+
 ## 한계 / 주의할 점
 
 - **키 없는 해시의 본질적 한계 (가장 중요)**: DB가 유출되면, 전화번호 전체 스페이스(`010` + 8자리 ≈ 1억 개)가 크지 않아 공격자가 오프라인으로 SHA-256을 1억 번 계산해서 `mobile_number_hash` 값 전부를 원본 전화번호로 역산할 수 있다(GPU 기준 수 초~수 분). 즉 "DB 덤프만으로는 전화번호를 못 얻는다"는 보장은 **없다** — 이 프로젝트 규모/목적상 감수하기로 한 트레이드오프다. 실사용 서비스로 확장한다면 HMAC(키 있는 해시)이나 Argon2/bcrypt 같은 느린 해시로 다시 바꿔야 한다.

@@ -9,3 +9,4 @@ frontend/dist/
 # STS 실행 설정에는 Gmail 앱 비밀번호가 들어갈 수 있으므로 Git에서 제외한다.
 backend/*.launch
 cookie/
+docs/

@@ -52,6 +52,11 @@ public class OrderService {
         private final CouponValidationService couponValidationService;
         private final KioskFlavorDiscountService kioskFlavorDiscountService;
 
+        // 한 주문에 담을 수 있는 상품 수 상한. 매장에서 실제로 나올 수 있는 수량보다 넉넉하지만,
+        // API를 직접 호출해 수천 건을 한 번에 밀어넣는 요청은 막는다 - 항목 하나마다 상품 조회와
+        // insert가 발생하므로 상한이 없으면 요청 하나로 DB를 오래 점유할 수 있다.
+        private static final int MAX_ITEMS_PER_ORDER = 50;
+
         private record ResolvedItem(Product product, OrderItemRequest request, int itemTotal) {
         }
 
@@ -59,6 +64,10 @@ public class OrderService {
         public OrderCheckoutResponse checkout(OrderCheckoutRequest request) {
                 if (request.items() == null || request.items().isEmpty()) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "장바구니가 비어있습니다.");
+                }
+                if (request.items().size() > MAX_ITEMS_PER_ORDER) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                        "한 번에 주문할 수 있는 상품은 " + MAX_ITEMS_PER_ORDER + "개까지입니다.");
                 }
 
                 Branch branch = branchRepository.findById(request.branchId())

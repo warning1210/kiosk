@@ -252,7 +252,7 @@ async function submitCancel() {
 }
 async function load() {
   try {
-    // 이 화면은 2초마다 조회하므로 완료/취소 이력 수백 건은 받지 않고 처리 중 주문만 요청한다.
+    // SSE 'order' 이벤트마다 다시 조회하므로 완료/취소 이력 수백 건은 받지 않고 처리 중 주문만 요청한다.
     orders.value = (await http.get('/orders?activeOnly=true')).data;
   } catch (e) {
     console.error(e);
