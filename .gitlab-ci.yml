@@ -70,6 +70,7 @@ deploy-backend:
       docker stop kiosk-backend || true &&
       docker rm kiosk-backend || true &&
       docker run -d --name kiosk-backend --restart unless-stopped -p 8080:8080
+      -v /home/ubuntu/kiosk-logs:/app/logs
       -e DB_HOST=$DB_HOST -e DB_PORT=$DB_PORT -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD
       $BACKEND_IMAGE"
     - echo "배포 끝. 테스트 다 하면 잊지 말고 stop -> aws ec2 stop-instances --instance-ids $BACKEND_INSTANCE_ID"
