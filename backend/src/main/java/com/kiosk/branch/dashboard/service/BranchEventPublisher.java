@@ -62,8 +62,12 @@ public class BranchEventPublisher {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name(eventName).data("update"));
-            } catch (IOException e) {
-                emitter.complete();
+            } catch (Exception e) {
+                try {
+                    emitter.complete();
+                } catch (Exception ignored) {
+                    // 톰캣 내부에서 이미 에러 상태로 처리된 경우 IllegalStateException이 발생할 수 있으므로 무시한다.
+                }
                 emitters.remove(emitter);
             }
         }

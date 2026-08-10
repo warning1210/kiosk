@@ -1,5 +1,21 @@
 server:
   port: 8080
+  # nginx 프록시를 거치면 getRemoteAddr()이 프록시(프론트 EC2) IP로 찍혀 레이트리밋이 전체
+  # 사용자를 한 버킷으로 묶는다. nginx가 넣어주는 X-Forwarded-For로 실제 클라이언트 IP를
+  # 복원한다. 백엔드 8080은 보안그룹상 프론트 EC2만 접근 가능하므로 이 헤더를 신뢰할 수 있다.
+  forward-headers-strategy: native
+  tomcat:
+    # 지정하지 않으면 액세스 로그가 임시 폴더에 생성돼 찾을 수 없다. 실행 위치 기준으로 고정.
+    basedir: .
+    # 요청 단위 추적 기록(누가 언제 무엇을 호출했는지). logback 파일 로그와 같은 logs/ 에 쌓인다.
+    accesslog:
+      enabled: true
+      directory: logs
+      prefix: access
+      suffix: .log
+      max-days: 30
+      encoding: UTF-8
+      pattern: "%{yyyy-MM-dd HH:mm:ss.SSS}t %a %r %s %b %Dms"
 
 spring:
   config:
@@ -52,11 +68,9 @@ mybatis:
 app:
   # 초대 이메일에 들어갈 프론트엔드 주소다.
   frontend:
-    base-url: ${APP_FRONTEND_URL:http://localhost:5173}
+    base-url: ${APP_FRONTEND_URL:https://icekiosk.shop}
 
-  # MAIL_ENABLED=true일 때만 실제 이메일을 발송한다.
   mail:
-    enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
 
   upload:

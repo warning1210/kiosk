@@ -1,5 +1,6 @@
 package com.kiosk.global.exception;
 
+import com.kiosk.global.security.CrlfUtils;
 import com.kiosk.kiosk.payment.toss.TossPaymentException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +20,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException e) {
-        log.warn("잘못된 요청 처리 중 예외가 발생했습니다.", e);
-        return ResponseEntity.badRequest().body(Map.of("message", "잘못된 요청입니다."));
+        // 예외 메시지에 외부 시스템 응답이나 사용자 입력이 이어붙는 경로가 있어 개행을 정제해 남긴다.
+        log.warn("잘못된 요청 처리 중 예외가 발생했습니다. 사유: {}", CrlfUtils.forLog(e.getMessage()));
+        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "잘못된 요청입니다."));
     }
 
     // @Valid 검증에 걸리면 Spring 기본 응답은 필드 오류가 잔뜩 담긴 큰 JSON이라 화면에 그대로 못 쓴다.
@@ -36,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleConflict(IllegalStateException e) {
-        log.error("요청 상태 충돌 처리 중 예외가 발생했습니다.", e);
+        log.error("요청 상태 충돌 처리 중 예외가 발생했습니다. 사유: {}", CrlfUtils.forLog(e.getMessage()));
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "요청을 처리할 수 없습니다."));
     }
 
@@ -48,21 +50,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TossPaymentException.class)
     public ResponseEntity<Map<String, String>> handleTossPayment(TossPaymentException e) {
 
-    	log.error(
-    		    "Toss payment failed. code={}",
-    		    sanitizeForLog(e.getTossErrorCode()),
-    		    e
-    		);
+        log.error("Toss payment failed. code={}", CrlfUtils.forLog(e.getTossErrorCode()), e);
 
         return ResponseEntity.status(e.getHttpStatus())
                 .body(Map.of("message", "결제 처리 중 오류가 발생했습니다."));
-    }
-    
-    private static String sanitizeForLog(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("\r", "")
-                    .replace("\n", "");
     }
 }
