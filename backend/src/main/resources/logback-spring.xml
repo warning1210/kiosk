@@ -39,4 +39,10 @@
         <appender-ref ref="FILE"/>
     </logger>
 
+    <!-- @Scheduled 작업에서 잡히지 않고 새어나온 예외는 스프링 기본 ErrorHandler가 이 로거로
+         출력하는데, root에는 FILE이 없어 콘솔에만 남는다. 스케줄 장애도 파일에 남도록 연결한다. -->
+    <logger name="org.springframework.scheduling.support" level="ERROR">
+        <appender-ref ref="FILE"/>
+    </logger>
+
 </configuration>
