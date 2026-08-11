@@ -113,7 +113,7 @@ onMounted(() => {
   let script = document.querySelector('script[data-turnstile-api]')
   if (!script) {
     script = document.createElement('script')
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
     script.async = true
     script.defer = true
     script.dataset.turnstileApi = 'true'

@@ -62,6 +62,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- 업로드 파일의 실제 바이너리 시그니처(매직바이트)를 검증하여 확장자 위조를 방지한다. -->
+        <dependency>
+            <groupId>com.j256.simplemagic</groupId>
+            <artifactId>simplemagic</artifactId>
+            <version>1.17</version>
+        </dependency>
+
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
