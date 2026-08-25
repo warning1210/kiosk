@@ -105,6 +105,15 @@
             border-left: 7px solid #dc2626;
         }
 
+        .section-header.a10 {
+            background: linear-gradient(135deg, #fce7f3, #fdf2f8);
+            border-left: 7px solid #ec4899;
+        }
+        
+        .badge-a10 {
+            background: #ec4899;
+        }
+
         .owasp-badge {
             display: inline-block;
             padding: 4px 14px;
@@ -2134,6 +2143,295 @@ if (updated.count() > MAX_ATTEMPTS) {
                 </div>
 
             </div>
+
+<!-- ===================== 10번 프론트엔드 보안 점검 ===================== -->
+<div class="section">
+
+    <div class="section-header a10">
+        <span class="owasp-badge badge-a10">A10:2025</span>
+        <h2>Vue 개발자 도구를 이용한 프론트엔드 보안 적용 사항 확인</h2>
+        <p class="subtitle">
+            Cloudflare Turnstile Site Key 환경변수 누락으로 인증 기능이 정상 동작하지 않았던 문제
+        </p>
+    </div>
+
+    <div class="section-body">
+
+        <div class="item">
+
+            <div class="item-title">
+                Cloudflare Turnstile Site Key 환경변수 누락 문제 확인 및 수정
+            </div>
+
+
+            <!-- ==================== 문제 상황 ==================== -->
+            <div class="story">
+                <div class="story-label">📖 이런 상황이 있었습니다</div>
+
+                <p>
+                    프론트엔드에 적용된 보안 기능이 실제 실행 환경에서도 정상적으로 동작하는지
+                    확인하기 위해 Vue 프로젝트를 실행하고
+                    <span class="hl-blue">브라우저 개발자 도구</span>를 이용하여 점검하였습니다.
+                </p>
+
+                <p>
+                    Console을 확인하는 과정에서
+                    <span class="hl-red">
+                        Cloudflare Turnstile의 Site Key가 정상적으로 전달되지 않는 문제
+                    </span>를 발견하였습니다.
+                </p>
+
+                <p>
+                    기존 코드에서는
+                    <code>import.meta.env.VITE_TURNSTILE_SITE_KEY</code>를 통해
+                    환경변수에 저장된 Site Key를 가져오도록 구현되어 있었지만,
+                    실제 프론트엔드 실행 환경에는
+                    <span class="hl-red">
+                        해당 환경변수가 제대로 설정되어 있지 않았습니다.
+                    </span>
+                </p>
+
+                <p>
+                    이로 인해 Turnstile 인증이 완료되지 않아
+                    <span class="hl-red">turnstileToken이 생성되지 않았으며</span>,
+                    결과적으로 지점 등록 버튼을 사용할 수 없는 문제가 발생하였습니다.
+                </p>
+            </div>
+
+
+            <!-- ==================== 흐름 ==================== -->
+            <div class="flow">
+
+                <div class="flow-item situation">
+                    <span class="step-label">📍 상황</span>
+                    Vue 프로젝트 실행 후 개발자 도구로 보안 기능 점검
+                </div>
+
+                <div class="flow-arrow">→</div>
+
+                <div class="flow-item problem">
+                    <span class="step-label">🚨 문제</span>
+                    Site Key 환경변수 누락으로 Turnstile 인증 실패
+                </div>
+
+                <div class="flow-arrow">→</div>
+
+                <div class="flow-item apply">
+                    <span class="step-label">🔧 적용</span>
+                    .env에 VITE_TURNSTILE _SITE_KEY 추가
+                </div>
+
+                <div class="flow-arrow">→</div>
+
+                <div class="flow-item result">
+                    <span class="step-label">✅ 결과</span>
+                    Turnstile 인증 성공 및 지점 등록 버튼 활성화
+                </div>
+
+            </div>
+
+
+            <!-- ==================== 적용 전 / 후 ==================== -->
+            <div class="compare">
+
+                <div class="compare-box before">
+                    <div class="compare-label">❌ 환경변수 설정 전</div>
+
+                    <pre>VITE_TURNSTILE_SITE_KEY 설정 없음
+
+↓
+
+Site Key가 정상적으로 전달되지 않음
+
+↓
+
+Turnstile 인증 실패
+
+↓
+
+turnstileToken 생성 안 됨
+
+↓
+
+지점 등록 버튼 비활성화</pre>
+                </div>
+
+
+                <div class="compare-box after">
+                    <div class="compare-label">✅ 환경변수 설정 후</div>
+
+                    <pre>.env 파일에
+VITE_TURNSTILE_SITE_KEY 추가
+
+↓
+
+Site Key 정상 전달
+
+↓
+
+Turnstile 인증 성공
+
+↓
+
+turnstileToken 정상 생성
+
+↓
+
+지점 등록 버튼 활성화</pre>
+                </div>
+
+            </div>
+
+
+            <!-- ==================== 해결 방법 ==================== -->
+            <div class="story">
+
+                <div class="story-label">🔧 어떻게 해결했는가?</div>
+
+                <p>
+                    해당 문제를 해결하기 위해 프론트엔드 프로젝트의
+                    <span class="hl-green">.env 파일</span>에
+                    <code>VITE_TURNSTILE_SITE_KEY</code> 환경변수를 추가하고
+                    Cloudflare에서 발급받은 Site Key를 설정하였습니다.
+                </p>
+
+                <p>
+                    이후 변경된 환경변수를 적용하기 위해
+                    <span class="hl-green">개발 서버를 다시 실행</span>하였으며,
+                    프론트엔드에서 Turnstile의 Site Key를 정상적으로
+                    불러올 수 있도록 수정하였습니다.
+                </p>
+
+            </div>
+
+
+            <!-- ==================== 환경변수 설정 화면 ==================== -->
+<div class="screenshot-single">
+    <div class="screenshot-item">
+
+        <div class="screenshot-label">
+            frontend/.env — Turnstile Site Key 환경변수 설정
+        </div>
+
+        <img src="image (10-3).png"
+             alt=".env 파일에 VITE_TURNSTILE_SITE_KEY 환경변수를 설정한 화면">
+
+    </div>
+</div>
+
+
+            <!-- ==================== 실제 확인 사진 ==================== -->
+            <div class="screenshot-row">
+
+                <!-- 설정 전 -->
+                <div class="screenshot-item">
+
+                    <div class="screenshot-label">
+                        환경변수 설정 전 — Turnstile 인증 불가 / 버튼 비활성화
+                    </div>
+
+                    <img src="image (10-1).png"
+                        alt="환경변수 설정 전 Turnstile 인증 불가 및 등록 버튼 비활성화 화면">
+
+                </div>
+
+
+                <!-- 설정 후 -->
+                <div class="screenshot-item">
+
+                    <div class="screenshot-label">
+                        환경변수 설정 후 — Turnstile 인증 성공 / 버튼 활성화
+                    </div>
+
+                    <img src="image (10-2).png"
+                        alt="환경변수 설정 후 Turnstile 인증 성공 및 등록 버튼 활성화 화면">
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================== 적용 결과 ==================== -->
+            <div class="story">
+
+                <div class="story-label">✅ 적용 결과</div>
+
+                <p>
+                    환경변수를 설정하고 개발 서버를 다시 실행한 결과,
+                    Turnstile 인증 화면에서
+                    <span class="hl-green">성공!</span>이 표시되는 것을 확인하였습니다.
+                </p>
+
+                <p>
+                    기존에 사용할 수 없었던
+                    <span class="hl-green">
+                        지점 등록 버튼도 정상적으로 활성화
+                    </span>되었습니다.
+                </p>
+
+                <p>
+                    이를 통해 환경변수 누락으로 정상적으로 동작하지 않았던
+                    Cloudflare Turnstile 인증 기능이 수정 후
+                    <span class="hl-green">
+                        실제 실행 환경에서도 정상적으로 작동하는 것을 확인
+                    </span>하였습니다.
+                </p>
+
+            </div>
+
+
+            <!-- ==================== 핵심 정리 ==================== -->
+            <div class="summary">
+
+                <div class="summary-title">
+                    💡 핵심 정리
+                </div>
+
+                <ul>
+
+                    <li>
+                        프론트엔드 보안 기능을 개발자 도구를 이용하여
+                        <span class="hl-blue">실제 실행 환경에서 점검</span>하였습니다.
+                    </li>
+
+                    <li>
+                        Turnstile 기능은 구현되어 있었지만
+                        <span class="hl-red">
+                            VITE_TURNSTILE_SITE_KEY 환경변수가 누락되어
+                            인증이 정상적으로 동작하지 않았습니다.
+                        </span>
+                    </li>
+
+                    <li>
+                        프론트엔드의 <code>.env</code> 파일에
+                        <span class="hl-green">
+                            VITE_TURNSTILE_SITE_KEY
+                        </span>를 추가하여 문제를 해결하였습니다.
+                    </li>
+
+                    <li>
+                        환경변수를 수정한 후에는
+                        <span class="hl-blue">
+                            개발 서버를 다시 실행하여 변경된 환경변수를 적용
+                        </span>하였습니다.
+                    </li>
+
+                    <li>
+                        수정 후 Turnstile의
+                        <span class="hl-green">
+                            인증 성공과 지점 등록 버튼 활성화를 직접 확인
+                        </span>하였습니다.
+                    </li>
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
