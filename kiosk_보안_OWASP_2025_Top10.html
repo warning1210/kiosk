@@ -419,6 +419,93 @@
             border: 1px solid #e2e8f0;
         }
 
+        .zoomable-image {
+            position: relative;
+            overflow: hidden;
+            border-radius: 6px;
+        }
+
+        .zoomable-image img {
+            cursor: zoom-in;
+            transition: filter 0.2s ease, transform 0.2s ease;
+        }
+
+        .zoomable-image:hover img {
+            filter: brightness(0.92);
+            transform: scale(1.01);
+        }
+
+        .image-zoom-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 50%;
+            color: #fff;
+            background: rgba(15, 23, 42, 0.82);
+            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.3);
+            cursor: zoom-in;
+            font-size: 1rem;
+        }
+
+        .image-zoom-button:hover {
+            background: #db2777;
+        }
+
+        .image-lightbox {
+            width: min(94vw, 1400px);
+            max-width: none;
+            max-height: 94vh;
+            padding: 48px 18px 18px;
+            border: 0;
+            border-radius: 14px;
+            background: #0f172a;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+        }
+
+        .image-lightbox::backdrop {
+            background: rgba(2, 6, 23, 0.82);
+            backdrop-filter: blur(3px);
+        }
+
+        .image-lightbox img {
+            display: block;
+            max-width: 100%;
+            max-height: calc(94vh - 92px);
+            margin: 0 auto;
+            object-fit: contain;
+            border-radius: 7px;
+        }
+
+        .image-lightbox-close {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 50%;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.14);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .image-lightbox-close:hover {
+            background: #db2777;
+        }
+
+        .image-lightbox-caption {
+            margin: 12px 0 0;
+            color: #e2e8f0;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
         .screenshot-label {
             font-weight: bold;
             font-size: 0.85em;
@@ -2526,12 +2613,59 @@ turnstileToken 정상 생성
                 </div>
             </div>
 
+            <dialog class="image-lightbox" id="imageLightbox" aria-label="확대한 이미지">
+                <button class="image-lightbox-close" type="button" aria-label="확대 화면 닫기">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+                <img src="" alt="">
+                <p class="image-lightbox-caption"></p>
+            </dialog>
+
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+            <script>
+                (() => {
+                    const lightbox = document.getElementById('imageLightbox');
+                    const enlargedImage = lightbox.querySelector('img');
+                    const caption = lightbox.querySelector('.image-lightbox-caption');
+                    const closeButton = lightbox.querySelector('.image-lightbox-close');
+
+                    const openLightbox = (image, label) => {
+                        enlargedImage.src = image.currentSrc || image.src;
+                        enlargedImage.alt = image.alt;
+                        caption.textContent = label;
+                        lightbox.showModal();
+                    };
+
+                    document.querySelectorAll('.screenshot-item img').forEach((image) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'zoomable-image';
+                        image.parentNode.insertBefore(wrapper, image);
+                        wrapper.appendChild(image);
+
+                        const label = wrapper.closest('.screenshot-item')
+                            ?.querySelector('.screenshot-label')?.textContent.trim() || image.alt;
+                        const zoomButton = document.createElement('button');
+                        zoomButton.type = 'button';
+                        zoomButton.className = 'image-zoom-button';
+                        zoomButton.setAttribute('aria-label', `${label} 크게 보기`);
+                        zoomButton.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>';
+                        wrapper.appendChild(zoomButton);
+
+                        image.addEventListener('click', () => openLightbox(image, label));
+                        zoomButton.addEventListener('click', () => openLightbox(image, label));
+                    });
+
+                    closeButton.addEventListener('click', () => lightbox.close());
+                    lightbox.addEventListener('click', (event) => {
+                        if (event.target === lightbox) lightbox.close();
+                    });
+                })();
+            </script>
 </body>
 
 </html>
