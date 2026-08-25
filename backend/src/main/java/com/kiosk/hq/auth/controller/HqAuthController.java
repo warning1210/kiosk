@@ -3,6 +3,7 @@ package com.kiosk.hq.auth.controller;
 import com.kiosk.hq.auth.dto.HqLoginRequest;
 import com.kiosk.hq.auth.dto.HqLoginResponse;
 import com.kiosk.hq.auth.service.HqAuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,7 +18,7 @@ public class HqAuthController {
     private final HqAuthService hqAuthService;
 
     @PostMapping("/login")
-    public HqLoginResponse login(@RequestBody HqLoginRequest request) {
-        return hqAuthService.login(request);
+    public HqLoginResponse login(@RequestBody HqLoginRequest request, HttpServletResponse response) {
+        return hqAuthService.login(request, response);
     }
 }

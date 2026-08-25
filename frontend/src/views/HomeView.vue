@@ -163,6 +163,11 @@ async function loginKiosk() {
     const session = { branchId: data.branchId, branchName: data.branchName }
     // 영업 종료로 INACTIVE였던 키오스크도 다음 등록 성공 시 다시 주문 가능한 상태로 연다.
     await http.patch('/kiosk/session/start', null, { params: { branchId: session.branchId } })
+    // DB 폴백 로그인은 성공 시 httpOnly 쿠키를 심는데, 이 기기는 손님이 만지는 키오스크라
+    // 관리자 세션이 남으면 안 된다. 쿠키는 JS가 못 지우므로 서버에 지워달라고 요청한다
+    // (같은 요청이 토큰 자체도 무효화하므로 복사해간 값도 못 쓰게 된다).
+    // Firebase 경로는 바로 위에서 signOut()으로 이미 정리했다.
+    try { await http.post('/auth/logout') } catch (e) { console.error('관리자 세션 정리 실패:', e) }
     setKioskSession(session)
     kioskSession.value = session
   } catch (e) {

@@ -10,13 +10,11 @@ const api = axios.create({
 
 // branchId는 URL로 받지 않고, 로그인된 토큰으로부터 서버가 직접 확인한다 (IDOR 방지)
 api.interceptors.request.use(async (config) => {
-    // Firebase 장애 시의 DB 폴백 로그인을 했다면 branch-session에 자체 서명 토큰이 같이 저장돼 있다 -
-    // 이 경우 Firebase는 아예 건드리지 않아야 폴백의 의미가 있다.
+    // Firebase 장애 시의 DB 폴백 로그인을 했다면 토큰이 httpOnly 쿠키에 들어있다 - JS는 그 값을
+    // 읽을 수 없고(읽히면 XSS로 유출되니까 그게 목적이다) 브라우저가 요청에 자동으로 실어 보낸다.
+    // 여기서 할 일은 Firebase를 건드리지 않고 그냥 통과시키는 것뿐이다.
     const session = JSON.parse(localStorage.getItem('branch-session') || 'null');
-    if (session?.token) {
-        config.headers.Authorization = `Bearer ${session.token}`;
-        return config;
-    }
+    if (session?.auth === 'cookie') return config;
 
     // 새로고침 직후에는 Firebase가 저장된 로그인 세션을 아직 복원하는 중이라
     // currentUser가 잠깐 null일 수 있다. authStateReady()로 그 복원이 끝날 때까지
@@ -27,7 +25,9 @@ api.interceptors.request.use(async (config) => {
     return config;
 });
 
-// 지점 토큰이 없거나 만료되어 서버가 401을 반환하면 잘못 남은 세션을 제거하고 로그인 화면으로 리다이렉트한다.
+// 지점 토큰이 없거나 만료(또는 로그아웃으로 무효화)되어 서버가 401을 반환하면
+// 잘못 남은 세션을 제거하고 로그인 화면으로 리다이렉트한다.
+// 쿠키 자체는 JS가 못 지우므로 서버가 /api/auth/logout에서 지운다.
 api.interceptors.response.use(
     (response) => response,
     async (requestError) => {

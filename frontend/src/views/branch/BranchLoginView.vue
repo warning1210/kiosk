@@ -6,13 +6,11 @@
             본점 id/pw는 hadmin/hadmin1234 입니다!!
         </p><h2>로그인</h2><p>계정 정보를 입력하세요</p>
 <label>아이디 또는 이메일
-    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력" @focus="openKeypad('id')">
+    <input v-model="loginId" required placeholder="아이디 또는 이메일 입력">
 </label>
-<VirtualKeypad v-if="activeKeypad === 'id'" v-model="loginId" @close="activeKeypad = null" />
 <label>비밀번호
-    <input v-model="password" required type="password" placeholder="비밀번호 입력" @focus="openKeypad('password')">
+    <input v-model="password" required type="password" placeholder="비밀번호 입력">
 </label>
-<VirtualKeypad v-if="activeKeypad === 'password'" v-model="password" @close="activeKeypad = null" />
 <div class="options">
     <label>
         <input v-model="remember" type="checkbox"> 로그인 상태 유지
@@ -32,7 +30,6 @@ import{useRoute,useRouter}from'vue-router';
 import{setPersistence,browserLocalPersistence,browserSessionPersistence,signInWithEmailAndPassword}from'firebase/auth';
 import{firebaseAuth}from'../../firebase';
 import http from'../../api/http';
-import VirtualKeypad from'../../components/common/VirtualKeypad.vue';
 
 const router = useRouter()
 // 로그인 전에 사용자가 열려고 했던 본점 주소를 확인하기 위해 현재 경로 정보를 받는다.
@@ -80,12 +77,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (widgetId) window.turnstile?.remove(widgetId)
 })
-
-// 아이디/비밀번호 중 어느 입력란에 가상 키패드를 띄울지 - 한 번에 하나만 연다.
-// const activeKeypad = ref(null)
-// function openKeypad(name) {
-//   activeKeypad.value = name
-// }
 
 // 본사/지점 로그인 페이지를 하나로 합친 것 - 아이디가 본사 계정인지 지점 계정인지는
 // 미리 나누지 않고, 각 경로를 순서대로 시도해보고 "성공한 경로"로 role을 판단한다.
@@ -146,18 +137,21 @@ async function loginWithFirebase() {
     idToken: await credential.user.getIdToken(true),
     turnstileToken: turnstileToken.value
   })
-  localStorage.setItem('branch-session', JSON.stringify(data))
+  // auth는 이 세션이 어느 경로로 인증되는지 표시하는 값이다 - 예전에는 token 유무로 구분했는데
+  // 토큰이 httpOnly 쿠키로 옮겨가면서 프론트에서 보이지 않게 됐다(api/branch.js에서 사용).
+  localStorage.setItem('branch-session', JSON.stringify({ ...data, auth: 'firebase' }))
   router.replace(branchRedirectTarget())
 }
 
-// Firebase 서버가 응답하지 않는 상황을 위한 폴백 - DB에 저장된 비밀번호 해시와 직접 대조한다
+// Firebase 서버가 응답하지 않는 상황을 위한 폴백 - DB에 저장된 비밀번호 해시와 직접 대조한다.
+// 토큰은 응답 본문에 없다 - 서버가 Set-Cookie(httpOnly)로 내려주고 브라우저가 알아서 보관한다.
 async function loginWithDb() {
   const { data } = await http.post('/branch-auth/db-login', {
     loginId: loginId.value,
     password: password.value,
     turnstileToken: turnstileToken.value
   })
-  localStorage.setItem('branch-session', JSON.stringify(data))
+  localStorage.setItem('branch-session', JSON.stringify({ ...data, auth: 'cookie' }))
   router.replace(branchRedirectTarget())
 }
 

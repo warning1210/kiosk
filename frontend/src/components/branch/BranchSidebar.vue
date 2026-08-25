@@ -72,6 +72,9 @@ async function sendPresence(){
 async function logout(){
   if(loggingOut.value)return
   loggingOut.value=true
+  // 폴백 로그인 토큰은 서버에서 세대를 올려야 죽는다. baseURL이 /api/branch라 이 요청만 /api로 되돌린다.
+  // Firebase 로그인 상태면 토큰 형식이 달라 서버가 조용히 무시하므로 그냥 같이 호출한다.
+  try{await http.post('/auth/logout',null,{baseURL:'/api'})}catch(error){console.error('토큰 무효화 실패:',error)}
   try{await signOut(firebaseAuth)}catch(error){console.error('Firebase 로그아웃 실패:',error)}finally{
     localStorage.removeItem('branch-session')
     await router.replace('/branch/login')

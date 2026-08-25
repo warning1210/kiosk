@@ -3,6 +3,7 @@ package com.kiosk.branch.auth.controller;
 import com.kiosk.branch.auth.dto.DbLoginRequest;
 import com.kiosk.branch.auth.dto.DbLoginResponse;
 import com.kiosk.branch.auth.service.BranchFallbackLoginService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +19,7 @@ public class BranchFallbackLoginController {
     private final BranchFallbackLoginService branchFallbackLoginService;
 
     @PostMapping("/db-login")
-    public DbLoginResponse dbLogin(@RequestBody DbLoginRequest request) {
-        return branchFallbackLoginService.login(request);
+    public DbLoginResponse dbLogin(@RequestBody DbLoginRequest request, HttpServletResponse response) {
+        return branchFallbackLoginService.login(request, response);
     }
 }

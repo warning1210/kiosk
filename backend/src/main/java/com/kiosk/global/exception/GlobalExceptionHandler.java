@@ -55,4 +55,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(e.getHttpStatus())
                 .body(Map.of("message", "결제 처리 중 오류가 발생했습니다."));
     }
+
+    // 위 핸들러들이 못 잡는 예외(버그, 프레임워크 오류 등)는 그동안 스택트레이스가 어디에도
+    // 안 남고 메시지 없는 500으로만 새어나갔다 - 원인 파악이 불가능했다. 최소한 파일 로그에는 남긴다.
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleUnexpected(Exception e) {
+        log.error("예상하지 못한 예외가 발생했습니다.", e);
+        return ResponseEntity.internalServerError().body(Map.of("message", "서버 오류가 발생했습니다."));
+    }
 }

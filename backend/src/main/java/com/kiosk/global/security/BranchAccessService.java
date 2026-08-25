@@ -48,6 +48,20 @@ public class BranchAccessService {
         return admin;
     }
 
+    // SSE 스트림 전용 - issueStreamTicket()이 만든 짧은 티켓만 받는다. 계정 상태 검증은
+    // requireAdminById()를 그대로 재사용해 일반 로그인 경로와 동일한 규칙을 적용한다.
+    @Transactional
+    public Long requireBranchIdForStream(String ticket) {
+        Long adminId = adminTokenService.verifyStreamTicket(ticket);
+        if (adminId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        Admin admin = requireAdminById(adminId);
+        admin.getBranch().setKioskLastAccessAt(LocalDateTime.now());
+        branchRepository.save(admin.getBranch());
+        return admin.getBranch().getBranchId();
+    }
+
     private Admin requireAdminById(Long adminId) {
         return adminRepository.findById(adminId)
                 .filter(a -> a.getRole() == AdminRole.BRANCH_MANAGER)

@@ -22,6 +22,8 @@ public class HqAccessService {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
         }
+        // 로그아웃으로 무효화된 토큰도 여기서 null이 되어 401로 나간다 - 403이면 프론트
+        // 인터셉터(hq.js)가 남은 세션을 안 지워서 화면이 오류만 반복한다.
         Long adminId = adminTokenService.verify(authorization.substring(7));
         if (adminId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 정보가 유효하지 않습니다.");

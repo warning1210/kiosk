@@ -48,7 +48,10 @@ async function loadUnreadCount() {
     console.error(error)
   }
 }
-function logout() {
+async function logout() {
+  // 서버에서 토큰 세대를 올려야 실제로 무효화된다 - localStorage만 지우면 복사해둔 토큰이 계속 통한다.
+  // 네트워크 실패로 무효화를 못 해도 로그아웃 자체는 진행한다.
+  try { await http.post('/auth/logout') } catch (error) { console.error('토큰 무효화 실패:', error) }
   localStorage.removeItem('hq-session')
   router.replace('/branch/login')
 }

@@ -76,6 +76,11 @@ app:
   upload:
     dir: uploads
 
+  # 로그인 토큰을 담는 httpOnly 쿠키에 Secure 플래그를 붙일지. HTTPS(ALB/CloudFront 등)가
+  # 앞단에 붙는 순간 COOKIE_SECURE=true로 켠다 - 지금 nginx는 80만 열려 있어서 true로 두면
+  # 브라우저가 쿠키를 아예 전송하지 않아 모든 로그인이 막힌다.
+  cookie-secure: ${COOKIE_SECURE:false}
+
 # 관리자 토큰 HMAC 서명 키다. 운영 환경별로 서로 다른 32바이트 이상의 무작위 값을 사용한다.
 # 기본값을 두지 않아 키가 누락된 서버는 안전하게 기동을 중단한다.
 hq:

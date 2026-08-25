@@ -7,7 +7,9 @@ import com.kiosk.domain.admin.Admin;
 import com.kiosk.domain.admin.AdminRepository;
 import com.kiosk.domain.admin.AdminRole;
 import com.kiosk.global.security.AdminTokenService;
+import com.kiosk.global.security.AuthCookie;
 import com.kiosk.global.security.TurnstileVerifier;
+import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,8 +28,10 @@ public class BranchFallbackLoginService {
     private final PasswordEncoder passwordEncoder;
     private final AdminTokenService adminTokenService;
     private final TurnstileVerifier turnstileVerifier;
+    private final AuthCookie authCookie;
 
-    public DbLoginResponse login(DbLoginRequest request) {
+    // 발급한 토큰은 응답 본문이 아니라 httpOnly 쿠키로 내려간다(AuthCookie 참고).
+    public DbLoginResponse login(DbLoginRequest request, HttpServletResponse response) {
         turnstileVerifier.verify(request.turnstileToken());
 
         Admin admin = adminRepository.findByLoginId(request.loginId())
@@ -40,9 +44,9 @@ public class BranchFallbackLoginService {
         admin.setLastLoginAt(LocalDateTime.now());
         adminRepository.save(admin);
 
-        String token = adminTokenService.issue(admin.getAdminId());
-        return new DbLoginResponse(admin.getAdminId(), admin.getBranch().getBranchId(), admin.getBranch().getBranchName(),
-                admin.getName(), token);
+        authCookie.set(response, adminTokenService.issue(admin.getAdminId()));
+        return new DbLoginResponse(admin.getAdminId(), admin.getBranch().getBranchId(),
+                admin.getBranch().getBranchName(), admin.getName());
     }
 
     // 이 변경 이전에 가입한 계정은 passwordHash에 "FIREBASE$"+uid 마커만 있어 BCrypt 형식이 아니므로

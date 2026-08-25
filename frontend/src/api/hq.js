@@ -5,12 +5,9 @@ const api = axios.create({
   timeout: 10000
 })
 
-// 본점은 Firebase 대신 자체 로그인 토큰(HqAccessService가 검증)을 쓴다.
-api.interceptors.request.use((config) => {
-  const session = JSON.parse(localStorage.getItem('hq-session') || 'null')
-  if (session?.token) config.headers.Authorization = `Bearer ${session.token}`
-  return config
-})
+// 본점 토큰은 httpOnly 쿠키에 들어있어서 JS가 붙일 일이 없다 - 같은 출처라 브라우저가 요청마다
+// 자동으로 실어 보내고, 서버는 AuthCookieFilter가 그 쿠키를 Authorization 헤더로 바꿔준다.
+// (요청 인터셉터를 아예 두지 않는 이유: 예전에 여기서 하던 일이 그것 하나뿐이었다.)
 
 // 본점 토큰이 없거나 만료되어 서버가 401을 반환하면 잘못 남은 세션을 제거한다.
 api.interceptors.response.use(
