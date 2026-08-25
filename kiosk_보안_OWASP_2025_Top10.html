@@ -203,6 +203,25 @@
             border-left: 4px solid #64748b;
         }
 
+        .term-note {
+            margin: -12px 0 20px 18px;
+            padding-left: 12px;
+            border-left: 2px solid #cbd5e1;
+            color: #64748b;
+            font-size: 0.78em;
+            line-height: 1.65;
+        }
+
+        .term-note::before {
+            content: "↳ ";
+            color: #db2777;
+            font-weight: 800;
+        }
+
+        .term-note strong {
+            color: #334155;
+        }
+
         /* ── 스토리 박스 (핵심) ── */
         .story {
             background: #fffbeb;
@@ -773,6 +792,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
             <div class="section-body">
                 <div class="item">
                     <div class="item-title">① 허용된 출처에서만 API 응답을 읽을 수 있도록 CORS 접근을 제한</div>
+                    <div class="term-note"><strong>CORS(Cross-Origin Resource Sharing)</strong>: 다른 출처(Origin)의 자원을 공유할 수 있는지를 정하는 브라우저 정책 · <strong>Origin</strong>: 프로토콜, 도메인, 포트를 합친 출처 정보</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
@@ -829,6 +849,7 @@ configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code
                 <hr class="divider">
                 <div class="item">
                     <div class="item-title">② Nginx 보안 헤더를 설정해 브라우저의 기본 보안 방어선을 강화</div>
+                    <div class="term-note"><strong>CSP</strong>: 브라우저가 불러오거나 실행할 수 있는 리소스 출처를 제한하는 정책 · <strong>MIME / nosniff</strong>: 파일 형식을 명시하고 브라우저의 임의 형식 추측을 차단</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>프론트엔드 배포 설정을 확인하던 중 Nginx가 화면과 API를 정상적으로 전달하기만 할 뿐, 브라우저에 <span class="hl-red">어떤 콘텐츠를 실행해도 되는지 알려주는 보안 헤더</span>는 보내지 않고 있다는 것을 발견했습니다. 이 상태에서는 다른 사이트가 관리자 화면을 투명한 프레임 안에 숨겨 버튼을 누르게 하거나, 브라우저가 파일 형식을 잘못 추측해 실행할 위험이 있었습니다.</p>
@@ -1420,6 +1441,7 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
             <div class="section-body">
                 <div class="item">
                     <div class="item-title">① MyBatis 파라미터 바인딩을 사용해 상품 번호가 SQL 문장으로 직접 실행되지 않도록 방지</div>
+                    <div class="term-note"><strong>파라미터 바인딩</strong>: 외부 입력을 SQL에 직접 붙이지 않고 <code>?</code>의 값으로 분리해 전달하는 방식 · <strong>Prepared Statement</strong>: SQL 구조를 먼저 고정하고 값을 나중에 바인딩하는 쿼리 실행 방식</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>아이스크림 키오스크에서 상품 번호를 입력하면 데이터베이스에서 해당 상품의 재고를 찾는 기능을 만들었습니다. 처음에는 화면에서 받은 번호를 MyBatis의 <code>${itemId}</code>로 SQL 문장에 바로 붙이는 방식을 생각했습니다.</p>
@@ -1504,6 +1526,7 @@ Parameter: "x' OR '1'='1"
                 <hr class="divider">
                 <div class="item">
                     <div class="item-title">② CRLF 문자를 정규화해 로그인 ID로 가짜 로그 줄을 생성하지 못하도록 방지</div>
+                    <div class="term-note"><strong>CRLF</strong>: CR(<code>\r</code>, 커서를 줄 앞으로 이동)과 LF(<code>\n</code>, 다음 줄로 이동)를 합친 줄바꿈 문자 · 로그에 남으면 공격자가 새로운 기록 한 줄을 위조할 수 있음</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>관리자 로그인에 실패하면 입력한 아이디를 로그에 남겨 나중에 확인할 수 있도록 했습니다. 그런데 아이디에 줄바꿈 문자인 <code>\r\n</code>과 함께 “관리자 로그인 성공”이라는 문장을 넣어 보니, 로그 파일에는 <span class="hl-red">새로운 성공 로그 한 줄처럼</span> 기록될 수 있었습니다. 실제로는 실패한 요청인데도 관리자가 정상 로그인한 것처럼 보이는 문제였습니다.</p>
