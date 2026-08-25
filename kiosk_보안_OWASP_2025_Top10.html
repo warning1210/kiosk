@@ -1402,6 +1402,12 @@ Parameter: "x' OR '1'='1"
 공격 문자열이 SQL 본문에 없음
 → 명령이 아닌 값으로 바인딩</pre></div>
                     </div>
+                    <div class="screenshot-single">
+                        <div class="screenshot-item">
+                            <div class="screenshot-label">📷 MyBatis 파라미터 바인딩 테스트 — 1/1 통과, Errors 0, Failures 0</div>
+                            <img src="image (A05-MyBatis-test).png" alt="Eclipse JUnit에서 MyBatis SQL 인젝션 방어 테스트 1개가 통과한 화면">
+                        </div>
+                    </div>
                     <div class="summary"><div class="summary-title">💡 핵심 정리</div><ul>
                         <li><span class="hl-red"><code>${}</code></span>는 문자열 치환이므로 외부 입력에 사용하지 않습니다</li>
                         <li><span class="hl-green"><code>#{}</code></span>는 SQL 구조와 값을 분리해 인젝션을 차단합니다</li>
@@ -1447,6 +1453,12 @@ CRLF가 남으면 성공 로그처럼
 CR(\r): 없음
 LF(\n): 없음
 null 입력: 안전하게 null 반환</pre></div>
+                    </div>
+                    <div class="screenshot-single">
+                        <div class="screenshot-item">
+                            <div class="screenshot-label">📷 CRLF 로그 위조 방어 테스트 — 3/3 통과, Errors 0, Failures 0</div>
+                            <img src="image (A05-CRLF-test).png" alt="Eclipse JUnit에서 CRLF 로그 위조 방어 테스트 3개가 통과한 화면">
+                        </div>
                     </div>
                     <div class="summary"><div class="summary-title">💡 핵심 정리</div><ul>
                         <li>SQL 인젝션과 로그 인젝션은 모두 <span class="hl-blue">입력이 명령 구조를 바꾼다</span>는 공통점이 있습니다</li>
@@ -1587,7 +1599,7 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                     <div class="item-title">② 결제 게이트웨이 검증 없이 완료 처리하던 <code>POST /{qrToken}/confirm</code> 시뮬레이션 엔드포인트를 제거</div>
 
                     <div class="story">
-                        <div class="story-label">📍 이런 상황이 있었습니다</div>
+                        <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
                             원래는 결제가 정상적으로 완료되어 주문이 처리됐는지 <span class="hl-yellow">QR 토큰으로 확인</span>할 수 있도록 만든 API였습니다.
                             그런데 이 엔드포인트는 실제 결제 게이트웨이(Toss) 검증을 거치지 않고, <span class="hl-red">호출만 되면 그 자리에서 결제를 승인 처리</span>하고
@@ -1704,7 +1716,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                     <div class="item-title">① IP 기준으로 요청 횟수를 제한해 로그인 사전 대입(dictionary attack)을 차단</div>
 
                     <div class="story">
-                        <div class="story-label">📍 이런 상황이 있었습니다</div>
+                        <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
                             로그인 부분을 점검하던 중, <span class="hl-red">요청 횟수 제한이 전혀 걸려 있지 않다</span>는 것을 발견했습니다.
                             공격자가 <code>loginId</code>를 사전(dictionary) 방식으로 순차 대입하면 <span class="hl-red">429 차단 없이 무제한으로 시도</span>가
@@ -1856,7 +1868,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                     <div class="item-title">② Cloudflare Turnstile을 적용해 사람과 로봇(자동화 프로그램)의 로그인 요청을 구분</div>
 
                     <div class="story">
-                        <div class="story-label">📍 이런 상황이 있었습니다</div>
+                        <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
                             로그인 화면은 <code>loginId</code>/<code>password</code>가 맞는지만 검증하고 있었습니다.
                             공격자가 <span class="hl-red">자동으로 URL에 접근하는 프로그램</span>을 만들면, 서버 입장에서는 이 요청이
