@@ -925,6 +925,22 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> config.xml — ❌ 적용 전 (비밀값이 하드코딩되어 Git에 올라감)</div>
+                        <pre><code class="language-xml">&lt;!-- 데이터베이스 및 API 설정 --&gt;
+&lt;configuration&gt;
+    &lt;database&gt;
+        &lt;host&gt;kiosk-db.example.com&lt;/host&gt;
+        &lt;user&gt;admin&lt;/user&gt;
+        &lt;password&gt;SuperSecretPass123!&lt;/password&gt; &lt;!-- 해커에게 노출됨 --&gt;
+    &lt;/database&gt;
+    &lt;api&gt;
+        &lt;toss-secret-key&gt;test_sk_OEP59LybZ8Bdv6A1xv...&lt;/toss-secret-key&gt;
+    &lt;/api&gt;
+&lt;/configuration&gt;</code></pre>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
                                 class="dot dot-g"></span> .env.example — Git에 올라가는 파일 (실제 값 없음)</div>
                         <pre><code class="language-bash"># 이 파일에는 실제 비밀값을 입력하지 않습니다.
 # 팀원은 이 파일을 .env로 복사한 뒤 실제 값을 입력하세요.
@@ -982,6 +998,26 @@ HQ_TOKEN_SECRET=replace-with-at-least-32-random-bytes</code></pre>
                         <div class="flow-arrow">→</div>
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>코드에 비밀값 없음 / 해킹당해도 피해 최소화
                         </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> .gitlab-ci.yml — ❌ 적용 전 (AWS 관리자 키, 서버 비밀번호 하드코딩)</div>
+                        <pre><code class="language-yaml"># 🚨 누구나 볼 수 있는 코드에 중요 키가 그대로 노출됨
+# 🚨 심지어 AWS 계정의 모든 권한을 가진 어드민(Admin) 키를 사용 중
+
+deploy-backend:
+  variables:
+    AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE"       # ← AWS 관리자 키 하드코딩
+    AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG..."
+    DB_PASSWORD: "SuperSecretPassword!"             # ← DB 비밀번호 노출
+  script:
+    # SSH 키 파일 자체를 코드 저장소에 함께 올려서 사용 중인 상태
+    - chmod 400 ./server-key.pem 
+    - ssh -i ./server-key.pem ubuntu@192.168.1.50 "
+        docker run -d --name kiosk-backend
+        -e DB_PASSWORD=$DB_PASSWORD
+        kiosk/backend:latest"</code></pre>
                     </div>
 
                     <div class="code-block">
