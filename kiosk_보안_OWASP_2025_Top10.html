@@ -2307,6 +2307,16 @@ async function login() {
     &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n&lt;/pattern&gt;
 &lt;/encoder&gt;</code></pre>
                             </div>
+
+                            <div class="summary">
+                                <div class="summary-title">💡 핵심 정리</div>
+                                <ul>
+                                    <li><span class="hl-red">CRLF 로그 위조</span> = 입력값에 줄바꿈(<code>\r\n</code>)을 넣어 <span class="hl-red">없던 로그 줄을 지어내는</span> 공격</li>
+                                    <li>로그는 <span class="hl-blue">한 줄이 하나의 기록</span>이라, 줄을 늘리면 그대로 가짜 기록이 됩니다</li>
+                                    <li><span class="hl-green">logback 설정 한 곳</span>에서 전체 로그의 줄바꿈을 공백으로 치환 → 코드를 고치지 않아도 <span class="hl-green">모든 로그에 자동 적용</span></li>
+                                    <li>공격을 시도해도 로그가 <span class="hl-green">항상 한 줄로만 출력</span>되어 가짜 기록을 만들 수 없음</li>
+                                </ul>
+                            </div>
                         </div>
 
                         <hr class="divider">
