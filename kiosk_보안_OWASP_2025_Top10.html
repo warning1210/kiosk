@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>보안 적용 사례 — OWASP 2025 기준</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
         * {
             box-sizing: border-box;
@@ -113,6 +114,15 @@
         .section-header.a07 {
             background: linear-gradient(135deg, #fee2e2, #fef2f2);
             border-left: 7px solid #dc2626;
+        }
+
+        .section-header.a10 {
+            background: linear-gradient(135deg, #fce7f3, #fdf2f8);
+            border-left: 7px solid #ec4899;
+        }
+
+        .badge-a10 {
+            background: #ec4899;
         }
 
         .owasp-badge {
@@ -407,56 +417,6 @@
             display: block;
             border-radius: 6px;
             border: 1px solid #e2e8f0;
-            cursor: zoom-in;
-            transition: opacity 0.15s ease;
-        }
-
-        .screenshot-item img:hover {
-            opacity: 0.9;
-        }
-
-        /* ── 이미지 확대 보기(라이트박스) ── */
-        .lightbox-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 15, 25, 0.88);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            cursor: zoom-out;
-        }
-
-        .lightbox-overlay.open {
-            display: flex;
-        }
-
-        .lightbox-overlay img {
-            max-width: 100%;
-            max-height: 100%;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            cursor: default;
-        }
-
-        .lightbox-close {
-            position: fixed;
-            top: 24px;
-            right: 32px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            color: #fff;
-            border: none;
-            font-size: 1.4em;
-            line-height: 1;
-            cursor: pointer;
-        }
-
-        .lightbox-close:hover {
-            background: rgba(255, 255, 255, 0.22);
         }
 
         .screenshot-label {
@@ -585,7 +545,7 @@
         <!-- 타이틀 -->
         <div class="page-title">
             <div class="year-badge">OWASP Top 10 · 2025 기준</div>
-            <h1>🔐 보안 적용 사례 발표</h1>
+            <h1><i class="fa-solid fa-unlock-keyhole" aria-hidden="true"></i> 보안 적용 사례 발표</h1>
             <p>아이스크림 프랜차이즈 키오스크 프로젝트에서 실제로 발생할 수 있는 보안 문제와, 우리가 코드로 해결한 방법을 소개합니다.</p>
         </div>
 
@@ -615,7 +575,7 @@
                             매출·재고·주문을 열람할 수 있었습니다. 점장 본인이 다시 로그인해도, 브라우저를 밀어도 막을 방법이 없었습니다.
                         </p>
                         <p>
-                            그래서 관리자 계정마다 <span class="hl-green">토큰 세대(version) 번호</span>를 두고, 토큰에 발급 당시의 세대를 함께 서명해 넣었습니다.
+                            그래서 관리자 계정마다 <span class="hl-green">토큰 버전 번호</span>를 두고, 토큰에 발급 당시의 버전을 함께 서명해 넣었습니다.
                             로그아웃하면 서버가 그 계정의 세대를 <span class="hl-green">+1</span> 하고, 이후 들어오는 요청의 토큰 세대가 다르면 서명이 멀쩡해도 거부합니다.
                             결과적으로 <span class="hl-green">로그아웃 한 번으로 그 계정의 기존 토큰이 전부 즉시 무효화</span>됩니다.
                         </p>
@@ -642,7 +602,7 @@
 
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 해결 — AdminTokenService.java (세대 카운터)</div>
-                        <pre><code class="language-java">// adminId -&gt; 현재 토큰 세대. 없으면 0세대.
+                        <pre><code class="language-java">// adminId -&gt; 현재 토큰 버전. 없으면 0버전.
 private final Map&lt;Long, Integer&gt; tokenVersions = new ConcurrentHashMap&lt;&gt;();
 
 /** 이 관리자에게 발급된 모든 토큰을 즉시 무효화한다(로그아웃, 탈취 대응). */
@@ -651,11 +611,11 @@ public void revokeAll(Long adminId) {
 }
 
 public String issue(Long adminId) {
-    // 발급 당시의 세대를 payload에 함께 넣어 서명한다 → 값을 되돌리면 서명이 깨진다
+    // 발급 당시의 버전을 payload에 함께 넣어 서명한다 → 값을 되돌리면 서명이 깨진다
     return sealed(adminId + ":" + currentVersion(adminId) + ":" + expiresIn(VALID_DURATION));
 }
 
-// 검증할 때: 서명 확인 → 만료 확인 → 세대 대조
+// 검증할 때: 서명 확인 → 만료 확인 → 버전 대조
 if (Integer.parseInt(parts[offset + 1]) != currentVersion(adminId)) return null;</code></pre>
                     </div>
 
@@ -668,7 +628,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
     if (authorization == null || !authorization.startsWith("Bearer ")) return;
 
     Long adminId = adminTokenService.verify(authorization.substring(7));
-    if (adminId != null) adminTokenService.revokeAll(adminId);   // 세대 +1
+    if (adminId != null) adminTokenService.revokeAll(adminId);   // 버전 +1
 }</code></pre>
                     </div>
 
@@ -701,7 +661,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                         <div class="summary-title">💡 핵심 정리</div>
                         <ul>
                             <li>로그아웃은 <span class="hl-red">브라우저에서 지우는 것</span>이 아니라 <span class="hl-green">서버에서 무효화하는 것</span>이어야 합니다</li>
-                            <li>세대 번호도 <span class="hl-green">서명 대상</span>이라, 공격자가 값을 되돌리면 서명이 깨져 거부됩니다</li>
+                            <li>버전 번호도 <span class="hl-green">서명 대상</span>이라, 공격자가 값을 되돌리면 서명이 깨져 거부됩니다</li>
                             <li>한 사람의 로그아웃이 <span class="hl-blue">다른 관리자 토큰에는 영향을 주지 않습니다</span> (계정별 카운터)</li>
                             <li>인증 경로가 이미 매 요청 계정을 조회하고 있어 <span class="hl-blue">추가 비용이 사실상 없습니다</span></li>
                         </ul>
@@ -709,7 +669,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
 
                     <div class="improve">
                         <div class="improve-title">⚠️ 알고 있는 한계</div>
-                        <p>세대 카운터를 서버 메모리에 두었기 때문에 <strong>서버를 재시작하면 무효화 상태가 초기화</strong>됩니다. DB 컬럼으로 옮기면 재시작에도 유지되지만, 팀이 공유하는 개발 DB에 스키마 변경이 필요해 이번에는 메모리 방식을 선택했습니다.</p>
+                        <p>버전 카운터를 서버 메모리에 두었기 때문에 <strong>서버를 재시작하면 무효화 상태가 초기화</strong>됩니다. DB 컬럼으로 옮기면 재시작에도 유지되지만, 팀이 공유하는 개발 DB에 스키마 변경이 필요해 이번에는 메모리 방식을 선택했습니다.</p>
                     </div>
                 </div>
 
@@ -1413,6 +1373,35 @@ Optional&lt;Customer&gt; findById(@Param("id") Long id);
 
 // #{id} → JDBC PreparedStatement의 ? 파라미터
 // 입력값은 SQL 문자열에 직접 합쳐지지 않는다.</code></pre></div>
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> MyBatisParameterBindingSecurityTest.java — SQL 인젝션 방어 테스트</div>
+                        <pre><code class="language-java">@Test
+void treatsAnInjectionPayloadAsAParameterInsteadOfSql() {
+    String attack = "x' OR '1'='1";
+    Configuration configuration = new Configuration();
+    configuration.addMapper(CustomerRepository.class);
+
+    MappedStatement statement = configuration.getMappedStatement(
+        CustomerRepository.class.getName() + ".findByMobileNumberHash");
+    BoundSql boundSql = statement.getBoundSql(attack);
+
+    assertThat(boundSql.getSql())
+        .contains("mobile_number_hash=?")
+        .doesNotContain(attack);
+    assertThat(boundSql.getParameterObject()).isEqualTo(attack);
+}</code></pre>
+                    </div>
+                    <div class="compare">
+                        <div class="compare-box before"><div class="compare-label">🧪 공격 입력</div><pre>x' OR '1'='1
+
+문자열 치환이면 SQL 구조를
+바꾸는 조건으로 실행될 수 있음</pre></div>
+                        <div class="compare-box after"><div class="compare-label">✅ 실제 테스트 결과 — PASS</div><pre>SQL: mobile_number_hash = ?
+Parameter: "x' OR '1'='1"
+
+공격 문자열이 SQL 본문에 없음
+→ 명령이 아닌 값으로 바인딩</pre></div>
+                    </div>
                     <div class="summary"><div class="summary-title">💡 핵심 정리</div><ul>
                         <li><span class="hl-red"><code>${}</code></span>는 문자열 치환이므로 외부 입력에 사용하지 않습니다</li>
                         <li><span class="hl-green"><code>#{}</code></span>는 SQL 구조와 값을 분리해 인젝션을 차단합니다</li>
@@ -1434,11 +1423,41 @@ Optional&lt;Customer&gt; findById(@Param("id") Long id);
 }
 
 log.warn("login failed: {}", CrlfUtils.forLog(loginId));</code></pre></div>
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> CrlfUtilsTest.java — 가짜 로그 줄 생성 차단 테스트</div>
+                        <pre><code class="language-java">@Test
+void removesCrLfSoAnAttackerCannotCreateAFakeLogLine() {
+    String attack = "admin\r\nINFO administrator login succeeded";
+
+    String sanitized = CrlfUtils.forLog(attack);
+
+    assertThat(sanitized)
+        .isEqualTo("adminINFO administrator login succeeded")
+        .doesNotContain("\r", "\n");
+}</code></pre>
+                    </div>
+                    <div class="compare">
+                        <div class="compare-box before"><div class="compare-label">🧪 공격 입력</div><pre>admin\r\n
+INFO administrator login succeeded
+
+CRLF가 남으면 성공 로그처럼
+새로운 한 줄을 만들 수 있음</pre></div>
+                        <div class="compare-box after"><div class="compare-label">✅ 실제 테스트 결과 — 3 PASS</div><pre>adminINFO administrator login succeeded
+
+CR(\r): 없음
+LF(\n): 없음
+null 입력: 안전하게 null 반환</pre></div>
+                    </div>
                     <div class="summary"><div class="summary-title">💡 핵심 정리</div><ul>
                         <li>SQL 인젝션과 로그 인젝션은 모두 <span class="hl-blue">입력이 명령 구조를 바꾼다</span>는 공통점이 있습니다</li>
                         <li>SQL은 바인딩하고, 로그는 구조를 바꾸는 CR·LF를 제거합니다</li>
                         <li>공통 유틸과 전역 logback 설정을 함께 사용해 누락 가능성을 줄였습니다</li>
                     </ul></div>
+                    <div class="improve">
+                        <div class="improve-title">✅ A05 전용 테스트 실행 결과</div>
+                        <p><strong>총 4개 통과:</strong> MyBatis 파라미터 바인딩 1개, CRLF 제거·단독 개행·null 처리 3개가 모두 PASS했습니다.</p>
+                        <p><strong>한계:</strong> MyBatis 테스트는 DB 없이 생성된 SQL과 파라미터 분리를 확인합니다. 실제 MySQL 결과 행까지 증명하려면 Testcontainers 통합 테스트를 추가할 수 있습니다.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1447,7 +1466,7 @@ log.warn("login failed: {}", CrlfUtils.forLog(loginId));</code></pre></div>
         <div class="section">
             <div class="section-header insecure-design">
                 <span class="owasp-badge badge-insecure-design">A06:2025</span>
-                <h2>안전하지 않은 설계 (Insecure Design)</h2>
+                <h2>안전하지 않은 설계 (Insecure Design) — 위험한 유형의 파일 무제한 업로드 (CWE-434)</h2>
                 <p class="subtitle">파일 확장자 문자열만 확인하는 설계로는, 확장자만 위장한 악성 파일 업로드를 막을 수 없는 문제</p>
             </div>
             <div class="section-body">
@@ -1457,11 +1476,21 @@ log.warn("login failed: {}", CrlfUtils.forLog(loginId));</code></pre></div>
                     <div class="item-title">① 파일 시그니처(매직바이트)를 검증해 확장자를 위장한 파일 업로드를 차단</div>
 
                     <div class="story">
-                        <div class="story-label">📍 이런 상황이 있었습니다</div>
+                        <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
                             본사 관리자 페이지에는 상품 사진을 <span class="hl-yellow">PNG, JPG</span> 파일로 올리는 기능이 있습니다.
                             해당 기능을 점검하던 중, 허용되지 않는 확장자의 파일을 업로드하려고 하면 서버가 막긴 하지만
-                            <span class="hl-red">파일의 확장자만 허용된 확장자(.png 등)로 바꿔서 다시 올리면 그대로 업로드된다</span>는 문제를 발견되었습니다.
+                            <span class="hl-red">파일의 확장자만 허용된 확장자(.png 등)로 바꿔서 다시 올리면 그대로 업로드된다</span>는 문제를 발견했습니다.
+                        </p>
+                        <p>
+                            원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
+                            파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
+                            검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태였습니다.
+                        </p>
+                        <p>
+                            그래서 확장자 검사에 더해, <span class="hl-green">파일의 실제 바이너리 시그니처(매직바이트)</span>를 읽어 진짜 파일 형식을 판별하는
+                            검증 단계를 추가했습니다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
+                            없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>합니다.
                         </p>
                     </div>
 
@@ -1475,15 +1504,6 @@ log.warn("login failed: {}", CrlfUtils.forLog(loginId));</code></pre></div>
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>확장자를 위장해도 실제 내용이 다르면 즉시 차단</div>
                     </div>
 
-                    <div class="story">
-                        <div class="story-label">🚨 문제점 분석</div>
-                        <p>
-                            원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
-                            파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
-                            검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태입니다.
-                        </p>
-                    </div>
-
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 — HqUploadService.java (확장자만 검사)</div>
                         <pre><code class="language-java">private static final Set&lt;String&gt; ALLOWED_EXTENSIONS = Set.of("png", "jpg", "jpeg");
@@ -1495,15 +1515,6 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
     throw new IllegalArgumentException("PNG, JPG, JPEG 파일만 업로드할 수 있습니다.");
 }
 // → 여기서 바로 저장. 파일명 확장자만 보고 있어 확장자만 바꾼 위장 파일을 걸러내지 못함</code></pre>
-                    </div>
-
-                    <div class="story">
-                        <div class="story-label">🔧 적용 사항</div>
-                        <p>
-                            확장자 검사에 더해, <span class="hl-green">파일의 실제 바이너리 시그니처(매직바이트)</span>를 읽어 진짜 파일 형식을 판별하는
-                            검증 단계를 추가했습니다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
-                            없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>합니다.
-                        </p>
                     </div>
 
                     <div class="screenshot-row">
@@ -1582,6 +1593,16 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                             그런데 이 엔드포인트는 실제 결제 게이트웨이(Toss) 검증을 거치지 않고, <span class="hl-red">호출만 되면 그 자리에서 결제를 승인 처리</span>하고
                             있었습니다.
                         </p>
+                        <p>
+                            즉 <span class="hl-red">공격자가 개발자 도구로 이 엔드포인트를 직접 호출</span>하면, 결제창을 띄우지 않고도
+                            <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
+                            <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
+                        </p>
+                        <p>
+                            그래서 게이트웨이 검증 없이 <code>"SIM-"</code> 승인번호로 바로 완료 처리하던 시뮬레이션 경로 자체를 <span class="hl-green">완전히 삭제</span>했습니다.
+                            실제 카드결제 승인은 Toss 검증을 거치는 <span class="hl-green">confirmWithToss()</span> 경로로만 이뤄지며,
+                            결제가 완료되면 <span class="hl-green">그 qrToken은 더 이상 쓸 수 없게</span> 됩니다.
+                        </p>
                     </div>
 
                     <div class="flow">
@@ -1592,20 +1613,6 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                         <div class="flow-item apply"><span class="step-label">🔧 적용</span>시뮬레이션 confirm 라우트·메서드 완전 삭제</div>
                         <div class="flow-arrow">→</div>
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>qrToken만으로는 결제를 흉내낼 수 없음</div>
-                    </div>
-
-                    <div class="story">
-                        <div class="story-label">🚨 문제 분석</div>
-                        <p>
-                            <span class="hl-red">공격자가 개발자 도구로 이 엔드포인트를 직접 호출</span>하면, 결제창을 띄우지 않고도
-                            <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
-                            <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
-                        </p>
-                        <p>
-                            그래서 게이트웨이 검증 없이 <code>"SIM-"</code> 승인번호로 바로 완료 처리하던 시뮬레이션 경로 자체를 <span class="hl-green">완전히 삭제</span>했습니다.
-                            실제 카드결제 승인은 Toss 검증을 거치는 <span class="hl-green">confirmWithToss()</span> 경로로만 이뤄지며,
-                            결제가 완료되면 <span class="hl-green">그 qrToken은 더 이상 쓸 수 없게</span> 됩니다.
-                        </p>
                     </div>
 
                     <div class="code-block">
@@ -1639,8 +1646,8 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
 }</code></pre>
                     </div>
 
-                    <div class="story">
-                        <div class="story-label">🔧 적용한 변경 사항</div>
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용한 변경 사항</div>
                         <p>
                             1. <strong>PaymentController.java</strong> — <code>POST /{qrToken}/confirm</code> 라우트 삭제.<br>
                             2. <strong>PaymentService.java</strong> — 게이트웨이 검증 없이 <code>"SIM-"</code> 승인번호로 결제를 완료 처리하던
@@ -1687,7 +1694,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
         <div class="section">
             <div class="section-header a07">
                 <span class="owasp-badge badge-a07">A07:2025</span>
-                <h2>인증 실패 (Authentication Failures)</h2>
+                <h2>인증 실패 (Authentication Failures) — 로그인 접속 제한 (Rate Limiting)</h2>
                 <p class="subtitle">로그인 시도 횟수에 아무 제한이 없어, 아이디를 무제한으로 대입해볼 수 있었던 문제</p>
             </div>
             <div class="section-body">
@@ -1709,6 +1716,11 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                             (<code>/db-login</code>, <code>/firebase-session</code>)에 대한 표적 크리덴셜 스터핑이나 <span class="hl-red">피싱의 사전 정찰
                                 자료</span>로 악용될 수 있었습니다.
                         </p>
+                        <p>
+                            그래서 <span class="hl-green">같은 IP가 5분 안에 여러 번 반복 접속</span>하면 <span class="hl-green">최대 10번까지만
+                                허용</span>하고, 그 이후로는 접속을 제한하도록 했습니다. HQ 로그인, 지점 로그인, Firebase 세션 교환 등
+                            <span class="hl-green">로그인류 엔드포인트 전체</span>에 동일하게 적용됩니다.
+                        </p>
                     </div>
 
                     <div class="flow">
@@ -1721,26 +1733,9 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>11번째 요청부터 자동 차단, 사전 대입 무력화</div>
                     </div>
 
-                    <div class="story">
-                        <div class="story-label">🚨 문제 분석</div>
-                        <p>
-                                HQ 로그인, 지점 로그인, Firebase 세션 교환 등 <span class="hl-red">로그인류 엔드포인트 어디에도 요청 횟수를 검사하는
-                                    코드가 없었습니다.</span> 같은 IP에서 같은 아이디를 아무리 반복해서 시도해도 서버가 이를 감지하거나 제한할 방법이 전혀 없는 상태였습니다.
-                            </p>
-                    </div>
-
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 변경 전 코드</div>
                         <pre><code class="language-java">// 없음 — 로그인 요청 횟수를 제한하는 필터가 존재하지 않았음</code></pre>
-                    </div>
-
-                    <div class="story">
-                        <div class="story-label">🔧 적용 사항</div>
-                        <p>
-                            <span class="hl-green">같은 IP가 5분 안에 여러 번 반복 접속</span>하면 <span class="hl-green">최대 10번까지만
-                                허용</span>하고, 그 이후로는 접속을 제한하도록 했습니다. HQ 로그인, 지점 로그인, Firebase 세션 교환 등
-                            <span class="hl-green">로그인류 엔드포인트 전체</span>에 동일하게 적용됩니다.
-                        </p>
                     </div>
 
                     <div class="code-block">
@@ -1867,6 +1862,16 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                             공격자가 <span class="hl-red">자동으로 URL에 접근하는 프로그램</span>을 만들면, 서버 입장에서는 이 요청이
                             <span class="hl-red">로봇(프로그램)이 보낸 것인지 사람이 직접 보낸 것인지 구분할 방법이 전혀 없었습니다.</span>
                         </p>
+                        <p>
+                            사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
+                            처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
+                            어렵습니다.
+                        </p>
+                        <p>
+                            그래서 로그인 화면에 <span class="hl-green">Cloudflare Turnstile</span>을 붙였습니다. 사용자가 위젯을 통과해야만
+                            <span class="hl-green">1회용 인증 토큰</span>이 발급되고, 로그인 요청에는 이 토큰이 함께 실려야 합니다.
+                            서버는 토큰이 없거나 유효하지 않으면 <span class="hl-green">아이디/비밀번호 검증까지 가지도 않고 로그인 자체를 거부</span>합니다.
+                        </p>
                     </div>
 
                     <div class="flow">
@@ -1877,15 +1882,6 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                         <div class="flow-item apply"><span class="step-label">🔧 적용</span>Cloudflare Turnstile로 사람 확인 토큰 요구</div>
                         <div class="flow-arrow">→</div>
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>토큰 없으면 로그인 시도 자체가 차단됨</div>
-                    </div>
-
-                    <div class="story">
-                        <div class="story-label">🚨 문제 분석</div>
-                        <p>
-                            사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
-                            처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
-                            어렵습니다.
-                        </p>
                     </div>
 
                     <div class="code-block">
@@ -1929,15 +1925,6 @@ async function login() {
   console.error(lastError)
   error.value = lastError?.response?.data?.message || firebaseMessage(lastError?.code) || '로그인할 수 없습니다.'
 }</code></pre>
-                    </div>
-
-                    <div class="story">
-                        <div class="story-label">🔧 적용 사항</div>
-                        <p>
-                            로그인 화면에 <span class="hl-green">Cloudflare Turnstile</span>을 붙였습니다. 사용자가 위젯을 통과해야만
-                            <span class="hl-green">1회용 인증 토큰</span>이 발급되고, 로그인 요청에는 이 토큰이 함께 실려야 합니다.
-                            서버는 토큰이 없거나 유효하지 않으면 <span class="hl-green">아이디/비밀번호 검증까지 가지도 않고 로그인 자체를 거부</span>합니다.
-                        </p>
                     </div>
 
                     <div class="code-block">
@@ -2411,10 +2398,120 @@ if (updated.count() > MAX_ATTEMPTS) {
 
             </div>
 
-            <!-- 이미지 확대 보기(라이트박스) -->
-            <div class="lightbox-overlay" id="lightboxOverlay">
-                <button class="lightbox-close" id="lightboxClose" aria-label="닫기">&times;</button>
-                <img id="lightboxImage" src="" alt="">
+            <!-- ===================== A10 섹션 ===================== -->
+            <div class="section">
+                <div class="section-header a10">
+                    <span class="owasp-badge badge-a10">A10:2025</span>
+                    <h2>Vue 개발자 도구를 이용한 프론트엔드 보안 설정 점검</h2>
+                    <p class="subtitle">Cloudflare Turnstile Site Key 환경변수 누락으로 인증 기능이 정상 동작하지 않았던 문제</p>
+                </div>
+                <div class="section-body">
+                    <div class="item">
+                        <div class="item-title">① <code>VITE_TURNSTILE_SITE_KEY</code> 환경변수를 설정해 Cloudflare Turnstile 인증 기능을 정상화</div>
+
+                        <div class="story">
+                            <div class="story-label">📖 이런 상황이 있었습니다</div>
+                            <p>
+                                프론트엔드에 적용된 보안 기능이 실제 실행 환경에서도 정상적으로 동작하는지 확인하기 위해 Vue 프로젝트를 실행하고
+                                <span class="hl-blue">브라우저 개발자 도구</span>로 점검했습니다.
+                            </p>
+                            <p>
+                                Console을 확인하던 중 <span class="hl-red">Cloudflare Turnstile의 Site Key가 정상적으로 전달되지 않는 문제</span>를 발견했습니다.
+                                코드는 <code>import.meta.env.VITE_TURNSTILE_SITE_KEY</code>로 Site Key를 가져오도록 구현되어 있었지만, 실제 실행 환경에는 해당 환경변수가 설정되어 있지 않았습니다.
+                            </p>
+                            <p>
+                                이로 인해 Turnstile 인증이 완료되지 않아 <span class="hl-red"><code>turnstileToken</code>이 생성되지 않았고</span>, 결과적으로 지점 등록 버튼을 사용할 수 없었습니다.
+                            </p>
+                        </div>
+
+                        <div class="flow">
+                            <div class="flow-item situation"><span class="step-label">📍 상황</span>Vue 프로젝트 실행 후 개발자 도구로 보안 기능 점검</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item problem"><span class="step-label">🚨 문제</span>Site Key 환경변수 누락으로 Turnstile 인증 실패</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item apply"><span class="step-label">🔧 적용</span><code>.env</code>에 <code>VITE_TURNSTILE_SITE_KEY</code> 추가</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item result"><span class="step-label">✅ 결과</span>Turnstile 인증 성공 및 지점 등록 버튼 활성화</div>
+                        </div>
+
+                        <div class="compare">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 환경변수 설정 전</div>
+                                <pre>VITE_TURNSTILE_SITE_KEY 설정 없음
+↓
+Site Key가 정상적으로 전달되지 않음
+↓
+Turnstile 인증 실패
+↓
+turnstileToken 생성 안 됨
+↓
+지점 등록 버튼 비활성화</pre>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 환경변수 설정 후</div>
+                                <pre>.env 파일에
+VITE_TURNSTILE_SITE_KEY 추가
+↓
+Site Key 정상 전달
+↓
+Turnstile 인증 성공
+↓
+turnstileToken 정상 생성
+↓
+지점 등록 버튼 활성화</pre>
+                            </div>
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">🔧 어떻게 해결했는가?</div>
+                            <p>
+                                프론트엔드 프로젝트의 <span class="hl-green"><code>.env</code> 파일</span>에 <code>VITE_TURNSTILE_SITE_KEY</code> 환경변수를 추가하고 Cloudflare에서 발급받은 Site Key를 설정했습니다.
+                                변경된 환경변수를 적용하기 위해 <span class="hl-green">개발 서버를 다시 실행</span>했습니다.
+                            </p>
+                        </div>
+
+                        <div class="screenshot-single">
+                            <div class="screenshot-item">
+                                <div class="screenshot-label">frontend/.env — Turnstile Site Key 환경변수 설정</div>
+                                <img src="image (10-3).png" alt=".env 파일에 VITE_TURNSTILE_SITE_KEY 환경변수를 설정한 화면">
+                            </div>
+                        </div>
+
+                        <div class="screenshot-row">
+                            <div class="screenshot-item">
+                                <div class="screenshot-label">환경변수 설정 전 — Turnstile 인증 불가 / 버튼 비활성화</div>
+                                <img src="image (10-1).png" alt="환경변수 설정 전 Turnstile 인증 불가 및 등록 버튼 비활성화 화면">
+                            </div>
+                            <div class="screenshot-item">
+                                <div class="screenshot-label">환경변수 설정 후 — Turnstile 인증 성공 / 버튼 활성화</div>
+                                <img src="image (10-2).png" alt="환경변수 설정 후 Turnstile 인증 성공 및 등록 버튼 활성화 화면">
+                            </div>
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">✅ 적용 결과</div>
+                            <p>
+                                환경변수를 설정하고 개발 서버를 다시 실행한 결과, Turnstile 인증 화면에서 <span class="hl-green">성공!</span>이 표시되고 기존에 사용할 수 없었던 <span class="hl-green">지점 등록 버튼도 정상적으로 활성화</span>되는 것을 확인했습니다.
+                            </p>
+                        </div>
+
+                        <div class="summary">
+                            <div class="summary-title">💡 핵심 정리</div>
+                            <ul>
+                                <li>브라우저 개발자 도구로 프론트엔드 보안 기능을 <span class="hl-blue">실제 실행 환경에서 점검</span>했습니다</li>
+                                <li>Turnstile 기능은 구현되어 있었지만 <span class="hl-red"><code>VITE_TURNSTILE_SITE_KEY</code> 환경변수가 누락</span>되어 인증이 동작하지 않았습니다</li>
+                                <li><code>.env</code>에 Site Key를 추가하고 개발 서버를 재시작해 변경된 환경변수를 적용했습니다</li>
+                                <li>수정 후 <span class="hl-green">Turnstile 인증 성공과 지점 등록 버튼 활성화</span>를 직접 확인했습니다</li>
+                            </ul>
+                        </div>
+
+                        <div class="improve">
+                            <div class="improve-title">⚠️ 검증 범위와 한계</div>
+                            <p><strong>검증 범위:</strong> Site Key 전달, Turnstile 토큰 생성, 지점 등록 버튼 활성화를 브라우저에서 확인했습니다.</p>
+                            <p><strong>한계:</strong> Site Key는 공개되어도 되는 값이지만 Secret Key는 프론트엔드에 노출하면 안 됩니다. 실제 보안 검증을 완성하려면 백엔드가 Cloudflare에 토큰을 전달해 서버 측 검증을 수행해야 합니다.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
@@ -2423,38 +2520,6 @@ if (updated.count() > MAX_ATTEMPTS) {
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-            <script>
-                (function () {
-                    var overlay = document.getElementById('lightboxOverlay');
-                    var overlayImg = document.getElementById('lightboxImage');
-                    var closeBtn = document.getElementById('lightboxClose');
-
-                    function openLightbox(img) {
-                        overlayImg.src = img.src;
-                        overlayImg.alt = img.alt;
-                        overlay.classList.add('open');
-                    }
-
-                    function closeLightbox() {
-                        overlay.classList.remove('open');
-                        overlayImg.src = '';
-                    }
-
-                    document.querySelectorAll('.screenshot-item img').forEach(function (img) {
-                        img.addEventListener('click', function () {
-                            openLightbox(img);
-                        });
-                    });
-
-                    closeBtn.addEventListener('click', closeLightbox);
-                    overlay.addEventListener('click', function (e) {
-                        if (e.target === overlay) closeLightbox();
-                    });
-                    document.addEventListener('keydown', function (e) {
-                        if (e.key === 'Escape') closeLightbox();
-                    });
-                })();
-            </script>
 </body>
 
 </html>
