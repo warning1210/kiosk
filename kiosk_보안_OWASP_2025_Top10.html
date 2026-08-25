@@ -1742,11 +1742,6 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                             <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
                             <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
                         </p>
-                        <p>
-                            그래서 게이트웨이 검증 없이 <code>"SIM-"</code> 승인번호로 바로 완료 처리하던 시뮬레이션 경로 자체를 <span class="hl-green">완전히 삭제</span>했습니다.
-                            실제 카드결제 승인은 Toss 검증을 거치는 <span class="hl-green">confirmWithToss()</span> 경로로만 이뤄지며,
-                            결제가 완료되면 <span class="hl-green">그 qrToken은 더 이상 쓸 수 없게</span> 됩니다.
-                        </p>
                     </div>
 
                     <div class="code-block">
