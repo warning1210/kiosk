@@ -1859,19 +1859,19 @@ null 입력: 안전하게 null 반환</pre>
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
                                 <p>
-                                    본사 관리자 페이지에는 상품 사진을 <span class="hl-yellow">PNG, JPG</span> 파일로 올리는 기능이 있습니다.
+                                    본사 관리자 페이지에는 상품 사진을 <span class="hl-yellow">PNG, JPG</span> 파일로 올리는 기능이 있다.
                                     해당 기능을 점검하던 중, 허용되지 않는 확장자의 파일을 업로드하려고 하면 서버가 막긴 하지만
                                     <span class="hl-red">파일의 확장자만 허용된 확장자(.png 등)로 바꿔서 다시 올리면 그대로 업로드된다</span>는 문제를
-                                    발견했습니다.
+                                    발견했다.
                                 </p>
                             </div>
 
                             <div class="story">
                                 <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
                                 <p>
-                                    원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
+                                    원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문이다.
                                     파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
-                                    검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태입니다.
+                                    검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태이다.
                                 </p>
                             </div>
 
@@ -1908,8 +1908,8 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 <div class="story-label">🔧 적용 사항</div>
                                 <p>
                                     확장자 검사에 더해, <span class="hl-green">파일의 실제 바이너리 시그니처(매직바이트)</span>를 읽어 진짜 파일 형식을 판별하는
-                                    검증 단계를 추가했습니다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
-                                    없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>합니다.
+                                    검증 단계를 추가했다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
+                                    없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>한다.
                                 </p>
                             </div>
 
@@ -1953,7 +1953,7 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 <div class="story-label">🧪 실제 테스트 실행</div>
                                 <p>
                                     원본 파일(텍스트/다른 형식)의 확장자만 <code>.png</code>로 바꾼 위장 파일을 준비해, 실제로 상품 등록 화면에서
-                                    업로드를 시도해 보았습니다.
+                                    업로드를 시도해 보았다.
                                 </p>
                             </div>
 
@@ -1973,15 +1973,15 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 <div class="summary-title">💡 핵심 정리</div>
                                 <ul>
                                     <li>파일 <span class="hl-red">확장자는 사용자가 자유롭게 바꿀 수 있는 문자열</span>일 뿐, 실제 파일 형식을 보장하지
-                                        않습니다</li>
-                                    <li>진짜 형식 판별은 <span class="hl-green">파일 시작 바이트(매직바이트)</span>를 읽어 판단해야 합니다 —
+                                        않는다</li>
+                                    <li>진짜 형식 판별은 <span class="hl-green">파일 시작 바이트(매직바이트)</span>를 읽어 판단해야 한다 —
                                         <code>image/png</code>는 PNG 시그니처, <code>image/jpeg</code>는 JPEG 시그니처가 실제로 있어야
-                                        통과합니다
+                                        통과한다
                                     </li>
                                     <li>확장자 검사(1차)와 매직바이트 검사(2차)를 <span class="hl-blue">함께 두는 심층 방어</span>로, 확장자만 우회해서는
-                                        통과할 수 없게 만들었습니다</li>
+                                        통과할 수 없게 만들었다</li>
                                     <li>UUID로 파일명을 재생성하고 업로드 경로를 재검증하는 기존 로직과 결합해, <strong>위장 파일 업로드(CWE-434)</strong>로
-                                        인한 피해 가능성을 줄였습니다</li>
+                                        인한 피해 가능성을 줄였다</li>
                                 </ul>
                             </div>
                         </div>
@@ -1997,7 +1997,7 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 <div class="story-label">📍 이런 상황이 있었습니다</div>
                                 <p>
                                     원래는 결제가 정상적으로 완료되어 주문이 처리됐는지 <span class="hl-yellow">QR 토큰으로 확인</span>할 수 있도록 만든
-                                    API였습니다.
+                                    API였다.
                                     그런데 이 엔드포인트는 실제 결제 게이트웨이(Toss) 검증을 거치지 않고, <span class="hl-red">호출만 되면 그 자리에서 결제를 승인
                                         처리</span>하고 있었습니다.
                                 </p>
@@ -2136,6 +2136,14 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제 분석</div>
+                                <p>
+                                        HQ 로그인, 지점 로그인, Firebase 세션 교환 등 <span class="hl-red">로그인류 엔드포인트 어디에도 요청 횟수를 검사하는
+                                            코드가 없었습니다.</span> 같은 IP에서 같은 아이디를 아무리 반복해서 시도해도 서버가 이를 감지하거나 제한할 방법이 전혀 없는 상태였습니다.
+                                </p>
+                            </div>
+
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>HQ/지점 로그인 API에 요청
                                     횟수 제한이 전혀 없음</div>
@@ -2150,13 +2158,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                                     무력화</div>
                             </div>
 
-                            <div class="story">
-                                <div class="story-label">🚨 문제 분석</div>
-                                <p>
-                                        HQ 로그인, 지점 로그인, Firebase 세션 교환 등 <span class="hl-red">로그인류 엔드포인트 어디에도 요청 횟수를 검사하는
-                                            코드가 없었습니다.</span> 같은 IP에서 같은 아이디를 아무리 반복해서 시도해도 서버가 이를 감지하거나 제한할 방법이 전혀 없는 상태였습니다.
-                                </p>
-                            </div>
+                            
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
@@ -2307,6 +2309,15 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제 분석</div>
+                                <p>
+                                    사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
+                                    처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
+                                    어렵습니다.
+                                </p>
+                            </div>
+
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>로그인 화면이 아이디/비밀번호만
                                     검증</div>
@@ -2321,14 +2332,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                                 </div>
                             </div>
 
-                            <div class="story">
-                                <div class="story-label">🚨 문제 분석</div>
-                                <p>
-                                    사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
-                                    처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
-                                    어렵습니다.
-                                </p>
-                            </div>
+                            
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
