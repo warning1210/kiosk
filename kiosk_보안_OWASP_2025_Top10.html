@@ -251,6 +251,76 @@
             line-height: 1.9;
         }
 
+        /* 문장 안에서 클릭해 확인하는 형광펜 메모 */
+        .click-note {
+            position: relative;
+            display: inline-block;
+        }
+
+        .click-note-trigger {
+            appearance: none;
+            border: 0;
+            border-radius: 4px;
+            background: linear-gradient(transparent 38%, #fde68a 38%);
+            color: inherit;
+            font: inherit;
+            font-weight: 700;
+            line-height: inherit;
+            padding: 0 3px;
+            cursor: pointer;
+        }
+
+        .click-note-trigger:hover,
+        .click-note-trigger:focus-visible,
+        .click-note-trigger[aria-expanded="true"] {
+            background: #fde68a;
+        }
+
+        .click-note-trigger:focus-visible {
+            outline: 2px solid #d97706;
+            outline-offset: 2px;
+        }
+
+        .click-note-content {
+            position: absolute;
+            z-index: 20;
+            left: 50%;
+            bottom: calc(100% + 10px);
+            width: max-content;
+            max-width: min(360px, 80vw);
+            transform: translateX(-50%) translateY(4px);
+            border: 1px solid #f59e0b;
+            border-radius: 9px;
+            background: #fff7c2;
+            box-shadow: 0 8px 20px rgba(120, 53, 15, 0.18);
+            color: #78350f;
+            font-size: 0.88em;
+            font-weight: 700;
+            line-height: 1.5;
+            padding: 8px 12px;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+        }
+
+        .click-note-content::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            border: 6px solid transparent;
+            border-top-color: #f59e0b;
+            transform: translateX(-50%);
+        }
+
+        .click-note-trigger[aria-expanded="true"] + .click-note-content {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+
         /* 강조 텍스트 */
         .hl-red {
             background: #fee2e2;
@@ -791,7 +861,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
             <div class="section-header a02">
                 <span class="owasp-badge badge-a02">A02:2025</span>
                 <h2>보안 설정 오류 (Security Misconfiguration)</h2>
-                <p class="subtitle">기능은 정상이어도 잘못 열린 출처·브라우저 정책·서버 설정 때문에 공격 표면이 넓어지는 문제</p>
+                <p class="subtitle">프로그램은 정상적으로 작동하지만, 보안 설정이 허술해서 공격받기 쉬워지는 문제</p>
             </div>
             <div class="section-body">
                 <div class="item">
@@ -801,7 +871,8 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
-                            아이스크림 키오스크의 관리자 화면에서 상품과 주문 정보를 불러오려면 프론트엔드가 백엔드 API에 요청을 보내야 합니다.
+                            아이스크림 키오스크의 관리자 화면에서 상품과 주문 정보를 불러오려면 프론트엔드가
+                            <span class="click-note"><button type="button" class="click-note-trigger" aria-expanded="false" aria-describedby="a02-api-note">백엔드 API에 요청</button><span class="click-note-content" id="a02-api-note" role="note">관리자 화면 → 상품·재고·주문 API 호출</span></span>을 보내야 합니다.
                             개발할 때는 접속 주소가 자주 바뀌어서 편하게 테스트하려고 CORS 설정에
                             <span class="hl-red">모든 출처(<code>*</code>)를 허용</span>해 두었습니다.
                         </p>
@@ -2980,6 +3051,23 @@ turnstileToken 정상 생성
                     closeButton.addEventListener('click', () => lightbox.close());
                     lightbox.addEventListener('click', (event) => {
                         if (event.target === lightbox) lightbox.close();
+                    });
+
+                    document.querySelectorAll('.click-note-trigger').forEach((trigger) => {
+                        trigger.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            const willOpen = trigger.getAttribute('aria-expanded') !== 'true';
+
+                            document.querySelectorAll('.click-note-trigger[aria-expanded="true"]')
+                                .forEach((openTrigger) => openTrigger.setAttribute('aria-expanded', 'false'));
+
+                            trigger.setAttribute('aria-expanded', String(willOpen));
+                        });
+                    });
+
+                    document.addEventListener('click', () => {
+                        document.querySelectorAll('.click-note-trigger[aria-expanded="true"]')
+                            .forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
                     });
                 })();
             </script>
