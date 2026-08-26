@@ -712,6 +712,7 @@
             border-top: 2px dashed #e2e8f0;
             margin: 44px 0;
         }
+
     </style>
 </head>
 
@@ -1865,6 +1866,15 @@ null 입력: 안전하게 null 반환</pre>
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                                <p>
+                                    원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
+                                    파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
+                                    검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태입니다.
+                                </p>
+                            </div>
+
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>본사 관리자가 상품 사진을
                                     PNG/JPG로 업로드</div>
@@ -1877,15 +1887,6 @@ null 입력: 안전하게 null 반환</pre>
                                 <div class="flow-arrow">→</div>
                                 <div class="flow-item result"><span class="step-label">✅ 결과</span>확장자를 위장해도 실제 내용이 다르면
                                     즉시 차단</div>
-                            </div>
-
-                            <div class="story">
-                                <div class="story-label">🚨 문제점 분석</div>
-                                <p>
-                                    원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
-                                    파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
-                                    검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태입니다.
-                                </p>
                             </div>
 
                             <div class="code-block">
@@ -1998,8 +1999,16 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                     원래는 결제가 정상적으로 완료되어 주문이 처리됐는지 <span class="hl-yellow">QR 토큰으로 확인</span>할 수 있도록 만든
                                     API였습니다.
                                     그런데 이 엔드포인트는 실제 결제 게이트웨이(Toss) 검증을 거치지 않고, <span class="hl-red">호출만 되면 그 자리에서 결제를 승인
-                                        처리</span>하고
-                                    있었습니다.
+                                        처리</span>하고 있었습니다.
+                                </p>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                                <p>
+                                    <span class="hl-red">공격자가 개발자 도구로 이 엔드포인트를 직접 호출</span>하면, 결제창을 띄우지 않고도
+                                    <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
+                                    <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
                                 </p>
                             </div>
 
@@ -2015,15 +2024,6 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 <div class="flow-arrow">→</div>
                                 <div class="flow-item result"><span class="step-label">✅ 결과</span>qrToken만으로는 결제를 흉내낼 수
                                     없음</div>
-                            </div>
-
-                            <div class="story">
-                                <div class="story-label">🚨 문제 분석</div>
-                                <p>
-                                    <span class="hl-red">공격자가 개발자 도구로 이 엔드포인트를 직접 호출</span>하면, 결제창을 띄우지 않고도
-                                    <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
-                                    <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
-                                </p>
                             </div>
 
                             <div class="code-block">
@@ -3072,6 +3072,7 @@ turnstileToken 정상 생성
                         document.querySelectorAll('.click-note-trigger[aria-expanded="true"]')
                             .forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
                     });
+
                 })();
             </script>
 </body>
