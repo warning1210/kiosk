@@ -722,7 +722,7 @@
         <div class="page-title">
             <div class="year-badge">OWASP Top 10 · 2025 기준</div>
             <h1><i class="fa-solid fa-unlock-keyhole" aria-hidden="true"></i> 보안 적용 사례 발표</h1>
-            <p>아이스크림 프랜차이즈 키오스크 프로젝트에서 실제로 발생할 수 있는 보안 문제와, 우리가 코드로 해결한 방법을 소개합니다.</p>
+            <p>아이스크림 프랜차이즈 키오스크 프로젝트에서 실제로 발생할 수 있는 보안 문제와, <br> 우리가 코드로 해결한 방법을 소개합니다.</p>
         </div>
 
         <!-- ===================== A01 섹션 ===================== -->
@@ -865,26 +865,25 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
             </div>
             <div class="section-body">
                 <div class="item">
-                    <div class="item-title">① 허용된 출처에서만 API 응답을 읽을 수 있도록 CORS 접근을 제한</div>
-                    <div class="term-note"><strong>CORS(Cross-Origin Resource Sharing)</strong>: 다른 출처(Origin)의 자원을 공유할
-                        수 있는지를 정하는 브라우저 정책<br>· <strong>Origin</strong>: 프로토콜, 도메인, 포트를 합친 출처 정보</div>
+                    <div class="item-title">① 관리자·키오스크 화면에서만 API 응답을 읽도록 CORS 제한</div>
+                    <div class="term-note"><strong>CORS(Cross-Origin Resource Sharing)</strong>: 어떤 웹사이트가 우리 API의 응답을 읽어도 되는지 정하는 브라우저 규칙<br>· <strong>Origin</strong>: 요청을 보낸 웹사이트의 주소로, 프로토콜·도메인·포트를 합친 정보</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
-                            아이스크림 키오스크의 관리자 화면에서 상품과 주문 정보를 불러오려면 프론트엔드가
+                            관리자 화면에 상품, 재고, 주문 정보를 보여주려면 프론트엔드가
                             <span class="click-note"><button type="button" class="click-note-trigger" aria-expanded="false" aria-describedby="a02-api-note">백엔드 API에 요청</button><span class="click-note-content" id="a02-api-note" role="note">관리자 화면 → 상품·재고·주문 API 호출</span></span>을 보내야 합니다.
-                            개발할 때는 접속 주소가 자주 바뀌어서 편하게 테스트하려고 CORS 설정에
-                            <span class="hl-red">모든 출처(<code>*</code>)를 허용</span>해 두었습니다.
+                            개발 중에는 프론트엔드 주소와 포트가 자주 바뀌었습니다. 주소가 바뀔 때마다 CORS 설정을 수정하는 것이 번거로워서
+                            <span class="hl-red">모든 출처(<code>*</code>)를 허용</span>해 두었습니다. 덕분에 어느 개발 주소에서든 API 응답을 바로 확인할 수 있었습니다.
                         </p>
                         <p>
-                            그런데 이 설정을 그대로 운영하면 우리 서비스와 관계없는 사이트도 API를 호출할 수 있습니다. 관리자가 로그인한 상태로 공격자가 만든 사이트에
-                            접속할 경우, 그 사이트의 스크립트가 관리자 브라우저를 이용해 요청을 보내고 <span class="hl-red">상품·재고·주문 응답을 읽을 위험</span>이
-                            있었습니다.
+                            하지만 운영 서버에서도 모든 출처를 허용하면, 우리 서비스와 관계없는 사이트에도 응답을 보여주게 됩니다. 예를 들어 관리자가 로그인한 채 공격자가 보낸
+                            링크를 열면, 공격 사이트의 스크립트가 관리자 브라우저를 통해 키오스크 API를 호출할 수 있습니다. 이때 CORS가 모든 출처를 허용하고 있으면
+                            브라우저가 그 사이트에도 응답을 공개하여 <span class="hl-red">상품·재고·주문 정보가 노출될 수 있습니다.</span>
                         </p>
                         <p>
-                            그래서 실제 관리자 화면과 키오스크 주소만 설정 목록에 등록하고, <span class="hl-green">목록에 있는 Origin에만 CORS 허용
-                                헤더</span>를
-                            보내도록 바꿔습니다. 이후 공격 사이트 주소로 다시 요청했더니 허용 헤더가 나오지 않아 브라우저가 응답을 사용할 수 없게 되었습니다.
+                            그래서 개발 편의를 위한 전체 허용 설정은 없애고, 실제 관리자 화면과 키오스크 주소만 허용 목록에 넣었습니다. 이제 공격 사이트가 API 요청을 보내더라도
+                            <span class="hl-green">등록된 주소가 아니면 브라우저가 응답 내용을 읽지 못합니다.</span> CORS는 요청 자체를 막는 기능이 아니므로,
+                            로그인 인증과 관리자 권한 검사는 API에서 별도로 확인합니다.
                         </p>
                     </div>
                     <div class="flow">
@@ -906,7 +905,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
 Access-Control-Allow-Origin: *
 Access-Control-Allow-Credentials: true
 
-→ 관계없는 사이트에도 API 응답이 노출될 위험</pre>
+→ 등록하지 않은 사이트도 응답을 읽을 수 있음</pre>
                         </div>
                         <div class="compare-box after">
                             <div class="compare-label">✅ 적용 후 — 등록된 출처만 허용</div>
@@ -942,17 +941,16 @@ configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code
                 </div>
                 <hr class="divider">
                 <div class="item">
-                    <div class="item-title">② Nginx 보안 헤더를 설정해 브라우저의 기본 보안 방어선을 강화</div>
+                    <div class="item-title">② Nginx 보안 헤더로 클릭재킹과 잘못된 파일 실행 방지</div>
                     <div class="term-note"><strong>CSP</strong>: 브라우저가 불러오거나 실행할 수 있는 리소스 출처를 제한하는 정책<br>· <strong>MIME
                             / nosniff</strong>: 파일 형식을 명시하고 브라우저의 임의 형식 추측을 차단</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
-                        <p>프론트엔드 배포 설정을 확인하던 중 Nginx가 화면과 API를 정상적으로 전달하기만 할 뿐, 브라우저에 <span class="hl-red">어떤 콘텐츠를 실행해도
-                                되는지 알려주는 보안 헤더</span>는 보내지 않고 있다는 것을 발견했습니다. 이 상태에서는 다른 사이트가 관리자 화면을 투명한 프레임 안에 숨겨 버튼을
-                            누르게 하거나, 브라우저가 파일 형식을 잘못 추측해 실행할 위험이 있었습니다.</p>
+                        <p>Nginx는 화면과 API를 정상적으로 전달하고 있었지만, 브라우저가 지켜야 할 보안 규칙은 보내지 않고 있었습니다. 이 상태에서는 공격 사이트가
+                            관리자 화면을 투명한 프레임으로 덮어 사용자가 엉뚱한 버튼을 누르게 하거나, 브라우저가 파일 형식을 잘못 판단해 실행할 수 있습니다.</p>
                         <p>그래서 Nginx 응답에 <span class="hl-green">Content-Security-Policy, X-Frame-Options,
-                                X-Content-Type-Options</span> 등의 헤더를 추가했습니다. 적용 후에는 우리 서비스가 허용한 리소스만 불러오고, 외부 사이트의 프레임
-                            삽입과 MIME 형식 추측을 브라우저가 차단하도록 만들었습니다.</p>
+                                X-Content-Type-Options</span> 등의 헤더를 추가했습니다. 이제 브라우저는 허용된 리소스만 불러오고, 다른 사이트가 관리자 화면을
+                            프레임에 넣거나 파일 형식을 임의로 판단하는 동작을 차단합니다.</p>
                     </div>
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>Nginx가 프론트엔드와 API 응답 제공
@@ -1627,7 +1625,7 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                     <div class="section-header a05">
                         <span class="owasp-badge badge-a05">A05:2025</span>
                         <h2>인젝션 (Injection)</h2>
-                        <p class="subtitle">사용자 입력이 단순한 값이 아니라 SQL이나 로그 구조를 바꾸는 명령으로 해석되는 문제</p>
+                        <p class="subtitle">사용자가 입력한 값이 SQL이나 로그의 형식을 바꾸는 명령처럼 처리되는 문제</p>
                     </div>
                     <div class="section-body">
                         <div class="item">
@@ -1644,8 +1642,7 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                                         class="hl-red">SQL 조건문의 일부로 합쳐질 수 있다</span>는 문제가 있었습니다. 이렇게 되면 조건이 항상 참이 되어 요청한
                                     상품 외의 재고까지 조회될 수 있습니다.</p>
                                 <p>그래서 외부에서 받는 값은 모두 MyBatis의 <span class="hl-green"><code>#{}</code> 방식으로 전달</span>하도록
-                                    바꿔습니다. 같은 공격 문장을 다시 넣었을 때는 SQL 명령으로 실행되지 않고 하나의 잘못된 상품 번호로 처리되어, 다른 상품의 재고가 조회되지
-                                    않았습니다.</p>
+                                    바꿨습니다. 같은 공격 문장을 다시 넣어도 SQL 명령이 아니라 하나의 잘못된 상품 번호로 처리되므로 다른 상품의 재고가 조회되지 않습니다.</p>
                             </div>
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>상품 번호로 DB 재고 조회
@@ -1670,7 +1667,7 @@ WHERE item_id = ${itemId}
 실행 SQL:
 WHERE item_id = 999999 OR 1=1
 
-→ 조건이 항상 참이 되어 조회 범위가 바뀌</pre>
+→ 조건이 항상 참이 되어 조회 범위가 바뀜</pre>
                                 </div>
                                 <div class="compare-box after">
                                     <div class="compare-label">✅ 안전한 값 바인딩</div>
@@ -1760,12 +1757,12 @@ Parameter: "x' OR '1'='1"
                                 LF(<code>\n</code>, 다음 줄로 이동)를 합친 줄바꿈 문자<br>· 로그에 남으면 공격자가 새로운 기록 한 줄을 위조할 수 있음</div>
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
-                                <p>관리자 로그인에 실패하면 입력한 아이디를 로그에 남겨 나중에 확인할 수 있도록 했습니다. 그런데 아이디에 줄바꿈 문자인 <code>\r\n</code>과
-                                    함께 “관리자 로그인 성공”이라는 문장을 넣어 보니, 로그 파일에는 <span class="hl-red">새로운 성공 로그 한 줄처럼</span>
-                                    기록될 수 있었습니다. 실제로는 실패한 요청인데도 관리자가 정상 로그인한 것처럼 보이는 문제였습니다.</p>
+                                <p>관리자 로그인에 실패하면 입력한 아이디를 로그에 남깁니다. 그런데 아이디에 줄바꿈 문자 <code>\r\n</code>과
+                                    “관리자 로그인 성공”이라는 문장을 함께 넣으면, <span class="hl-red">성공 로그가 한 줄 새로 생긴 것처럼</span>
+                                    보일 수 있습니다. 실제로는 로그인에 실패했지만 로그만 보면 성공한 것으로 오해할 수 있습니다.</p>
                                 <p>그래서 사용자 입력이나 외부 서비스의 응답을 로그에 남기기 전에 <span class="hl-green">CrlfUtils.forLog()</span>를
-                                    거쳐 줄바꿈을 제거하도록 했습니다. 같은 값을 다시 입력하자 문장이 한 줄 안에 이어서 기록되어, 공격자가 가짜 로그 줄을 새로 만들 수 없게
-                                    되었습니다. logback 설정에서도 줄바꿈을 한 번 더 제거해 두 단계로 막았습니다.</p>
+                                    거쳐 줄바꿈을 제거합니다. 그러면 입력한 문장이 기존 로그 한 줄 안에 이어서 기록되므로 가짜 로그 줄을 만들 수 없습니다. 빠뜨린 곳이 생기지 않도록
+                                    Logback 설정에서도 줄바꿈을 한 번 더 제거했습니다.</p>
                             </div>
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
@@ -1825,15 +1822,15 @@ null 입력: 안전하게 null 반환</pre>
                                 <ul>
                                     <li>SQL 인젝션과 로그 인젝션은 모두 <span class="hl-blue">입력이 명령 구조를 바꾼다</span>는 공통점이 있습니다</li>
                                     <li>SQL은 바인딩하고, 로그는 구조를 바꾸는 CR·LF를 제거합니다</li>
-                                    <li>공통 유틸과 전역 logback 설정을 함께 사용해 누락 가능성을 줄였습니다</li>
+                                    <li>공통 유틸과 Logback 설정을 함께 사용해 처리하지 않은 로그가 생길 가능성을 줄였습니다</li>
                                 </ul>
                             </div>
                             <div class="improve">
                                 <div class="improve-title">✅ A05 전용 테스트 실행 결과</div>
                                 <p><strong>총 4개 통과:</strong> MyBatis 파라미터 바인딩 1개, CRLF 제거·단독 개행·null 처리 3개가 모두 PASS했습니다.
                                 </p>
-                                <p><strong>한계:</strong> MyBatis 테스트는 DB 없이 생성된 SQL과 파라미터 분리를 확인합니다. 실제 MySQL 결과 행까지
-                                    증명하려면 Testcontainers 통합 테스트를 추가할 수 있습니다.</p>
+                                <p><strong>한계:</strong> MyBatis 테스트는 실제 DB에 접속하지 않고 SQL 문장과 입력값이 분리되는지만 확인합니다. 실제 MySQL에서도
+                                    같은 결과가 나오는지는 Testcontainers를 이용한 통합 테스트로 추가 확인할 수 있습니다.</p>
                             </div>
                         </div>
                     </div>
