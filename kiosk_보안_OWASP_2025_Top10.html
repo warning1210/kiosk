@@ -1789,18 +1789,6 @@ null 입력: 안전하게 null 반환</pre>
                                     <span class="hl-red">파일의 확장자만 허용된 확장자(.png 등)로 바꿔서 다시 올리면 그대로 업로드된다</span>는 문제를
                                     발견했습니다.
                                 </p>
-                                <p>
-                                    원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
-                                    파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
-                                    검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로
-                                        응답될 수 있는</span> 상태였습니다.
-                                </p>
-                                <p>
-                                    그래서 확장자 검사에 더해, <span class="hl-green">파일의 실제 바이너리 시그니처(매직바이트)</span>를 읽어 진짜 파일 형식을
-                                    판별하는
-                                    검증 단계를 추가했습니다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
-                                    없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>합니다.
-                                </p>
                             </div>
 
                             <div class="flow">
@@ -1817,6 +1805,15 @@ null 입력: 안전하게 null 반환</pre>
                                     즉시 차단</div>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label">🚨 문제점 분석</div>
+                                <p>
+                                    원인은 서버가 <span class="hl-red">원본 파일명에 붙은 확장자 문자열만</span> 검사하고 있었기 때문입니다.
+                                    파일의 실제 내용은 전혀 들여다보지 않으므로, 실행 스크립트나 다른 형식의 파일도 이름만 <code>image.png</code>로 바꾸면
+                                    검증을 그대로 통과해 서버에 저장되고, 업로드 경로(<code>/uploads/</code>)를 통해 <span class="hl-red">그대로 응답될 수 있는</span> 상태입니다.
+                                </p>
+                            </div>
+
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 —
@@ -1830,6 +1827,15 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
     throw new IllegalArgumentException("PNG, JPG, JPEG 파일만 업로드할 수 있습니다.");
 }
 // → 여기서 바로 저장. 파일명 확장자만 보고 있어 확장자만 바꾼 위장 파일을 걸러내지 못함</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🔧 적용 사항</div>
+                                <p>
+                                    확장자 검사에 더해, <span class="hl-green">파일의 실제 바이너리 시그니처(매직바이트)</span>를 읽어 진짜 파일 형식을 판별하는
+                                    검증 단계를 추가했습니다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
+                                    없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>합니다.
+                                </p>
                             </div>
 
                             <div class="screenshot-row">
@@ -1913,24 +1919,13 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 엔드포인트를 제거</div>
 
                             <div class="story">
-                                <div class="story-label">📖 이런 상황이 있었습니다</div>
+                                <div class="story-label">📍 이런 상황이 있었습니다</div>
                                 <p>
                                     원래는 결제가 정상적으로 완료되어 주문이 처리됐는지 <span class="hl-yellow">QR 토큰으로 확인</span>할 수 있도록 만든
                                     API였습니다.
                                     그런데 이 엔드포인트는 실제 결제 게이트웨이(Toss) 검증을 거치지 않고, <span class="hl-red">호출만 되면 그 자리에서 결제를 승인
                                         처리</span>하고
                                     있었습니다.
-                                </p>
-                                <p>
-                                    즉 <span class="hl-red">공격자가 개발자 도구로 이 엔드포인트를 직접 호출</span>하면, 결제창을 띄우지 않고도
-                                    <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
-                                    <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
-                                </p>
-                                <p>
-                                    그래서 게이트웨이 검증 없이 <code>"SIM-"</code> 승인번호로 바로 완료 처리하던 시뮬레이션 경로 자체를 <span
-                                        class="hl-green">완전히 삭제</span>했습니다.
-                                    실제 카드결제 승인은 Toss 검증을 거치는 <span class="hl-green">confirmWithToss()</span> 경로로만 이뤄지며,
-                                    결제가 완료되면 <span class="hl-green">그 qrToken은 더 이상 쓸 수 없게</span> 됩니다.
                                 </p>
                             </div>
 
@@ -1946,6 +1941,15 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 <div class="flow-arrow">→</div>
                                 <div class="flow-item result"><span class="step-label">✅ 결과</span>qrToken만으로는 결제를 흉내낼 수
                                     없음</div>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🚨 문제 분석</div>
+                                <p>
+                                    <span class="hl-red">공격자가 개발자 도구로 이 엔드포인트를 직접 호출</span>하면, 결제창을 띄우지 않고도
+                                    <code>PAID</code> 처리 + 포인트 적립 + 쿠폰 소진 + 재고 차감까지 그대로 진행됐습니다.
+                                    <span class="hl-red">qrToken 값만 알면 누구나 결제 없이 주문을 완료 처리</span>할 수 있는 상태였던 것입니다.
+                                </p>
                             </div>
 
                             <div class="code-block">
@@ -1981,8 +1985,8 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
 }</code></pre>
                             </div>
 
-                            <div class="improve">
-                                <div class="improve-title">🔧 적용한 변경 사항</div>
+                            <div class="story">
+                                <div class="story-label">🔧 적용한 변경 사항</div>
                                 <p>
                                     1. <strong>PaymentController.java</strong> — <code>POST /{qrToken}/confirm</code>
                                     라우트 삭제.<br>
@@ -2039,7 +2043,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                 <div class="section">
                     <div class="section-header a07">
                         <span class="owasp-badge badge-a07">A07:2025</span>
-                        <h2>인증 실패 (Authentication Failures) — 로그인 접속 제한 (Rate Limiting)</h2>
+                        <h2>인증 실패 (Authentication Failures)</h2>
                         <p class="subtitle">로그인 시도 횟수에 아무 제한이 없어, 아이디를 무제한으로 대입해볼 수 있었던 문제</p>
                     </div>
                     <div class="section-body">
@@ -2049,25 +2053,12 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                             <div class="item-title">① IP 기준으로 요청 횟수를 제한해 로그인 사전 대입(dictionary attack)을 차단</div>
 
                             <div class="story">
-                                <div class="story-label">📖 이런 상황이 있었습니다</div>
+                                <div class="story-label">📍 이런 상황이 있었습니다</div>
                                 <p>
                                     로그인 부분을 점검하던 중, <span class="hl-red">요청 횟수 제한이 전혀 걸려 있지 않다</span>는 것을 발견했습니다.
                                     공격자가 <code>loginId</code>를 사전(dictionary) 방식으로 순차 대입하면 <span class="hl-red">429 차단
                                         없이 무제한으로 시도</span>가
                                     가능했습니다.
-                                </p>
-                                <p>
-                                    더 심각한 것은, <span class="hl-red">유효한 아이디를 맞힐 때마다 해당 지점 관리자의 이메일이 응답에 그대로 노출</span>된다는
-                                    점이었습니다. 이렇게 수집한 <span class="hl-yellow">"존재하는 계정 + 이메일"</span> 목록은 실제 로그인
-                                    (<code>/db-login</code>, <code>/firebase-session</code>)에 대한 표적 크리덴셜 스터핑이나 <span
-                                        class="hl-red">피싱의 사전 정찰
-                                        자료</span>로 악용될 수 있었습니다.
-                                </p>
-                                <p>
-                                    그래서 <span class="hl-green">같은 IP가 5분 안에 여러 번 반복 접속</span>하면 <span
-                                        class="hl-green">최대 10번까지만
-                                        허용</span>하고, 그 이후로는 접속을 제한하도록 했습니다. HQ 로그인, 지점 로그인, Firebase 세션 교환 등
-                                    <span class="hl-green">로그인류 엔드포인트 전체</span>에 동일하게 적용됩니다.
                                 </p>
                             </div>
 
@@ -2085,10 +2076,27 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                                     무력화</div>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label">🚨 문제 분석</div>
+                                <p>
+                                        HQ 로그인, 지점 로그인, Firebase 세션 교환 등 <span class="hl-red">로그인류 엔드포인트 어디에도 요청 횟수를 검사하는
+                                            코드가 없었습니다.</span> 같은 IP에서 같은 아이디를 아무리 반복해서 시도해도 서버가 이를 감지하거나 제한할 방법이 전혀 없는 상태였습니다.
+                                </p>
+                            </div>
+
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span> 변경 전 코드</div>
                                 <pre><code class="language-java">// 없음 — 로그인 요청 횟수를 제한하는 필터가 존재하지 않았음</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🔧 적용 사항</div>
+                                <p>
+                                    <span class="hl-green">같은 IP가 5분 안에 여러 번 반복 접속</span>하면 <span class="hl-green">최대 10번까지만
+                                        허용</span>하고, 그 이후로는 접속을 제한하도록 했습니다. HQ 로그인, 지점 로그인, Firebase 세션 교환 등
+                                    <span class="hl-green">로그인류 엔드포인트 전체</span>에 동일하게 적용됩니다.
+                                </p>
                             </div>
 
                             <div class="code-block">
@@ -2217,23 +2225,11 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                             <div class="item-title">② Cloudflare Turnstile을 적용해 사람과 로봇(자동화 프로그램)의 로그인 요청을 구분</div>
 
                             <div class="story">
-                                <div class="story-label">📖 이런 상황이 있었습니다</div>
+                                <div class="story-label">📍 이런 상황이 있었습니다</div>
                                 <p>
                                     로그인 화면은 <code>loginId</code>/<code>password</code>가 맞는지만 검증하고 있었습니다.
                                     공격자가 <span class="hl-red">자동으로 URL에 접근하는 프로그램</span>을 만들면, 서버 입장에서는 이 요청이
                                     <span class="hl-red">로봇(프로그램)이 보낸 것인지 사람이 직접 보낸 것인지 구분할 방법이 전혀 없었습니다.</span>
-                                </p>
-                                <p>
-                                    사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
-                                    처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
-                                    어렵습니다.
-                                </p>
-                                <p>
-                                    그래서 로그인 화면에 <span class="hl-green">Cloudflare Turnstile</span>을 붙였습니다. 사용자가 위젯을
-                                    통과해야만
-                                    <span class="hl-green">1회용 인증 토큰</span>이 발급되고, 로그인 요청에는 이 토큰이 함께 실려야 합니다.
-                                    서버는 토큰이 없거나 유효하지 않으면 <span class="hl-green">아이디/비밀번호 검증까지 가지도 않고 로그인 자체를
-                                        거부</span>합니다.
                                 </p>
                             </div>
 
@@ -2249,6 +2245,15 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                                 <div class="flow-arrow">→</div>
                                 <div class="flow-item result"><span class="step-label">✅ 결과</span>토큰 없으면 로그인 시도 자체가 차단됨
                                 </div>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🚨 문제 분석</div>
+                                <p>
+                                    사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
+                                    처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
+                                    어렵습니다.
+                                </p>
                             </div>
 
                             <div class="code-block">
@@ -2294,6 +2299,15 @@ async function login() {
   console.error(lastError)
   error.value = lastError?.response?.data?.message || firebaseMessage(lastError?.code) || '로그인할 수 없습니다.'
 }</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🔧 적용 사항</div>
+                                <p>
+                                    로그인 화면에 <span class="hl-green">Cloudflare Turnstile</span>을 붙였습니다. 사용자가 위젯을 통과해야만
+                                    <span class="hl-green">1회용 인증 토큰</span>이 발급되고, 로그인 요청에는 이 토큰이 함께 실려야 합니다.
+                                    서버는 토큰이 없거나 유효하지 않으면 <span class="hl-green">아이디/비밀번호 검증까지 가지도 않고 로그인 자체를 거부</span>합니다.
+                                </p>
                             </div>
 
                             <div class="code-block">
