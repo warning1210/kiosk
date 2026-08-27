@@ -1,0 +1,2 @@
+2026-08-24 16:19:24.007 INFO  [restartedMain] com.kiosk.KioskApplication - Starting KioskApplication using Java 25.0.2 with PID 23452 (D:\25work\SpringBoot\kiosk\backend\target\classes started by seoil in D:\25work\SpringBoot\kiosk\backend)
+2026-08-24 16:19:24.008 INFO  [restartedMain] com.kiosk.KioskApplication - No active profile set, falling back to 1 default profile: "default"
