@@ -3086,8 +3086,8 @@ RUN mvn -B -C -DskipTests package</code></pre>
                                         alt="npm ci 실행 결과 added 179 packages 성공 화면">
                                 </div>
                                 <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 테스트 ② — 지문 1글자 변조 후: EINTEGRITY 에러로 설치 거부 (wanted
-                                        Ab5... / got Pb5...)</div>
+                                    <div class="screenshot-label">📷 테스트 ② — 무결성 검증 실패: 다운로드한 파일의 해시가
+                                        package-lock.json에 기록된 값과 불일치하여 설치 거부</div>
                                     <img src="image (A08-npmci-fail).png"
                                         alt="package-lock.json의 integrity 해시를 한 글자 변조한 뒤 npm ci가 EINTEGRITY 에러로 설치를 거부하는 화면">
                                 </div>
