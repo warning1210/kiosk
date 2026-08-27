@@ -1,6 +1,8 @@
 services:
   mysql:
-    image: mysql:8.0
+    # A08(무결성): 태그는 내용이 바뀔 수 있어 sha256 digest로 고정 - 내용이 다르면 pull 단계에서 거부된다.
+    # 업데이트 시: docker pull mysql:8.0 후 docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0 로 새 지문 확인 후 교체.
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     container_name: kiosk-mysql
     restart: unless-stopped
     environment:
@@ -26,7 +28,8 @@ services:
       retries: 10
 
   adminer:
-    image: adminer:latest
+    # A08(무결성): latest 태그 제거하고 digest 고정 - DB 접속정보를 다루는 컨테이너라 바꿔치기 피해가 가장 큰 자리.
+    image: adminer@sha256:043db066c4532719f49e35355a620f0bbe48fc862f6bfccda72f441b162f092e
     container_name: kiosk-adminer
     restart: unless-stopped
     environment:

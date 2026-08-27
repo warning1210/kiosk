@@ -3,9 +3,10 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
 # 의존성만 먼저 받아서 레이어 캐싱 - pom.xml이 안 바뀌면 소스만 바뀌어도 이 레이어는 재사용된다.
-RUN mvn -B dependency:go-offline
+# -C(--strict-checksums): A08(무결성) - 받아온 라이브러리의 체크섬이 불일치하면 경고가 아니라 빌드 실패로 차단한다.
+RUN mvn -B -C dependency:go-offline
 COPY src ./src
-RUN mvn -B -DskipTests package
+RUN mvn -B -C -DskipTests package
 
 # 실행 스테이지 - JDK가 아니라 JRE만 있으면 되고, Maven/소스는 이미지에 남기지 않는다.
 FROM eclipse-temurin:21-jre-jammy
