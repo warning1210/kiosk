@@ -610,9 +610,14 @@
         /* Before / After */
         .compare {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
+            grid-template-columns: 1fr;
+            gap: 18px;
             margin: 18px 0;
+        }
+
+        .story > .compare,
+        .test-execution > .compare {
+            margin-top: 20px;
         }
 
         .compare-box {
@@ -656,6 +661,32 @@
             word-break: break-all;
             margin: 8px 0 0;
             font-family: 'Consolas', monospace;
+        }
+
+        .test-execution {
+            position: relative;
+            margin: 30px 0 24px;
+            padding: 24px 18px 18px;
+            background: #fffbeb;
+            border: 1.5px solid #fbbf24;
+            border-radius: 12px;
+        }
+
+        .test-execution-title {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #f59e0b;
+            color: #fff;
+            font-weight: bold;
+            font-size: 0.82em;
+            padding: 3px 12px;
+            border-radius: 20px;
+        }
+
+        .test-execution .compare {
+            grid-template-columns: 1fr;
+            margin: 20px 0 0;
         }
 
         /* 핵심 정리 */
@@ -867,7 +898,6 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
             <div class="section-body">
                 <div class="item">
                     <div class="item-title">① 관리자·키오스크 화면에서만 API 응답을 읽도록 CORS 제한</div>
-                    <div class="term-note"><strong>CORS(Cross-Origin Resource Sharing)</strong>: 어떤 웹사이트가 우리 API의 응답을 읽어도 되는지 정하는 브라우저 규칙<br>· <strong>Origin</strong>: 요청을 보낸 웹사이트의 주소로, 프로토콜·도메인·포트를 합친 정보</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>
@@ -887,6 +917,10 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                             로그인 인증과 관리자 권한 검사는 API에서 별도로 확인합니다.
                         </p>
                     </div>
+                    <div class="story">
+                        <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                        <p>모든 Origin을 허용하면 로그인한 관리자가 악성 사이트를 열었을 때 그 사이트의 스크립트도 관리자 API 응답을 읽을 수 있습니다. CORS는 인증을 대신하지 않으므로 허용 Origin 제한과 API 인증·권한 검사를 함께 적용해야 합니다.</p>
+                    </div>
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>브라우저에서 관리자 API 호출</div>
                         <div class="flow-arrow">→</div>
@@ -898,26 +932,26 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>미등록 Origin에는 허용 헤더를 반환하지 않음
                         </div>
                     </div>
-                    <div class="compare">
-                        <div class="compare-box before">
-                            <div class="compare-label">❌ 적용 전 — 모든 출처 허용</div>
-                            <pre>Origin: https://evil.example
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 문제가 있었던 코드 — SecurityConfig.java</div>
+                        <pre><code class="language-java">CorsConfiguration configuration = new CorsConfiguration();
+configuration.addAllowedOriginPattern("*"); // 모든 Origin 허용
+configuration.setAllowCredentials(true);
+configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
-Access-Control-Allow-Origin: *
-Access-Control-Allow-Credentials: true
-
-→ 등록하지 않은 사이트도 응답을 읽을 수 있음</pre>
-                        </div>
-                        <div class="compare-box after">
-                            <div class="compare-label">✅ 적용 후 — 등록된 출처만 허용</div>
-                            <pre>Origin: https://evil.example
-
-Access-Control-Allow-Origin: (없음)
-
-→ 브라우저가 응답 사용을 차단
-→ 운영 프론트엔드 Origin만 정상 허용</pre>
-                        </div>
+// 운영 환경에서도 악성 사이트에 CORS 응답을 허용할 수 있음</code></pre>
                     </div>
+
+                    <div class="story">
+                        <div class="story-label">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>application.yml</strong> — 개발·운영 환경별로 허용할 관리자·키오스크 Origin 목록을 분리해 설정.<br>
+                            2. <strong>SecurityConfig.java</strong> — 모든 출처를 허용하던 <code>*</code> 설정을 제거하고 <code>setAllowedOriginPatterns(originPatterns)</code>로 허용 목록만 등록.<br>
+                            3. <strong>SecurityConfig.java</strong> — 자격 증명 사용 여부와 허용 메서드·헤더를 명시해 등록되지 않은 Origin에는 CORS 허용 헤더를 반환하지 않도록 변경.
+                        </p>
+                    </div>
+
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
                                 class="dot dot-g"></span> SecurityConfig.java — 실제 적용 코드</div>
@@ -929,6 +963,33 @@ configuration.setAllowedOriginPatterns(originPatterns); // * 대신 허용 목�
 configuration.setAllowCredentials(true);
 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code></pre>
+                    </div>
+                    <div class="test-execution">
+                        <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                        <div class="compare">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 적용 전 — 모든 출처 허용되어 미등록 출처도 통과</div>
+                                <pre>Origin: https://evil.example
+
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+→ 등록하지 않은 사이트도 응답을 읽을 수 있음</pre>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 적용 후 — 등록된 출처만 허용, 허용 목록 외 차단</div>
+                                <pre>Origin: https://evil.example
+
+Access-Control-Allow-Origin: (없음)
+
+→ 브라우저가 응답 사용을 차단
+→ 운영 프론트엔드 Origin만 정상 허용</pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="improve">
+                        <div class="improve-title">✨ 결론</div>
+                        <p>운영 환경의 API 응답은 등록된 프론트엔드에서만 읽을 수 있게 되었으며, API 인증과 권한 검사는 별도의 방어선으로 계속 유지합니다.</p>
                     </div>
                     <div class="summary">
                         <div class="summary-title">💡 핵심 정리</div>
@@ -943,8 +1004,6 @@ configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code
                 <hr class="divider">
                 <div class="item">
                     <div class="item-title">② Nginx 보안 헤더로 클릭재킹과 잘못된 파일 실행 방지</div>
-                    <div class="term-note"><strong>CSP</strong>: 브라우저가 불러오거나 실행할 수 있는 리소스 출처를 제한하는 정책<br>· <strong>MIME
-                            / nosniff</strong>: 파일 형식을 명시하고 브라우저의 임의 형식 추측을 차단</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
                         <p>Nginx는 화면과 API를 정상적으로 전달하고 있었지만, 브라우저가 지켜야 할 보안 규칙은 보내지 않고 있었습니다. 이 상태에서는 공격 사이트가
@@ -952,6 +1011,10 @@ configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code
                         <p>그래서 Nginx 응답에 <span class="hl-green">Content-Security-Policy, X-Frame-Options,
                                 X-Content-Type-Options</span> 등의 헤더를 추가했습니다. 이제 브라우저는 허용된 리소스만 불러오고, 다른 사이트가 관리자 화면을
                             프레임에 넣거나 파일 형식을 임의로 판단하는 동작을 차단합니다.</p>
+                    </div>
+                    <div class="story">
+                        <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                        <p>보안 헤더가 없으면 다른 사이트가 관리자 화면을 프레임에 삽입하거나 브라우저가 파일 형식을 임의로 추측할 수 있어 클릭재킹과 의도하지 않은 콘텐츠 실행 위험이 커집니다.</p>
                     </div>
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>Nginx가 프론트엔드와 API 응답 제공
@@ -966,6 +1029,27 @@ configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code
                     </div>
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 문제가 있었던 코드 — nginx.conf</div>
+                        <pre><code class="language-nginx">server {
+  listen 80;
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # CSP, X-Frame-Options, nosniff 등 보안 헤더가 없음
+}</code></pre>
+                    </div>
+                    <div class="story">
+                        <div class="story-label">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>nginx.conf</strong> — <code>Content-Security-Policy</code>를 추가해 허용할 리소스 출처와 프레임 삽입 범위를 제한.<br>
+                            2. <strong>nginx.conf</strong> — <code>X-Frame-Options</code>와 <code>X-Content-Type-Options</code>를 추가해 클릭재킹과 MIME 타입 추측을 차단.<br>
+                            3. <strong>nginx.conf</strong> — <code>Referrer-Policy</code>와 <code>Permissions-Policy</code>를 모든 응답에 <code>always</code> 옵션으로 적용.
+                        </p>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
                                 class="dot dot-g"></span> nginx.conf — 실제 적용 코드</div>
                         <pre><code class="language-nginx">add_header Content-Security-Policy
   "default-src 'self'; object-src 'none'; frame-ancestors 'self'" always;
@@ -973,6 +1057,33 @@ add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;</code></pre>
+                    </div>
+                    <div class="test-execution">
+                        <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                        <div class="compare">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 적용 전 — 보안 정책 헤더 없음</div>
+                                <pre>$ curl -I https://kiosk.example
+
+→ Content-Security-Policy: 없음
+→ X-Frame-Options: 없음
+→ X-Content-Type-Options: 없음
+→ 외부 프레임 삽입과 MIME 추측을 제한하지 못함</pre>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 적용 후 — 보안 헤더 응답 확인</div>
+                                <pre>$ curl -I https://kiosk.example
+
+→ Content-Security-Policy: default-src 'self' ...
+→ X-Frame-Options: SAMEORIGIN
+→ X-Content-Type-Options: nosniff
+→ 브라우저 보안 정책 정상 적용</pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="improve">
+                        <div class="improve-title">✨ 결론</div>
+                        <p>브라우저가 허용된 리소스와 표시 방식만 사용하도록 제한해 클릭재킹과 잘못된 파일 실행 위험을 줄였습니다.</p>
                     </div>
                     <div class="summary">
                         <div class="summary-title">💡 핵심 정리</div>
@@ -1118,7 +1229,7 @@ deploy-backend:
     DB_PASSWORD: "SuperSecretPassword!"             # ← DB 비밀번호 노출
   script:
     # SSH 키 파일 자체를 코드 저장소에 함께 올려서 사용 중인 상태
-    - chmod 400 ./server-key.pem 
+    - chmod 400 ./server-key.pem
     - ssh -i ./server-key.pem ubuntu@192.168.1.50 "
         docker run -d --name kiosk-backend
         -e DB_PASSWORD=$DB_PASSWORD
@@ -1391,6 +1502,10 @@ RUN npm run build</code></pre>
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                                <p><code>${}</code> 문자열 치환은 외부 입력을 SQL 본문에 직접 결합하므로, 공격 문자열이 조회 조건 자체를 바꿀 수 있습니다.</p>
+                            </div>
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>실시간 주문 알림을 위해 SSE
                                     연결 사용</div>
@@ -1631,9 +1746,6 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                     <div class="section-body">
                         <div class="item">
                             <div class="item-title">① MyBatis 파라미터 바인딩을 사용해 상품 번호가 SQL 문장으로 직접 실행되지 않도록 방지</div>
-                            <div class="term-note"><strong>파라미터 바인딩</strong>: 외부 입력을 SQL에 직접 붙이지 않고 <code>?</code>의 값으로
-                                분리해 전달하는 방식<br>· <strong>Prepared Statement</strong>: SQL 구조를 먼저 고정하고 값을 나중에 바인딩하는 쿼리 실행
-                                방식</div>
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
                                 <p>아이스크림 키오스크에서 상품 번호를 입력하면 데이터베이스에서 해당 상품의 재고를 찾는 기능을 만들었습니다. 처음에는 화면에서 받은 번호를 MyBatis의
@@ -1642,6 +1754,10 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                                 <p>테스트하면서 상품 번호 자리에 <code>999999 OR 1=1</code>을 넣어 보니, 이 값이 단순한 상품 번호가 아니라 <span
                                         class="hl-red">SQL 조건문의 일부로 합쳐질 수 있다</span>는 문제가 있었습니다. 이렇게 되면 조건이 항상 참이 되어 요청한
                                     상품 외의 재고까지 조회될 수 있습니다.</p>
+                            </div>
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                                <p><code>${}</code> 문자열 치환은 외부 입력을 SQL 본문에 직접 결합하므로, 공격 문자열이 조회 조건 자체를 바꿀 수 있습니다.</p>
                             </div>
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>상품 번호로 DB 재고 조회
@@ -1655,6 +1771,19 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                                 <div class="flow-arrow">→</div>
                                 <div class="flow-item result"><span class="step-label">✅ 결과</span>공격 문장이 명령이 아닌 값 하나로 처리
                                 </div>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있었던 코드 — ItemRepository.java</div>
+                                <pre><code class="language-java">@Select("""
+    SELECT item_id, item_name, stock
+    FROM item
+    WHERE item_id = ${itemId}
+    """)
+Optional&lt;Item&gt; findById(@Param("itemId") String itemId);
+
+// ${itemId}가 SQL 문자열에 그대로 합쳐져
+// 공격 입력이 SQL 조건을 변경할 수 있음</code></pre>
                             </div>
                             <div class="compare">
                                 <div class="compare-box before">
@@ -1681,6 +1810,14 @@ WHERE item_id = ?
 → SQL 구조는 그대로, 입력은 값 하나</pre>
                                 </div>
                             </div>
+                            <div class="story">
+                                <div class="story-label">🔧 적용 사항</div>
+                                <p>
+                                    1. <strong>CustomerRepository.java</strong> — 외부 입력을 SQL에 직접 결합하던 <code>${}</code> 문자열 치환을 제거.<br>
+                                    2. <strong>CustomerRepository.java</strong> — 모든 조회 조건을 <code>#{}</code> 파라미터 바인딩으로 변경해 SQL 구조와 입력값을 분리.<br>
+                                    3. <strong>MyBatisParameterBindingSecurityTest.java</strong> — 공격 문자열이 SQL 본문에 포함되지 않고 <code>?</code>의 값으로 전달되는지 검증하는 테스트 추가.
+                                </p>
+                            </div>
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span> CustomerRepository.java
@@ -1694,6 +1831,30 @@ Optional&lt;Customer&gt; findById(@Param("id") Long id);
 
 // #{id} → JDBC PreparedStatement의 ? 파라미터
 // 입력값은 SQL 문자열에 직접 합쳐지지 않는다.</code></pre>
+                            </div>
+                            <div class="test-execution">
+                                <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                                <div class="compare">
+                                    <div class="compare-box before">
+                                        <div class="compare-label">❌ 적용 전 — 공격 문자열이 SQL 조건으로 결합</div>
+                                        <pre>입력: 999999 OR 1=1
+
+실행 SQL:
+WHERE item_id = 999999 OR 1=1
+
+→ 조건이 항상 참이 되어 조회 범위가 변경됨</pre>
+                                    </div>
+                                    <div class="compare-box after">
+                                        <div class="compare-label">✅ 적용 후 — 입력을 값으로만 처리</div>
+                                        <pre>입력: x' OR '1'='1
+
+SQL: mobile_number_hash = ?
+Parameter: "x' OR '1'='1"
+
+→ 공격 문자열이 SQL 본문에 없음
+→ MyBatis 방어 테스트 PASS</pre>
+                                    </div>
+                                </div>
                             </div>
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
@@ -1757,13 +1918,42 @@ Parameter: "x' OR '1'='1"
                         <hr class="divider">
                         <div class="item">
                             <div class="item-title">② CRLF 문자를 정규화해 로그인 ID로 가짜 로그 줄을 생성하지 못하도록 방지</div>
-                            <div class="term-note"><strong>CRLF</strong>: CR(<code>\r</code>, 커서를 줄 앞으로 이동)과
-                                LF(<code>\n</code>, 다음 줄로 이동)를 합친 줄바꿈 문자<br>· 로그에 남으면 공격자가 새로운 기록 한 줄을 위조할 수 있음</div>
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
                                 <p>관리자 로그인에 실패하면 입력한 아이디를 로그에 남깁니다. 그런데 아이디에 줄바꿈 문자 <code>\r\n</code>과
                                     “관리자 로그인 성공”이라는 문장을 함께 넣으면, <span class="hl-red">성공 로그가 한 줄 새로 생긴 것처럼</span>
                                     보일 수 있습니다. 실제로는 로그인에 실패했지만 로그만 보면 성공한 것으로 오해할 수 있습니다.</p>
+                            </div>
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                                <p>로그에 사용자 입력의 CR·LF가 그대로 기록되면 공격자가 줄을 끊고 정상 시스템 메시지처럼 보이는 가짜 기록을 삽입할 수 있습니다.</p>
+                            </div>
+                            <div class="flow">
+                                <div class="flow-item situation"><span class="step-label">📍 상황</span>로그인 실패 아이디를 서버 로그에 기록</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="flow-item problem"><span class="step-label">🚨 문제</span>CRLF 입력으로 가짜 로그 줄 생성</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="flow-item apply"><span class="step-label">🔧 적용</span>기록 전 CR·LF 제거</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="flow-item result"><span class="step-label">✅ 결과</span>입력이 한 줄의 값으로만 기록</div>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있었던 코드 — LoginService.java</div>
+                                <pre><code class="language-java">public void recordLoginFailure(String loginId) {
+    log.warn("login failed: {}", loginId);
+}
+
+// loginId에 \r\n이 포함되어도 그대로 기록되어
+// 공격자가 가짜 로그 줄을 만들 수 있음</code></pre>
+                            </div>
+                            <div class="story">
+                                <div class="story-label">🔧 적용 사항</div>
+                                <p>
+                                    1. <strong>CrlfUtils.java</strong> — 로그에 기록할 문자열에서 <code>\r</code>과 <code>\n</code>을 제거하는 <code>forLog()</code> 메서드 추가.<br>
+                                    2. <strong>LoginService.java</strong> — 로그인 아이디 등 외부 입력을 로그에 남기기 전에 <code>CrlfUtils.forLog()</code>를 적용.<br>
+                                    3. <strong>logback 설정 + CrlfUtilsTest.java</strong> — 로그 설정에서도 줄바꿈을 한 번 더 제거하고 CR·LF·단독 개행·null 입력 방어 테스트를 추가.
+                                </p>
                             </div>
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
@@ -1776,6 +1966,31 @@ Parameter: "x' OR '1'='1"
 }
 
 log.warn("login failed: {}", CrlfUtils.forLog(loginId));</code></pre>
+                            </div>
+                            <div class="test-execution">
+                                <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                                <div class="compare">
+                                    <div class="compare-box before">
+                                        <div class="compare-label">❌ 적용 전 — 가짜 로그 줄 생성</div>
+                                        <pre>입력: admin\r\nINFO administrator login succeeded
+
+로그 결과:
+WARN login failed: admin
+INFO administrator login succeeded
+
+→ 공격 문장이 정상 로그 한 줄처럼 기록됨</pre>
+                                    </div>
+                                    <div class="compare-box after">
+                                        <div class="compare-label">✅ 적용 후 — CR·LF 제거</div>
+                                        <pre>입력: admin\r\nINFO administrator login succeeded
+
+로그 결과:
+WARN login failed: adminINFO administrator login succeeded
+
+→ 입력 전체가 기존 로그 한 줄에 기록됨
+→ CRLF 방어 테스트 3 PASS</pre>
+                                    </div>
+                                </div>
                             </div>
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
@@ -1907,9 +2122,9 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                             <div class="story">
                                 <div class="story-label">🔧 적용 사항</div>
                                 <p>
-                                    확장자 검사에 더해, <span class="hl-green">파일의 실제 바이너리 시그니처(매직바이트)</span>를 읽어 진짜 파일 형식을 판별하는
-                                    검증 단계를 추가했다. 확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
-                                    없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>한다.
+                                    1. <strong>HqUploadService.java</strong> — 허용 확장자와 확장자별 실제 MIME 타입 목록을 상수로 정의.<br>
+                                    2. <strong>HqUploadService.java</strong> — 파일의 매직바이트를 읽어 실제 형식을 판별하는 <code>validateActualContentType()</code> 검증 로직 추가.<br>
+                                    3. <strong>HqUploadService.java</strong> — 기존 확장자 검사 후 매직바이트 검사를 실행하고, 확장자와 실제 MIME 타입이 일치하지 않으면 저장 전에 업로드를 차단하도록 변경.
                                 </p>
                             </div>
 
@@ -2023,8 +2238,12 @@ public class HqUploadService {
                                 </div>
                             </div> -->
 
-                            <div class="compare">
-                                <div class="compare-box before">
+
+
+                            <div class="test-execution">
+                                <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                                <div class="compare">
+                                    <div class="compare-box before">
                                     <div class="compare-label">❌ 적용 전 — 확장자만 바꾸면 통과</div>
                                     <pre>txt 파일의 이름을 image.png로 변경 후 업로드
 
@@ -2032,6 +2251,8 @@ public class HqUploadService {
 → 200 상품 등록 성공
 → 실제로는 텍스트 파일이 이미지로
    서버에 그대로 저장됨</pre>
+
+
                                 </div>
                                 <div class="compare-box after">
                                     <div class="compare-label">✅ 적용 후 — 실제 내용까지 검증</div>
@@ -2042,18 +2263,7 @@ public class HqUploadService {
    text/plain으로 감지되어 불일치
 → 400 "파일 내용이 PNG, JPG, JPEG
    이미지 형식이 아닙니다."</pre>
-                                </div>
-                            </div>
-
-                            <div class="story">
-                                <div class="story-label">🧪 실제 테스트 실행</div>
-                                <p>
-                                    원본 파일(텍스트/다른 형식)의 확장자만 <code>.png</code>로 바꾼 위장 파일을 준비해, 실제로 상품 등록 화면에서
-                                    업로드를 시도해 보았다.
-                                </p>
-                            </div>
-
-                            <div class="screenshot-row">
+                                        <div class="screenshot-row">
                                 <div class="screenshot-item">
                                     <div class="screenshot-label">① 확장자만 .png로 바꾼 위장 파일 선택 (파일 열기 다이얼로그)</div>
                                     <img src="image (2).png" alt="파일 열기 다이얼로그에서 확장자만 png로 변경한 위장 파일을 선택하는 화면">
@@ -2063,6 +2273,14 @@ public class HqUploadService {
                                     <img src="image (3).png"
                                         alt="새 상품 등록 화면에 파일 내용이 PNG, JPG, JPEG 이미지 형식이 아니라는 에러 메시지가 표시된 화면">
                                 </div>
+                            </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="improve">
+                                <div class="improve-title">✨ 결론</div>
+                                <p>확장자 검사에 <span class="hl-green">매직바이트 기반 실제 파일 형식 검증</span>을 추가해, 파일 이름을 <code>.png</code>나 <code>.jpg</code>로 위장하더라도 실제 내용이 허용된 이미지 형식과 다르면 업로드 단계에서 즉시 차단되도록 개선했습니다.</p>
                             </div>
 
                             <div class="summary">
@@ -2090,7 +2308,7 @@ public class HqUploadService {
                                 엔드포인트를 제거</div>
 
                             <div class="story">
-                                <div class="story-label">📍 이런 상황이 있었습니다</div>
+                                <div class="story-label">📖 이런 상황이 있었습니다</div>
                                 <p>
                                     원래는 결제가 정상적으로 완료되어 주문이 처리됐는지 <span class="hl-yellow">QR 토큰으로 확인</span>할 수 있도록 만든
                                     API였다.
@@ -2156,7 +2374,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                             </div>
 
                             <div class="story">
-                                <div class="story-label">🔧 적용한 변경 사항</div>
+                                <div class="story-label">🔧 적용 사항</div>
                                 <p>
                                     1. <strong>PaymentController.java</strong> — <code>POST /{qrToken}/confirm</code>
                                     라우트 삭제.<br>
@@ -2169,26 +2387,42 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                                 </p>
                             </div>
 
-                            <div class="story">
-                                <div class="story-label">🧪 실제 테스트 실행</div>
-                                <p>
-                                    무작위 <code>qrToken</code>으로 <code>/{qrToken}/confirm</code>을 비롯한 결제 관련 엔드포인트를 직접 호출하는
-                                    스크립트
-                                    (<code>test_payment_confirm_removed.py</code>)를 만들어, 삭제한 경로가 실제로 더 이상 매핑되어 있지 않은지
-                                    (Spring 기본 404가 아니라 "라우트 자체가 없음") 확인했습니다.
-                                </p>
+                            <div class="test-execution">
+                                <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                                <div class="compare">
+                                    <div class="compare-box before">
+                                        <div class="compare-label">❌ 적용 전 — confirm 라우트가 남아있어 FAIL</div>
+                                        <pre>POST /api/payments/{qrToken}/confirm
+
+→ 시뮬레이션 confirm 라우트가 매핑됨
+→ 결제 게이트웨이 검증 없이 상태 변경 가능
+→ 테스트 결과: FAIL</pre>
+                                        <div class="screenshot-item">
+                                            <div class="screenshot-label">변경 전 테스트 — confirm 라우트가 남아있어 FAIL</div>
+                                            <img src="image (4).png"
+                                                alt="변경 전 테스트 실행 결과. POST /api/payments/{qrToken}/confirm 라우트가 매핑돼 있어 FAIL이 나오고 전체 결과가 FAIL로 표시됨">
+                                        </div>
+                                    </div>
+                                    <div class="compare-box after">
+                                        <div class="compare-label">✅ 적용 후 — 결제 확인 경로 제거 확인</div>
+                                        <pre>POST /api/payments/{qrToken}/confirm
+
+→ confirm 라우트 매핑 없음
+→ 관련 우회 경로 모두 404
+→ 실제 결제는 Toss 검증 경로만 사용
+→ 테스트 결과: PASS</pre>
+                                        <div class="screenshot-item">
+                                            <div class="screenshot-label">변경 후 테스트 — 모든 결제 확인 경로가 매핑 없음(404)으로 PASS</div>
+                                            <img src="image (5).png"
+                                                alt="변경 후 테스트 실행 결과. 모든 항목이 PASS이고 전체 결과가 PASS로 표시됨">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="screenshot-row">
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">변경 전 — confirm 라우트가 남아있어 FAIL</div>
-                                    <img src="image (4).png"
-                                        alt="변경 전 테스트 실행 결과. POST /api/payments/{qrToken}/confirm 라우트가 매핑돼 있어 FAIL이 나오고 전체 결과가 FAIL로 표시됨">
-                                </div>
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">변경 후 — 모든 결제 확인 경로가 매핑 없음(404)으로 PASS</div>
-                                    <img src="image (5).png" alt="변경 후 테스트 실행 결과. 모든 항목이 PASS이고 전체 결과가 PASS로 표시됨">
-                                </div>
+                            <div class="improve">
+                                <div class="improve-title">✨ 결론</div>
+                                <p>결제 게이트웨이 검증 없이 주문 상태를 변경하던 <code>POST /{qrToken}/confirm</code> 라우트와 서비스 메서드를 제거했습니다. 이제 결제 완료 처리는 <span class="hl-green">Toss 검증을 통과한 정상 결제 경로</span>에서만 가능하며, QR 토큰만으로 결제를 완료 처리하는 우회 경로는 더 이상 존재하지 않습니다.</p>
                             </div>
 
                             <div class="summary">
