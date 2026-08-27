@@ -1913,7 +1913,103 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                 </p>
                             </div>
 
-                            <div class="screenshot-row">
+                            <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> HqUploadService.java — 실제 적용
+                                    코드</div>
+                                    <div class="code-highlight">
+                                        <pre><code class="language-java">@Service
+public class HqUploadService {
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("png", "jpg", "jpeg");
+
+    // 확장자별로 허용되는 실제 MIME 타입 (매직바이트 기준)
+    private static final Map<String, Set<String>> ALLOWED_MIME_TYPES_BY_EXTENSION = Map.of(
+            "png", Set.of("image/png"),
+            "jpg", Set.of("image/jpeg"),
+            "jpeg", Set.of("image/jpeg")
+    );</code></pre>
+    </div>
+
+    <pre><code class="language-java"></code>
+    private static final ContentInfoUtil CONTENT_INFO_UTIL = new ContentInfoUtil();
+
+    @Value("${app.upload.dir}")
+    private String uploadDir;
+
+    public String store(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("업로드할 파일이 없습니다.");
+        }
+
+        String originalName = file.getOriginalFilename();
+
+        String extension = getExtension(originalName);
+
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException(
+                    "PNG, JPG, JPEG 파일만 업로드할 수 있습니다."
+            );
+        }
+
+        try {
+            byte[] content = file.getBytes();
+
+            validateActualContentType(content, extension);
+
+            Path uploadPath = Paths.get(uploadDir)
+                    .toAbsolutePath()
+                    .normalize();
+
+            // 파일이 없으면 생성
+            Files.createDirectories(uploadPath);
+
+            // UUID 기반 신규 파일명 생성
+            String storedFilename = UUID.randomUUID()
+                    + "."
+                    + extension;
+
+            Path target = uploadPath.resolve(storedFilename)
+                    .normalize();
+
+            // 최종 경로 검증 (추가 방어)
+            if (!target.startsWith(uploadPath)) {
+                throw new SecurityException("잘못된 파일 경로입니다.");
+            }
+
+            Files.write(target, content);
+
+            return "/uploads/" + storedFilename;
+
+        } catch (IOException e) {
+            throw new RuntimeException(
+                    "이미지 업로드에 실패했습니다.",
+                    e
+            );
+        }
+    }
+
+</code></pre>
+<div class="code-highlight">
+                                        <pre><code class="language-java">// 파일 확장자가 아닌 실제 바이너리 시그니처(매직바이트)로 이미지 타입을 검증한다.
+    private void validateActualContentType(byte[] content, String extension) throws IOException {
+        ContentInfo contentInfo = CONTENT_INFO_UTIL.findMatch(content);
+        String mimeType = contentInfo != null ? contentInfo.getMimeType() : null;
+
+        Set<String> allowedMimeTypes = ALLOWED_MIME_TYPES_BY_EXTENSION.get(extension);
+
+        if (mimeType == null || allowedMimeTypes == null || !allowedMimeTypes.contains(mimeType)) {
+            throw new IllegalArgumentException(
+                    "파일 내용이 PNG, JPG, JPEG 이미지 형식이 아닙니다."
+            );
+        }
+    }
+    </code></pre>
+    </div>
+
+                            </div>
+
+                            <!-- <div class="screenshot-row">
                                 <div class="screenshot-item">
                                     <div class="screenshot-label">📷 실제 코드 — 필드 선언 & 확장자 검사 (HqUploadService.java)</div>
                                     <img src="image.png"
@@ -1925,7 +2021,7 @@ if (!ALLOWED_EXTENSIONS.contains(extension)) {
                                     <img src="image (1).png"
                                         alt="validateActualContentType 메서드 코드, 매직바이트 검증 로직이 빨간 박스로 강조되어 있음">
                                 </div>
-                            </div>
+                            </div> -->
 
                             <div class="compare">
                                 <div class="compare-box before">
