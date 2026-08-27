@@ -121,15 +121,6 @@
             border-left: 7px solid #dc2626;
         }
 
-        .section-header.a10 {
-            background: linear-gradient(135deg, #fce7f3, #fdf2f8);
-            border-left: 7px solid #ec4899;
-        }
-
-        .badge-a10 {
-            background: #ec4899;
-        }
-
         .owasp-badge {
             display: inline-block;
             padding: 4px 14px;
@@ -2452,7 +2443,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                     </div>
                 </div>
 
-                <!-- ===================== A07 섹션 ===================== -->
+<!-- ===================== A07 섹션 ===================== -->
                 <div class="section">
                     <div class="section-header a07">
                         <span class="owasp-badge badge-a07">A07:2025</span>
@@ -2476,7 +2467,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                             </div>
 
                             <div class="story">
-                                <div class="story-label" style="background: #ef4444;">🚨 문제 분석</div>
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
                                 <p>
                                         HQ 로그인, 지점 로그인, Firebase 세션 교환 등 <span class="hl-red">로그인류 엔드포인트 어디에도 요청 횟수를 검사하는
                                             코드가 없었습니다.</span> 같은 IP에서 같은 아이디를 아무리 반복해서 시도해도 서버가 이를 감지하거나 제한할 방법이 전혀 없는 상태였습니다.
@@ -2598,7 +2589,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                             </div>
 
                             <div class="story">
-                                <div class="story-label">🧪 실제 테스트 실행</div>
+                                <div class="story-label">🧪 테스트 결과</div>
                                 <p>
                                     같은 IP에서 로그인 엔드포인트로 <span class="hl-yellow">20회 연속 요청</span>을 보내, 몇 번째부터 차단되는지
                                     확인했습니다.
@@ -2617,6 +2608,16 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                                 20번 접속을 계속 진행했으나 초반 10번만 접근이 되었고, 그 후의 접근은 <code>429 Too Many Requests</code>로 차단되어
                                 더 이상 시도할 수 없게 되는 것을 확인했습니다.
                             </p>
+
+                            <div class="story">
+                                <div class="story-label" style="background:#16a34a;">✅ 결론</div>
+                                <p>
+                                    20번의 연속 로그인 요청 중 처음 10번까지만 처리되고, 11번째 요청부터
+                                    <code>429 Too Many Requests</code>로 차단되는 것을 확인했습니다.
+                                    이를 통해 같은 IP에서 반복되는 로그인 시도를 제한하여
+                                    <span class="hl-green">사전 대입 공격을 효과적으로 지연·차단할 수 있음을 확인했습니다.</span>
+                                </p>
+                            </div>
 
                             <div class="summary">
                                 <div class="summary-title">💡 핵심 정리</div>
@@ -2649,7 +2650,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                             </div>
 
                             <div class="story">
-                                <div class="story-label" style="background: #ef4444;">🚨 문제 분석</div>
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
                                 <p>
                                     사람인지 로봇인지 구분하지 못하면, 아이디/비밀번호를 자동으로 대입해보는 스크립트도 정상적인 로그인 요청과 똑같이
                                     처리됩니다. IP 요청 횟수 제한만으로는 <span class="hl-yellow">여러 IP를 돌려가며 요청하는 자동화</span>까지 완전히 막기는
@@ -2799,7 +2800,7 @@ async function login() {
                             </div>
 
                             <div class="story">
-                                <div class="story-label">🧪 실제 테스트 실행</div>
+                                <div class="story-label">🧪 테스트 결과</div>
                                 <p>
                                     브라우저 없이 <code>requests</code>로 실제 로그인 API(<code>/api/branch-auth/db-login</code>)를
                                     직접 호출해,
@@ -2825,6 +2826,51 @@ async function login() {
                                 적용 후에는 Turnstile 토큰이 없다는 이유만으로 <strong>아이디/비밀번호 검증 전에</strong> 요청이 거부되는 것을 확인했습니다.
                             </p>
 
+                            <!-- 기존 A10 내용 중 A07-2 보충에 필요한 실행 환경 검증만 추가 -->
+                            <div class="story">
+                                <div class="story-label">🧪 테스트 결과 — 프론트엔드 추가 검증</div>
+                                <p>
+                                    로그인 API에서 Turnstile 토큰이 없는 요청이 차단되는 것을 확인한 뒤,
+                                    실제 Vue 화면에서도 <span class="hl-blue">Turnstile 인증 기능이 정상적으로 동작하는지</span>
+                                    브라우저 개발자 도구를 이용해 추가로 확인했습니다.
+                                </p>
+                                <p>
+                                    점검 과정에서 <code>VITE_TURNSTILE_SITE_KEY</code> 환경변수가 설정되지 않아
+                                    Turnstile 인증이 정상적으로 실행되지 않는 것을 확인했고,
+                                    환경변수를 설정한 뒤 개발 서버를 다시 실행하여 문제를 해결했습니다.
+                                </p>
+                            </div>
+
+                            <div class="screenshot-row">
+                                <div class="screenshot-item">
+                                    <div class="screenshot-label">설정 전 — Turnstile 인증 기능 정상 동작 불가</div>
+                                    <img src="image (10-1).png"
+                                        alt="환경변수 설정 전 Turnstile 인증이 정상적으로 동작하지 않는 화면">
+                                </div>
+                                <div class="screenshot-item">
+                                    <div class="screenshot-label">설정 후 — Turnstile 인증 정상 동작 확인</div>
+                                    <img src="image (10-2).png"
+                                        alt="환경변수 설정 후 Turnstile 인증이 정상적으로 동작하는 화면">
+                                </div>
+                            </div>
+
+                            <p style="font-size:0.9em; color:#666; margin: 4px 0 18px;">
+                                <code>VITE_TURNSTILE_SITE_KEY</code>를 설정한 뒤에는
+                                Turnstile 인증이 정상적으로 완료되고 <strong>인증 토큰이 생성되는 것</strong>을 실제 화면에서 확인했습니다.
+                                이를 통해 API의 토큰 검증뿐 아니라
+                                <strong>프론트엔드에서도 Turnstile 인증 과정이 정상적으로 연결되는 것</strong>을 확인했습니다.
+                            </p>
+
+                            <div class="story">
+                                <div class="story-label" style="background:#16a34a;">✅ 결론</div>
+                                <p>
+                                    적용 전에는 Turnstile 토큰 없이도 아이디와 비밀번호만 맞으면 로그인이 가능했지만,
+                                    적용 후에는 토큰이 없을 경우 아이디/비밀번호 검증 전에 요청이 거부되었습니다.
+                                    또한 실제 Vue 실행 환경에서도 Turnstile 인증과 토큰 생성이 정상적으로 이루어지는 것을 확인하여,
+                                    <span class="hl-green">자동화 프로그램의 로그인 요청을 구분하고 차단하는 인증 절차가 정상적으로 적용되었음을 확인했습니다.</span>
+                                </p>
+                            </div>
+
                             <div class="summary">
                                 <div class="summary-title">💡 핵심 정리</div>
                                 <ul>
@@ -2838,6 +2884,9 @@ async function login() {
                                     <li>IP 기준 <span class="hl-blue">요청 횟수 제한(①)</span>과 <span class="hl-blue">사람
                                             확인(②)</span>을 함께 둬서, 자동화 대입 공격을
                                         두 겹으로 방어합니다</li>
+                                    <li>실제 Vue 실행 환경에서도 Turnstile 동작을 점검하고,
+                                        <code>VITE_TURNSTILE_SITE_KEY</code> 누락 문제를 수정하여
+                                        <span class="hl-green">프론트엔드에서 인증 토큰이 정상적으로 생성되는 것까지 확인했습니다</span></li>
                                 </ul>
                             </div>
                         </div>
@@ -3082,13 +3131,13 @@ RUN mvn -B -C -DskipTests package</code></pre>
                             <div class="screenshot-row">
                                 <div class="screenshot-item">
                                     <div class="screenshot-label">📷 테스트 ① — 정상 lock 파일: 지문 대조 통과, 179개 패키지 설치 성공</div>
-                                    <img src="image (A08-npmci-ok).png"
+                                    <img src="image_A08-npmci-ok.png"
                                         alt="npm ci 실행 결과 added 179 packages 성공 화면">
                                 </div>
                                 <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 테스트 ② — 무결성 검증 실패: 다운로드한 파일의 해시가
-                                        package-lock.json에 기록된 값과 불일치하여 설치 거부</div>
-                                    <img src="image (A08-npmci-fail).png"
+                                    <div class="screenshot-label">📷 테스트 ② — 지문 1글자 변조 후: EINTEGRITY 에러로 설치 거부 (wanted
+                                        Ab5... / got Pb5...)</div>
+                                    <img src="image_A08-npmci-fail.png"
                                         alt="package-lock.json의 integrity 해시를 한 글자 변조한 뒤 npm ci가 EINTEGRITY 에러로 설치를 거부하는 화면">
                                 </div>
                             </div>
@@ -3495,134 +3544,6 @@ if (updated.count() > MAX_ATTEMPTS) {
             </div>
 
 
-            <!-- ===================== A10 섹션 ===================== -->
-            <div class="section">
-                <div class="section-header a10">
-                    <span class="owasp-badge badge-a10">A10:2025</span>
-                    <h2>Vue 개발자 도구를 이용한 프론트엔드 보안 설정 점검</h2>
-                    <p class="subtitle">Cloudflare Turnstile Site Key 환경변수 누락으로 인증 기능이 정상 동작하지 않았던 문제</p>
-                </div>
-                <div class="section-body">
-                    <div class="item">
-                        <div class="item-title">① <code>VITE_TURNSTILE_SITE_KEY</code> 환경변수를 설정해 Cloudflare Turnstile 인증
-                            기능을 정상화</div>
-
-                        <div class="story">
-                            <div class="story-label">📖 이런 상황이 있었습니다</div>
-                            <p>
-                                프론트엔드에 적용된 보안 기능이 실제 실행 환경에서도 정상적으로 동작하는지 확인하기 위해 Vue 프로젝트를 실행하고
-                                <span class="hl-blue">브라우저 개발자 도구</span>로 점검했습니다.
-                            </p>
-                            <p>
-                                Console을 확인하던 중 <span class="hl-red">Cloudflare Turnstile의 Site Key가 정상적으로 전달되지 않는
-                                    문제</span>를 발견했습니다.
-                                코드는 <code>import.meta.env.VITE_TURNSTILE_SITE_KEY</code>로 Site Key를 가져오도록 구현되어 있었지만, 실제
-                                실행 환경에는 해당 환경변수가 설정되어 있지 않았습니다.
-                            </p>
-                            <p>
-                                이로 인해 Turnstile 인증이 완료되지 않아 <span class="hl-red"><code>turnstileToken</code>이 생성되지
-                                    않았고</span>, 결과적으로 지점 등록 버튼을 사용할 수 없었습니다.
-                            </p>
-                        </div>
-
-                        <div class="flow">
-                            <div class="flow-item situation"><span class="step-label">📍 상황</span>Vue 프로젝트 실행 후 개발자 도구로
-                                보안 기능 점검</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item problem"><span class="step-label">🚨 문제</span>Site Key 환경변수 누락으로
-                                Turnstile 인증 실패</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item apply"><span class="step-label">🔧 적용</span><code>.env</code>에
-                                <code>VITE_TURNSTILE_SITE_KEY</code> 추가
-                            </div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item result"><span class="step-label">✅ 결과</span>Turnstile 인증 성공 및 지점 등록 버튼
-                                활성화</div>
-                        </div>
-
-                        <div class="compare">
-                            <div class="compare-box before">
-                                <div class="compare-label">❌ 환경변수 설정 전</div>
-                                <pre>VITE_TURNSTILE_SITE_KEY 설정 없음
-↓
-Site Key가 정상적으로 전달되지 않음
-↓
-Turnstile 인증 실패
-↓
-turnstileToken 생성 안 됨
-↓
-지점 등록 버튼 비활성화</pre>
-                            </div>
-                            <div class="compare-box after">
-                                <div class="compare-label">✅ 환경변수 설정 후</div>
-                                <pre>.env 파일에
-VITE_TURNSTILE_SITE_KEY 추가
-↓
-Site Key 정상 전달
-↓
-Turnstile 인증 성공
-↓
-turnstileToken 정상 생성
-↓
-지점 등록 버튼 활성화</pre>
-                            </div>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label">🔧 어떻게 해결했는가?</div>
-                            <p>
-                                프론트엔드 프로젝트의 <span class="hl-green"><code>.env</code> 파일</span>에
-                                <code>VITE_TURNSTILE_SITE_KEY</code> 환경변수를 추가하고 Cloudflare에서 발급받은 Site Key를 설정했습니다.
-                                변경된 환경변수를 적용하기 위해 <span class="hl-green">개발 서버를 다시 실행</span>했습니다.
-                            </p>
-                        </div>
-
-                        <div class="screenshot-single">
-                            <div class="screenshot-item">
-                                <div class="screenshot-label">frontend/.env — Turnstile Site Key 환경변수 설정</div>
-                                <img src="image (10-3).png" alt=".env 파일에 VITE_TURNSTILE_SITE_KEY 환경변수를 설정한 화면">
-                            </div>
-                        </div>
-
-                        <div class="screenshot-row">
-                            <div class="screenshot-item">
-                                <div class="screenshot-label">환경변수 설정 전 — Turnstile 인증 불가 / 버튼 비활성화</div>
-                                <img src="image (10-1).png" alt="환경변수 설정 전 Turnstile 인증 불가 및 등록 버튼 비활성화 화면">
-                            </div>
-                            <div class="screenshot-item">
-                                <div class="screenshot-label">환경변수 설정 후 — Turnstile 인증 성공 / 버튼 활성화</div>
-                                <img src="image (10-2).png" alt="환경변수 설정 후 Turnstile 인증 성공 및 등록 버튼 활성화 화면">
-                            </div>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label">✅ 적용 결과</div>
-                            <p>
-                                환경변수를 설정하고 개발 서버를 다시 실행한 결과, Turnstile 인증 화면에서 <span class="hl-green">성공!</span>이 표시되고
-                                기존에 사용할 수 없었던 <span class="hl-green">지점 등록 버튼도 정상적으로 활성화</span>되는 것을 확인했습니다.
-                            </p>
-                        </div>
-
-                        <div class="summary">
-                            <div class="summary-title">💡 핵심 정리</div>
-                            <ul>
-                                <li>브라우저 개발자 도구로 프론트엔드 보안 기능을 <span class="hl-blue">실제 실행 환경에서 점검</span>했습니다</li>
-                                <li>Turnstile 기능은 구현되어 있었지만 <span class="hl-red"><code>VITE_TURNSTILE_SITE_KEY</code>
-                                        환경변수가 누락</span>되어 인증이 동작하지 않았습니다</li>
-                                <li><code>.env</code>에 Site Key를 추가하고 개발 서버를 재시작해 변경된 환경변수를 적용했습니다</li>
-                                <li>수정 후 <span class="hl-green">Turnstile 인증 성공과 지점 등록 버튼 활성화</span>를 직접 확인했습니다</li>
-                            </ul>
-                        </div>
-
-                        <div class="improve">
-                            <div class="improve-title">⚠️ 검증 범위와 한계</div>
-                            <p><strong>검증 범위:</strong> Site Key 전달, Turnstile 토큰 생성, 지점 등록 버튼 활성화를 브라우저에서 확인했습니다.</p>
-                            <p><strong>한계:</strong> Site Key는 공개되어도 되는 값이지만 Secret Key는 프론트엔드에 노출하면 안 됩니다. 실제 보안 검증을
-                                완성하려면 백엔드가 Cloudflare에 토큰을 전달해 서버 측 검증을 수행해야 합니다.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <dialog class="image-lightbox" id="imageLightbox" aria-label="확대한 이미지">
                 <button class="image-lightbox-close" type="button" aria-label="확대 화면 닫기">
