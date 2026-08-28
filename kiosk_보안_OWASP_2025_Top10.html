@@ -807,16 +807,16 @@
                     </div>
 
                     <div class="flow">
-                        <div class="flow-item situation"><span class="step-label">📍 상황</span>매장 공용 PC에서 관리자 로그인 후 토큰 발급
+                        <div class="flow-item situation"><span class="step-label">📍 상황</span>매장 공용 PC에서 지점 관리자 로그인
                         </div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item problem"><span class="step-label">🚨 문제</span>브라우저에서만 토큰을 삭제해 복사된 토큰은 12시간 동안 계속 사용 가능
+                        <div class="flow-item problem"><span class="step-label">🚨 문제</span>로그아웃해도 복사해둔 토큰이 12시간 그대로 통함
                         </div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>토큰에 버전 번호를 서명하고 로그아웃 시 서버의 버전 번호를 1 증가
+                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>토큰에 세대 번호를 서명해 넣고 로그아웃 시 +1
                         </div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item result"><span class="step-label">✅ 결과</span>버전이 이전 값인 기존 토큰의 요청을 즉시 401로 거부</div>
+                        <div class="flow-item result"><span class="step-label">✅ 결과</span>로그아웃 즉시 기존 토큰 전부 401</div>
                     </div>
 
                     <div class="code-block">
@@ -833,13 +833,13 @@
                         <div class="story-label">🔧 적용 사항</div>
                         <p>
                             1. <strong>AdminTokenService.java</strong> — 계정별 <code>토큰 버전</code>을 두고, 토큰 발급 시 그 번호를 payload에 함께 넣어 서명.<br>
-                            2. <strong>AdminTokenService.java</strong> — 토큰 검증 순서에 <code>서명 확인 → 만료 확인 → 버전 대조</code>를 추가해, 토큰의 버전과 서버의 현재 버전이 다르면 거부.<br>
-                            3. <strong>LogoutController.java</strong> — 로그아웃 API를 신설해 호출 시 해당 계정의 토큰 버전 번호를 <code>+1</code>하고 인증 쿠키를 삭제.
+                            2. <strong>AdminTokenService.java</strong> — 토큰 검증 순서에 <code>서명 확인 → 만료 확인 → 세대 대조</code>를 추가해, 세대가 다르면 거부.<br>
+                            3. <strong>LogoutController.java</strong> — 로그아웃 API를 신설해 호출 시 해당 계정의 세대 번호를 <code>+1</code>하고 인증 쿠키를 삭제.
                         </p>
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> AdminTokenService.java (토큰 버전 카운터) — 실제 적용 코드 ①</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> AdminTokenService.java (세대 카운터) — 실제 적용 코드 ①</div>
                         <pre><code class="language-java">// adminId -&gt; 현재 토큰 버전. 없으면 0버전.
 private final Map&lt;Long, Integer&gt; tokenVersions = new ConcurrentHashMap&lt;&gt;();
 
@@ -897,11 +897,11 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                                 <p>
                                     ①의 응답을 보면 토큰이 본문이 아니라 <code>Set-Cookie</code>로 내려오고,
                                     <span class="hl-green">HttpOnly</span>가 붙어 있어 화면 스크립트가 값을 읽을 수 없다.
-                                    ③에서 로그아웃이 <span class="hl-green">200</span>으로 처리되며, 이때 서버가 해당 계정의 토큰 버전 번호를 1 증가시킨다.
+                                    ③에서 로그아웃이 <span class="hl-green">200</span>으로 처리되며, 이때 서버가 해당 계정의 세대 번호를 올린다.
                                 </p>
                                 <p>
                                     그 결과 ④에서 같은 쿠키를 그대로 다시 보내면 <span class="hl-green">401</span>로 거부된다.
-                                    토큰의 서명과 만료 시각에 문제가 없더라도, <strong>토큰에 서명된 버전 번호가 서버의 현재 버전 번호와 다르면</strong> 요청은 통과하지 못한다.
+                                    서명도 멀쩡하고 만료도 안 됐지만, <strong>토큰에 서명돼 있는 세대 번호가 서버의 현재 값과 달라서</strong> 통과하지 못한다.
                                 </p>
                             </div>
                         </div>
