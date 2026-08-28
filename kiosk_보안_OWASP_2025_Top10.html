@@ -781,8 +781,8 @@
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었다</div>
                         <p>
-                            지점 관리자가 매장 계산대 옆 <span class="hl-yellow">공용 PC</span>에서 관리자 화면에 로그인했다가, 일을 마치고 로그아웃 버튼을 누르고
-                            자리를 떠난다.
+                            지점 관리자는 매장 계산대 옆 <span class="hl-yellow">공용 PC</span>에서 관리자 화면에 로그인 후 업무를 처리하고,
+                            업무가 종료되면 로그아웃 버튼을 누른 뒤 자리를 비웁니다. 일반적으로 사용자는 로그아웃과 동시에 해당 로그인 상태가 종료되었다고 인식합니다.
                         </p>
                         <p>
                             그런데 점검해 보니 로그아웃을 누른 뒤에도, 로그아웃 직전에 복사해 둔 토큰으로 매출·재고·주문 조회 API가
@@ -923,15 +923,19 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                     <div class="summary">
                         <div class="summary-title">💡 핵심 정리</div>
                         <ul>
-                            <li>로그아웃은 토큰을 <span class="hl-red">브라우저에서 지우는 것</span>이 아니라 <span class="hl-green">서버에서 무효화하는
-                                    것</span>이어야 한다</li>
+                            <li>로그아웃은 토큰을 <span class="hl-red">브라우저에서 지우는 것</span>이 아니라 토큰을 <span class="hl-green">서버에서 무효화하는
+                                    것</span>이어야 합니다.</li>
+                            <li>토큰 버전 번호도 <span class="hl-green">서명 대상</span>이므로, 공격자가 토큰의 버전 값을 되돌리면 서명이 일치하지 않아 서버에서 요청이 거부됩니다.</li>
+                            <li>한 사람의 로그아웃이 <span class="hl-blue">다른 관리자 토큰에는 영향을 주지 않습니다</span> (계정별 카운터)</li>
                         </ul>
                     </div>
 
                     <div class="improve">
                         <div class="improve-title">⚠️ 알고 있는 한계</div>
-                        <p>버전 카운터를 서버 메모리에 두었기 때문에 <strong>서버를 재시작하면 무효화 상태가 초기화</strong>된다. DB 컬럼으로 옮기면 재시작에도 유지되지만,
-                            팀이 공유하는 개발 DB에 스키마 변경이 필요해 이번에는 메모리 방식을 선택했다.</p>
+                        <p>현재 개발 서버에서는 토큰 버전 카운터를 서버 메모리에 저장하는 방식을 사용하고 있습니다. 따라서 서버가 재시작되면 메모리에 저장되어 있던
+                            카운터 정보가 삭제되어 <strong>기존 토큰의 무효화 상태가 초기화</strong>됩니다. 무효화에 사용하는 토큰 버전 값을 데이터베이스 컬럼에 저장하면
+                            서버가 재시작된 이후에도 상태를 유지할 수 있습니다. 다만 이 방식을 적용하려면 팀이 공동으로 사용하는 개발 데이터베이스의 스키마를 변경해야 하므로,
+                            현재 개발 단계에서는 별도의 스키마 변경이 필요하지 않은 메모리 저장 방식을 선택했습니다.</p>
                     </div>
                 </div>
 
@@ -2082,7 +2086,7 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                     <div class="section-header a05">
                         <span class="owasp-badge badge-a05">A05:2025</span>
                         <h2>인젝션 (Injection)</h2>
-                        <p class="subtitle">사용자가 입력한 값이 SQL이나 로그의 형식을 바꾸는 명령처럼 처리되는 문제</p>
+                        <p class="subtitle">사용자가 입력한 값이 SQL 명령의 구조를 바꾸는 명령처럼 처리되는 문제</p>
                     </div>
                     <div class="section-body">
                         <div class="item">
@@ -2254,146 +2258,6 @@ Parameter: "x' OR '1'='1"
                                     <li><span class="hl-green"><code>#{}</code></span>는 SQL 구조와 값을 분리해 인젝션을 차단한다</li>
                                     <li>숫자형 DTO 검증도 적용하되, 핵심 방어는 <span class="hl-blue">파라미터 바인딩</span>이다</li>
                                 </ul>
-                            </div>
-                        </div>
-                        <hr class="divider">
-                        <div class="item">
-                            <div class="item-title">② CRLF 문자를 정규화해 로그인 ID로 가짜 로그 줄을 생성하지 못하도록 방지</div>
-                            <div class="story">
-                                <div class="story-label">📖 이런 상황이 있었다</div>
-                                <p>관리자 로그인에 실패하면 입력한 아이디를 로그에 남긴다. 그런데 아이디에 줄바꿈 문자 <code>\r\n</code>과
-                                    “관리자 로그인 성공”이라는 문장을 함께 넣으면, <span class="hl-red">성공 로그가 한 줄 새로 생긴 것처럼</span>
-                                    보일 수 있다. 실제로는 로그인에 실패했지만 로그만 보면 성공한 것으로 오해할 수 있다.</p>
-                            </div>
-                            <div class="story">
-                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
-                                <p>로그에 사용자 입력의 CR·LF가 그대로 기록되면 공격자가 줄을 끊고 정상 시스템 메시지처럼 보이는 가짜 기록을 삽입할 수 있다.</p>
-                            </div>
-                            <div class="flow">
-                                <div class="flow-item situation"><span class="step-label">📍 상황</span>로그인 실패 아이디를 서버 로그에 기록</div>
-                                <div class="flow-arrow">→</div>
-                                <div class="flow-item problem"><span class="step-label">🚨 문제</span>CRLF 입력으로 가짜 로그 줄 생성</div>
-                                <div class="flow-arrow">→</div>
-                                <div class="flow-item apply"><span class="step-label">🔧 적용</span>기록 전 CR·LF 제거</div>
-                                <div class="flow-arrow">→</div>
-                                <div class="flow-item result"><span class="step-label">✅ 결과</span>입력이 한 줄의 값으로만 기록</div>
-                            </div>
-                            <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> 문제가 있었던 코드 — LoginService.java</div>
-                                <pre><code class="language-java">public void recordLoginFailure(String loginId) {
-    log.warn("login failed: {}", loginId);
-}
-
-// loginId에 \r\n이 포함되어도 그대로 기록되어
-// 공격자가 가짜 로그 줄을 만들 수 있음</code></pre>
-                            </div>
-                            <div class="story">
-                                <div class="story-label">🔧 적용 사항</div>
-                                <p>
-                                    1. <strong>CrlfUtils.java</strong> — 로그에 기록할 문자열에서 <code>\r</code>과 <code>\n</code>을 제거하는 <code>forLog()</code> 메서드 추가.<br>
-                                    2. <strong>LoginService.java</strong> — 로그인 아이디 등 외부 입력을 로그에 남기기 전에 <code>CrlfUtils.forLog()</code>를 적용.<br>
-                                    3. <strong>logback 설정 + CrlfUtilsTest.java</strong> — 로그 설정에서도 줄바꿈을 한 번 더 제거하고 CR·LF·단독 개행·null 입력 방어 테스트를 추가.
-                                </p>
-                            </div>
-                            <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> CrlfUtils.java — 실제 적용
-                                    코드</div>
-                                <pre><code class="language-java">public static String forLog(String value) {
-    return value == null ? null
-            : value.replace("\r", "")
-                   .replace("\n", "");
-}
-
-log.warn("login failed: {}", CrlfUtils.forLog(loginId));</code></pre>
-                            </div>
-                            <div class="test-execution">
-                                <div class="test-execution-title">🧪 실제 테스트 실행</div>
-                                <div class="compare">
-                                    <div class="compare-box before">
-                                        <div class="compare-label">❌ 적용 전 — 가짜 로그 줄 생성</div>
-                                        <pre>입력: admin\r\nINFO administrator login succeeded
-
-로그 결과:
-WARN login failed: admin
-INFO administrator login succeeded
-
-→ 공격 문장이 정상 로그 한 줄처럼 기록됨</pre>
-                                    </div>
-                                    <div class="compare-box after">
-                                        <div class="compare-label">✅ 적용 후 — CR·LF 제거</div>
-                                        <pre>입력: admin\r\nINFO administrator login succeeded
-
-로그 결과:
-WARN login failed: adminINFO administrator login succeeded
-
-→ 입력 전체가 기존 로그 한 줄에 기록됨
-→ CRLF 방어 테스트 3 PASS</pre>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> CrlfUtilsTest.java — 가짜
-                                    로그 줄 생성 차단 테스트</div>
-                                <pre><code class="language-java">@Test
-void removesCrLfSoAnAttackerCannotCreateAFakeLogLine() {
-    String attack = "admin\r\nINFO administrator login succeeded";
-
-    String sanitized = CrlfUtils.forLog(attack);
-
-    assertThat(sanitized)
-        .isEqualTo("adminINFO administrator login succeeded")
-        .doesNotContain("\r", "\n");
-}</code></pre>
-                            </div>
-                            <div class="compare">
-                                <div class="compare-box before">
-                                    <div class="compare-label">🧪 공격 입력</div>
-                                    <pre>admin\r\n
-INFO administrator login succeeded
-
-CRLF가 남으면 성공 로그처럼
-새로운 한 줄을 만들 수 있음</pre>
-                                </div>
-                                <div class="compare-box after">
-                                    <div class="compare-label">✅ 실제 테스트 결과 — 3 PASS</div>
-                                    <pre>adminINFO administrator login succeeded
-
-CR(\r): 없음
-LF(\n): 없음
-null 입력: 안전하게 null 반환</pre>
-                                </div>
-                            </div>
-                            <div class="screenshot-single">
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 CRLF 로그 위조 방어 테스트 — 3/3 통과, Errors 0, Failures 0
-                                    </div>
-                                    <img src="image (A05-CRLF-test).png"
-                                        alt="Eclipse JUnit에서 CRLF 로그 위조 방어 테스트 3개가 통과한 화면">
-                                </div>
-                            </div>
-                            <div class="improve">
-                                <div class="improve-title">✨ 결론</div>
-                                <p>사용자 입력이나 외부 서비스의 응답을 로그에 남기기 전에 <span class="hl-green">CrlfUtils.forLog()</span>를
-                                    거쳐 줄바꿈을 제거한다. 그러면 입력한 문장이 기존 로그 한 줄 안에 이어서 기록되므로 가짜 로그 줄을 만들 수 없다. 빠뜨린 곳이 생기지 않도록
-                                    Logback 설정에서도 줄바꿈을 한 번 더 제거했다.</p>
-                            </div>
-                            <div class="summary">
-                                <div class="summary-title">💡 핵심 정리</div>
-                                <ul>
-                                    <li>SQL 인젝션과 로그 인젝션은 모두 <span class="hl-blue">입력이 명령 구조를 바꾼다</span>는 공통점이 있다</li>
-                                    <li>SQL은 바인딩하고, 로그는 구조를 바꾸는 CR·LF를 제거한다</li>
-                                    <li>공통 유틸과 Logback 설정을 함께 사용해 처리하지 않은 로그가 생길 가능성을 줄였다</li>
-                                </ul>
-                            </div>
-                            <div class="improve">
-                                <div class="improve-title">✅ A05 전용 테스트 실행 결과</div>
-                                <p><strong>총 4개 통과:</strong> MyBatis 파라미터 바인딩 1개, CRLF 제거·단독 개행·null 처리 3개가 모두 PASS했다.
-                                </p>
-                                <p><strong>한계:</strong> MyBatis 테스트는 실제 DB에 접속하지 않고 SQL 문장과 입력값이 분리되는지만 확인한다. 실제 MySQL에서도
-                                    같은 결과가 나오는지는 Testcontainers를 이용한 통합 테스트로 추가 확인할 수 있다.</p>
                             </div>
                         </div>
                     </div>
@@ -3878,6 +3742,17 @@ public ResponseEntity&lt;...&gt; handleTossPayment(TossPaymentException e) {
                                     두 방어는 서로를 전제하지 않기 때문에, <strong>한쪽이 실수로 빠져도 나머지가 그대로 동작한다.</strong>
                                     설정 파일 한 줄에 보안 전체가 걸려 있던 상태에서 벗어난 것이 이 항목의 목적이다.
                                 </p>
+                            </div>
+
+                            <div class="test-execution">
+                                <div class="test-execution-title">🧪 CrlfUtils 방어 테스트 결과</div>
+                                <p><strong>총 3개 통과:</strong> CR·LF 제거, 단독 개행 제거, null 입력 처리가 모두 PASS했습니다.</p>
+                                <div class="screenshot-single">
+                                    <div class="screenshot-item">
+                                        <div class="screenshot-label">📷 CRLF 로그 위조 방어 테스트 — 3/3 통과, Errors 0, Failures 0</div>
+                                        <img src="image (A05-CRLF-test).png" alt="Eclipse JUnit에서 CRLF 로그 위조 방어 테스트 3개가 통과한 화면">
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="summary">
