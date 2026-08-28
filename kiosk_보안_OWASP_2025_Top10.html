@@ -1744,7 +1744,7 @@ RUN npm run build</code></pre>
                     <div class="section-body">
 
                 <div class="item">
-                    <div class="item-title">① 1분짜리 스트림 전용 티켓을 사용해 실시간 알림 토큰이 서버 로그에 노출되지 않도록 방지</div>
+                    <div class="item-title">① 1분짜리 스트림 전용 토큰을 사용해 실시간 알림 토큰이 서버 로그에 노출되지 않도록 방지</div>
 
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었습니다</div>
@@ -1774,7 +1774,7 @@ RUN npm run build</code></pre>
                         <div class="flow-item problem"><span class="step-label">🚨 문제</span>12시간 토큰이 URL에 실려 로그에
                     30일 보관</div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>스트림 전용 1분 티켓을 헤더 인증으로
+                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>스트림 전용 1분 토큰을 헤더 인증으로
                     발급</div>
                         <div class="flow-arrow">→</div>
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>로그에 남아도 1분 뒤 만료 · 다른
@@ -1790,7 +1790,7 @@ RUN npm run build</code></pre>
                         <p>
                             여기서 놓친 것은 <strong>URL은 애플리케이션만 보는 값이 아니라는 점</strong>입니다. 액세스 로그·프록시·브라우저 히스토리·리퍼러까지
                             거쳐 가며 여러 곳에 복사됩니다. 게다가 이 토큰은 <span class="hl-red">12시간 동안 그 계정의 모든 API를 쓸 수 있는 값</span>이라,
-                            한 번 기록되면 그 자체가 계정 하나를 통째로 넘겨주는 것과 같았습니다.
+                            로그에 토큰값이 한 번이라도 기록되면 그 자체가 계정 하나를 통째로 넘겨주는 것과 같았습니다.
                         </p>
                     </div>
 
@@ -1799,7 +1799,7 @@ RUN npm run build</code></pre>
                         <div class="flow-arrow">→</div>
                         <div class="flow-item problem"><span class="step-label">🚨 문제</span>12시간 토큰이 URL에 실려 로그에 30일 보관</div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>스트림 전용 1분 티켓을 헤더 인증으로 발급</div>
+                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>스트림 전용 1분 토큰을 헤더 인증으로 발급</div>
                         <div class="flow-arrow">→</div>
                         <div class="flow-item result"><span class="step-label">✅ 결과</span>로그에 남아도 1분 뒤 만료 · 다른 API 사용 불가</div>
                     </div>
@@ -1819,15 +1819,15 @@ $ echo "NjoxNzg2..." | tr '_-' '/+' | base64 -d
                     <div class="story">
                         <div class="story-label">🔧 적용 사항</div>
                         <p>
-                            1. <strong>스트림 전용 티켓 신설</strong> — 유효기간 <code>60초</code>, 스트림 구독에만 쓸 수 있는 별도 접두사(<code>stream:</code>)를 붙여 발급.<br>
-                            2. <strong>티켓 발급 API는 헤더 인증</strong>(<code>/stream-ticket</code>)으로 처리 — 이 요청은 URL에 아무것도 싣지 않아 로그에 남지 않음.<br>
-                            3. <strong>양방향 분리</strong> — 로그인 토큰으로는 스트림을 열 수 없고, 티켓으로는 일반 API를 호출할 수 없도록 검증을 나눔.
+                            1. <strong>SSE 스트림 연결 전용 토큰 생성</strong> — 유효기간 <code>60초</code>
+                            2. <strong>토큰 발급 API는 헤더 인증</strong>(<code>/stream-ticket</code>)으로 처리 — 이 요청은 URL에 아무것도 싣지 않아 로그에 남지 않음.<br>
+                            3. <strong>양방향 분리</strong> — 로그인 토큰으로는 SSE스트림을 열 수 없고, SSE연결 토큰으로는 일반 API를 호출할 수 없도록 검증을 나눔.
                         </p>
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> BranchEventStreamController.java (티켓 분리) — 실제 적용 코드</div>
-                        <pre><code class="language-java">// 스트림 연결 직전에만 발급받는 짧은 티켓. 이 요청은 헤더로 인증하므로 로그에 아무것도 남지 않는다.
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> BranchEventStreamController.java (토큰 분리) — 실제 적용 코드</div>
+                        <pre><code class="language-java">// 스트림 연결 직전에만 발급받는 짧은 토큰. 이 요청은 헤더로 인증하므로 로그에 아무것도 남지 않는다.
 @GetMapping("/stream-ticket")
 public Map&lt;String, String&gt; issueStreamTicket(@RequestHeader("Authorization") String authorization) {
     Admin admin = branchAccessService.requireAdmin(authorization);
@@ -1835,7 +1835,7 @@ public Map&lt;String, String&gt; issueStreamTicket(@RequestHeader("Authorization
 }
 
 @GetMapping("/stream")
-public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 값이 티켓으로 바뀌었다
+public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 값이 토큰으로 바뀌었다
     Long branchId = branchAccessService.requireBranchIdForStream(token);
     return branchEventPublisher.subscribe(branchId);
 }</code></pre>
@@ -1844,7 +1844,7 @@ public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 �
                     <div class="test-execution">
                         <div class="test-execution-title">🧪 실제 테스트 실행</div>
                         <p>
-                            로그에서 주운 티켓을 <strong>① 일반 API에 써보고</strong>, <strong>② 60초를 넘긴 뒤 스트림에 다시 써봤습니다.</strong>
+                            로그에서 주운 토큰을 <strong>① 일반 API에 써보고</strong>, <strong>② 60초를 넘긴 뒤 스트림에 다시 써봤습니다.</strong>
                             둘 다 막혀야 "로그에 남아도 쓸 수 없다"가 성립합니다.
                         </p>
 
@@ -1859,7 +1859,7 @@ public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 �
 → 로그를 본 사람 = 계정 탈취</pre>
                                 </div>
                                 <div class="compare-box after">
-                                    <div class="compare-label">✅ 적용 후 — 1분 전용 티켓</div>
+                                    <div class="compare-label">✅ 적용 후 — 1분 전용 토큰</div>
                                     <pre>?token=stream:6:0:1787604099:...
 
 · 유효기간 60초
@@ -1871,7 +1871,7 @@ public SseEmitter stream(@RequestParam String token) {     // 여기 실리는 �
 
                         <div class="code-block">
                             <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> 실행 결과</div>
-                            <pre><code class="language-bash"># 로그에서 주운 티켓을 일반 API에 써보면
+                            <pre><code class="language-bash"># 로그에서 주운 토큰을 일반 API에 써보면
 $ curl .../api/branch/orders --cookie "admin_session=c3RyZWFt..."
 401                       # ← 접두사가 달라 스트림 외에는 못 쓴다
 
@@ -1886,7 +1886,7 @@ $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
                         <p>
                             기술적 제약(<code>EventSource</code>는 헤더를 못 보냄)은 그대로 두고,
                             <span class="hl-green">URL에 실리는 값의 권한과 수명을 줄이는</span> 쪽으로 풀었습니다.
-                            로그에 값이 남는 것 자체는 여전하지만, 남는 값이 <strong>60초짜리 스트림 전용 티켓</strong>으로 바뀌었습니다.
+                            로그에 값이 남는 것 자체는 여전하지만, 남는 값이 <strong>60초짜리 스트림 전용 토큰</strong>으로 바뀌었습니다.
                         </p>
                         <p>
                             그래서 30일치 로그를 전부 뒤져도 쓸 수 있는 자격증명은 나오지 않습니다.
@@ -1900,7 +1900,7 @@ $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
                                     <li>URL에 실리는 값은 <span class="hl-red">반드시 로그에 남는다</span>고 가정해야 합니다</li>
                                     <li>기술적 제약(<span class="hl-yellow">EventSource는 헤더 불가</span>)을 없앨 수 없다면, <span
                                             class="hl-green">실리는 값의 권한과 수명을 줄이는</span> 방향으로 풉니다</li>
-                                    <li>티켓은 접두사가 달라 <span class="hl-blue">양방향으로 분리</span>됩니다 — 로그인 토큰으로 스트림도 열 수 없습니다
+                                    <li>토큰은 접두사가 달라 <span class="hl-blue">양방향으로 분리</span>됩니다 — 로그인 토큰으로 스트림도 열 수 없습니다
                                     </li>
                                 </ul>
                             </div>
@@ -1918,29 +1918,21 @@ $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
                                 <p>
                                     로그인에 성공하면 서버가 응답 본문에 토큰을 실어 보냈고, 프론트엔드가 그 값을 <span
                                         class="hl-yellow">localStorage</span>에 저장했습니다.
-                                    동작에는 아무 문제가 없었지만, <span class="hl-red">localStorage는 JavaScript가 언제든 읽을 수 있는
-                                        자리</span>입니다.
+                                    동작에는 아무 문제가 없었지만, <span class="hl-red">localStorage는 JavaScript가 언제든 읽을 수 있습니다.</span>
                                 </p>
                                 <p>
                                     만약 본사 공지나 지점 채팅에 서식 기능을 붙이면서 사용자가 입력한 내용을 그대로 화면에 그리게 되면, 공격자가 아래처럼 <span
                                         class="hl-red">스크립트처럼 보이지 않는 문자열</span>을 남길 수 있습니다.
                                     그 공지를 여는 <span class="hl-red">모든 관리자의 브라우저에서</span> 코드가 실행되고, 토큰이 공격자 서버로 전송됩니다.
-                                    토큰이 한 번 빠져나가면 브라우저를 닫아도, 나중에 그 구멍을 고쳐도 <span class="hl-red">만료될 때까지 그 계정을 그대로
-                                        사용</span>할 수 있습니다.
                                 </p>
                             </div>
 
                     <div class="story">
                         <div class="story-label">🚨 문제점 분석</div>
                         <p>
-                            원인은 토큰을 <span class="hl-red">JavaScript가 접근할 수 있는 자리에 보관</span>했다는 점입니다.
+                            원인은 토큰을 <span class="hl-red">JavaScript가 접근할 수 있는 localStorage</span>에 저장했다는 점입니다.
                             <code>localStorage</code>는 같은 출처의 스크립트라면 무엇이든 읽을 수 있어서, 우리 페이지에서 실행되는 코드와
                             공격자가 심은 코드를 브라우저가 구분하지 않습니다.
-                        </p>
-                        <p>
-                            핵심은 <strong>피해가 그 자리에서 끝나지 않는다</strong>는 점입니다. 화면을 조작당하는 것은 탭을 닫으면 끝나지만,
-                            토큰이 빠져나가면 <span class="hl-red">공격자의 서버에 복사본이 남아</span> 브라우저와 무관하게 계속 쓸 수 있습니다.
-                            게다가 이 유출 요청은 CORS로 막히지 않습니다 — CORS는 응답을 읽는 것을 통제할 뿐, 보내는 것은 막지 않기 때문입니다.
                         </p>
                     </div>
 
