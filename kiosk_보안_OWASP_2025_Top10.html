@@ -783,11 +783,10 @@
                         <p>
                             지점 관리자가 매장 계산대 옆 <span class="hl-yellow">공용 PC</span>에서 관리자 화면에 로그인했다가, 일을 마치고 로그아웃 버튼을 누르고
                             자리를 떠납니다.
-                            보통은 이걸로 끝났다고 생각합니다.
                         </p>
                         <p>
                             그런데 점검해 보니 로그아웃을 누른 뒤에도, 로그아웃 직전에 복사해 둔 토큰으로 매출·재고·주문 조회 API가
-                            <span class="hl-red">그대로 200을 응답</span>하고 있었습니다. 점장 본인이 다시 로그인해도, 브라우저를 밀어도 막히지 않았습니다.
+                            <span class="hl-red">그대로 200을 응답</span>하고 있었습니다. 점장 본인이 다시 로그인해서 새 토큰을 발급받아도, 브라우저를 닫아도 막히지 않았습니다.
                         </p>
                     </div>
 
@@ -795,7 +794,7 @@
                         <div class="story-label">🚨 문제점 분석</div>
                         <p>
                             원인은 로그아웃이 <span class="hl-red">브라우저 안에서만 일어나는 동작</span>이었기 때문입니다.
-                            기존 로그아웃은 저장된 토큰 문자열을 지우는 것이 전부였고 <span class="hl-red">서버에는 아무 요청도 보내지 않았습니다.</span>
+                            기존 로그아웃은 저장된 토큰 문자열을 로컬 스토리지에서 지우는 것이 전부였고 <span class="hl-red">서버에는 아무 요청도 보내지 않았습니다.</span>
                         </p>
                         <p>
                             로그인 토큰은 서버에 세션을 저장하지 않는 방식이라, 서버 입장에서는 <span class="hl-red">서명과 만료 시각만 맞으면 유효한 토큰</span>입니다.
@@ -833,7 +832,7 @@
                     <div class="story">
                         <div class="story-label">🔧 적용 사항</div>
                         <p>
-                            1. <strong>AdminTokenService.java</strong> — 계정별 <code>세대 번호(토큰 버전)</code>를 두고, 토큰 발급 시 그 번호를 payload에 함께 넣어 서명.<br>
+                            1. <strong>AdminTokenService.java</strong> — 계정별 <code>토큰 버전</code>을 두고, 토큰 발급 시 그 번호를 payload에 함께 넣어 서명.<br>
                             2. <strong>AdminTokenService.java</strong> — 토큰 검증 순서에 <code>서명 확인 → 만료 확인 → 세대 대조</code>를 추가해, 세대가 다르면 거부.<br>
                             3. <strong>LogoutController.java</strong> — 로그아웃 API를 신설해 호출 시 해당 계정의 세대 번호를 <code>+1</code>하고 인증 쿠키를 삭제.
                         </p>
@@ -912,7 +911,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                         <div class="improve-title">✨ 결론</div>
                         <p>
                             로그아웃의 기준점을 <span class="hl-red">브라우저</span>에서 <span class="hl-green">서버</span>로 옮겼습니다.
-                            이제 로그아웃은 저장된 문자열을 지우는 동작이 아니라, 서버가 그 계정의 세대 번호를 올려
+                            이제 로그아웃은 저장된 문자열을 지우는 동작이 아니라, 서버가 그 토큰의 버전 번호를 올려
                             <span class="hl-green">이전에 발급된 토큰 전부를 한 번에 무효로 만드는 동작</span>입니다.
                         </p>
                         <p>
@@ -924,9 +923,8 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                     <div class="summary">
                         <div class="summary-title">💡 핵심 정리</div>
                         <ul>
-                            <li>로그아웃은 <span class="hl-red">브라우저에서 지우는 것</span>이 아니라 <span class="hl-green">서버에서 무효화하는
+                            <li>로그아웃은 토큰을 <span class="hl-red">브라우저에서 지우는 것</span>이 아니라 <span class="hl-green">서버에서 무효화하는
                                     것</span>이어야 합니다</li>
-                            <li>버전 번호도 <span class="hl-green">서명 대상</span>이라, 공격자가 값을 되돌리면 서명이 깨져 거부됩니다</li>
                         </ul>
                     </div>
 
