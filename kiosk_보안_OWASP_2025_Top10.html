@@ -65,6 +65,7 @@
             box-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
             margin-bottom: 50px;
             overflow: hidden;
+            scroll-margin-top: 20px;
         }
 
         .section-header {
@@ -186,6 +187,7 @@
         /* ── 아이템 카드 ── */
         .item {
             margin-bottom: 60px;
+            scroll-margin-top: 20px;
         }
 
         .item:last-child {
@@ -509,8 +511,8 @@
         }
 
         .screenshot-item.before-evidence {
-            background: #eef1f4;
-            border-color: #cbd5e1;
+            background: #f8fafc;
+            border-color: #e2e8f0;
             padding: 14px 12px;
         }
 
@@ -782,7 +784,7 @@
         </div>
 
         <!-- ===================== A01 섹션 ===================== -->
-        <div class="section">
+        <div class="section" id="a01">
             <div class="section-header a01">
                 <span class="owasp-badge badge-a01">A01:2025</span>
                 <h2>접근 통제 실패 (Broken Access Control)</h2>
@@ -959,14 +961,14 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
         </div>
 
         <!-- ===================== A02 섹션 ===================== -->
-        <div class="section">
+        <div class="section" id="a02">
             <div class="section-header a02">
                 <span class="owasp-badge badge-a02">A02:2025</span>
                 <h2>보안 설정 오류 (Security Misconfiguration)</h2>
                 <p class="subtitle">프로그램은 정상적으로 작동하지만, 보안 설정이 허술해서 공격받기 쉬워지는 문제</p>
             </div>
             <div class="section-body">
-                <div class="item">
+                <div class="item" id="a02-1">
                     <div class="item-title">① 관리자·키오스크 화면에서만 API 응답을 읽도록 CORS 제한</div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었다</div>
@@ -982,7 +984,7 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                         </p>
                     </div>
                     <div class="story">
-                        <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                        <div class="story-label">🚨 문제점 분석</div>
                         <p>CORS는 어떤 웹사이트가 브라우저에서 API 응답을 읽을 수 있는지 정하는 규칙이다. 모든 출처를 허용하면 공격 사이트도 관리자 API의 응답을
                             읽을 수 있으므로, 실제 관리자 화면과 키오스크 화면의 주소만 허용해야 한다. 또한 CORS는 사용자 인증 기능이 아니므로 API의 로그인 인증과
                             관리자 권한 검사도 별도로 유지해야 한다.</p>
@@ -1076,7 +1078,7 @@ Access-Control-Allow-Origin: (없음)
                     </div>
                 </div>
                 <hr class="divider">
-                <div class="item">
+                <div class="item" id="a02-2">
                     <div class="item-title">② Nginx 보안 헤더로
                         <span class="click-note"><button type="button" class="click-note-trigger" aria-expanded="false"
                                 aria-describedby="a02-clickjacking-note">클릭재킹</button><span class="click-note-content"
@@ -1092,7 +1094,7 @@ Access-Control-Allow-Origin: (없음)
                             프레임에 넣거나 파일 형식을 임의로 판단하는 동작을 차단한다.</p>
                     </div>
                     <div class="story">
-                        <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                        <div class="story-label">🚨 문제점 분석</div>
                         <p>보안 헤더가 없으면 다른 사이트가 관리자 화면을 프레임에 삽입하거나 브라우저가 파일 형식을 임의로 추측할 수 있어 클릭재킹과 의도하지 않은 콘텐츠 실행 위험이 커진다.</p>
                     </div>
                     <div class="flow">
@@ -1184,7 +1186,7 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
         </div>
 
         <!-- ===================== A03 섹션 ===================== -->
-        <div class="section">
+        <div class="section" id="a03">
             <div class="section-header a03">
                 <span class="owasp-badge badge-a03">A03:2025</span>
                 <h2>소프트웨어 공급망 실패 (Software Supply Chain Failures)</h2>
@@ -1193,7 +1195,7 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
             <div class="section-body">
 
                 <!-- ① 시크릿 -->
-                <div class="item">
+                <div class="item" id="a03-1">
                     <div class="item-title">① 시크릿(비밀번호·API 키)을 Git에 올리지 않기 — .env.example</div>
 
                     <div class="story">
@@ -1327,7 +1329,7 @@ $ git grep -lE '(SuperSecret|AKIA[A-Z0-9]{16}|sk_live_)' $(git ls-files)
                 <hr class="divider">
 
                 <!-- ② CI/CD 시크릿 -->
-                <div class="item">
+                <div class="item" id="a03-2">
                     <div class="item-title">② 배포 자동화(CI/CD)에서 시크릿 안전하게 쓰기 — GitLab Variables + IAM 최소 권한</div>
 
                     <div class="story">
@@ -1479,7 +1481,7 @@ $BACKEND_SSH_KEY  $CI_REGISTRY_PASSWORD  $DB_PASSWORD ...
                 <hr class="divider">
 
                 <!-- ③ 커밋 SHA 태그 -->
-                <div class="item">
+                <div class="item" id="a03-3">
                     <div class="item-title">③ 배포한 서버가 어떤 코드인지 추적하기 — 커밋 SHA 기반 Docker 이미지 태그</div>
 
                     <div class="story">
@@ -1607,7 +1609,7 @@ build-backend:
                 <hr class="divider">
 
                 <!-- ④ npm ci -->
-                <div class="item">
+                <div class="item" id="a03-4">
                     <div class="item-title">④ 외부 라이브러리 악성 업데이트 차단 — npm ci로 버전 고정</div>
 
                     <div class="story">
@@ -1755,7 +1757,7 @@ RUN npm run build</code></pre>
                 <hr class="divider">
 
                 <!-- ===================== A04 섹션 ===================== -->
-                <div class="section">
+                <div class="section" id="a04">
                     <div class="section-header a04">
                         <span class="owasp-badge badge-a04">A04:2025</span>
                         <h2>암호화 실패 (Cryptographic Failures)</h2>
@@ -1763,7 +1765,7 @@ RUN npm run build</code></pre>
                     </div>
                     <div class="section-body">
 
-                <div class="item">
+                <div class="item" id="a04-1">
                     <div class="item-title">① 1분짜리 스트림 전용 토큰을 사용해 실시간 알림 토큰이 서버 로그에 노출되지 않도록 방지</div>
 
                     <div class="story">
@@ -1930,7 +1932,7 @@ $ curl ".../api/branch/events/stream?token=c3RyZWFt..."
                         <hr class="divider">
 
                         <!-- ② httpOnly 쿠키 -->
-                        <div class="item">
+                        <div class="item" id="a04-2">
                             <div class="item-title">② httpOnly 쿠키로 전환해 JavaScript가 로그인 토큰을 읽지 못하도록 방지</div>
 
                             <div class="story">
@@ -2090,7 +2092,7 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                     </div>
 
                 <!-- ===================== A05 섹션 ===================== -->
-                <div class="section">
+                <div class="section" id="a05">
                     <div class="section-header a05">
                         <span class="owasp-badge badge-a05">A05:2025</span>
                         <h2>인젝션 (Injection)</h2>
@@ -2109,7 +2111,7 @@ Set-Cookie: admin_session=OToxOjE3ODc2...;
                                     상품 외의 재고까지 조회될 수 있다.</p>
                             </div>
                             <div class="story">
-                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
+                                <div class="story-label">🚨 문제점 분석</div>
                                 <p><code>${}</code> 문자열 치환은 외부 입력을 SQL 본문에 직접 결합하므로, 공격 문자열이 조회 조건 자체를 바꿀 수 있다.</p>
                             </div>
                             <div class="flow">
@@ -2274,7 +2276,7 @@ Parameter: "x' OR '1'='1"
                 </div>
 
                 <!-- ===================== A06:2025 (Insecure Design) 섹션 ===================== -->
-                <div class="section">
+                <div class="section" id="a06">
                     <div class="section-header insecure-design">
                         <span class="owasp-badge badge-insecure-design">A06:2025</span>
                         <h2>안전하지 않은 설계 (Insecure Design)</h2>
@@ -2283,7 +2285,7 @@ Parameter: "x' OR '1'='1"
                     <div class="section-body">
 
                         <!-- ① 매직바이트 검증 -->
-                        <div class="item">
+                        <div class="item" id="a06-1">
                             <div class="item-title">① 파일 시그니처(매직바이트)를 검증해 확장자를 위장한 파일 업로드를 차단</div>
 
                             <div class="story">
@@ -2548,7 +2550,7 @@ public class HqUploadService {
                         <hr class="divider">
 
                         <!-- ② 결제 시뮬레이션 엔드포인트 제거 -->
-                        <div class="item">
+                        <div class="item" id="a06-2">
                             <div class="item-title">② 결제 게이트웨이 검증 없이 완료 처리하던 <code>POST /{qrToken}/confirm</code> 시뮬레이션
                                 엔드포인트를 제거</div>
 
@@ -2679,7 +2681,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                     </div>
 
                 <!-- ===================== A07 섹션 ===================== -->
-                <div class="section">
+                <div class="section" id="a07">
                     <div class="section-header a07">
                         <span class="owasp-badge badge-a07">A07:2025</span>
                         <h2>인증 실패 (Authentication Failures)</h2>
@@ -2688,7 +2690,7 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                     <div class="section-body">
 
                         <!-- ① 로그인 요청 횟수 제한 -->
-                        <div class="item">
+                        <div class="item" id="a07-1">
                             <div class="item-title">① IP 기준으로 요청 횟수를 제한해 로그인 사전 대입(dictionary attack)을 차단</div>
 
                             <div class="story">
@@ -2872,7 +2874,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                         <hr class="divider">
 
                         <!-- ② Turnstile 사람/봇 구분 -->
-                        <div class="item">
+                        <div class="item" id="a07-2">
                             <div class="item-title">② Cloudflare Turnstile을 적용해 사람과 로봇(자동화 프로그램)의 로그인 요청을 구분</div>
 
                             <div class="story">
@@ -3134,7 +3136,7 @@ async function login() {
                 </div>
 
                 <!-- ===================== A08 섹션 ===================== -->
-                <div class="section">
+                <div class="section" id="a08">
                     <div class="section-header a08">
                         <span class="owasp-badge badge-a08">A08:2025</span>
                         <h2>소프트웨어 및 데이터 무결성 실패 (Software or Data Integrity Failures)</h2>
@@ -3167,7 +3169,7 @@ async function login() {
                         </div> -->
 
                         <!-- ① Docker 이미지 digest 고정 -->
-                        <div class="item">
+                        <div class="item" id="a08-1">
                             <div class="item-title">① "어제 받은 프로그램과 오늘 받은 프로그램이 다를 수 있다" — Docker 이미지 digest 고정
                                 (docker-compose.yml)</div>
                             <!-- <p class="term-note"><strong>digest</strong>란 이미지 내용 전체를 요약한 sha256 지문이다. 태그(<code>latest</code>,
@@ -3325,7 +3327,7 @@ docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
                         <hr class="divider">
 
                         <!-- ② 의존성 지문 검증 (npm ci + Maven strict checksums) -->
-                        <div class="item">
+                        <div class="item" id="a08-2">
                             <div class="item-title">② 라이브러리 다운로드가 변조되어도 빌드가 통과하던 문제 — 의존성 지문 검증 적용 (npm ci ·
                                 Maven -C)</div>
 
@@ -3458,7 +3460,7 @@ BUILD FAILURE   ← 즉시 차단되어
                 </div>
 
                 <!-- ===================== A09 섹션 ===================== -->
-                <div class="section">
+                <div class="section" id="a09">
                     <div class="section-header a09">
                         <span class="owasp-badge badge-a09">A09:2025</span>
                         <h2>보안 로깅 및 모니터링 실패 (Security Logging and Monitoring Failures)</h2>
@@ -3467,7 +3469,7 @@ BUILD FAILURE   ← 즉시 차단되어
                     <div class="section-body">
 
                         <!-- ① logback -->
-                        <div class="item">
+                        <div class="item" id="a09-1">
                             <div class="item-title">① 로그에 가짜 기록 심기 공격 차단 — CRLF 로그 위조 전역 방어 (logback-spring.xml)</div>
 
                             <div class="term-note"><strong>CRLF</strong>: CR(<code>\r</code>)과 LF(<code>\n</code>)을 합친 줄바꿈 문자<br>· <strong>로그 위조(Log Forging)</strong>: 입력값에 줄바꿈을 섞어 없던 로그 줄을 지어내는 공격</div>
@@ -3609,7 +3611,7 @@ BUILD FAILURE   ← 즉시 차단되어
                         <hr class="divider">
 
                         <!-- ② CrlfUtils -->
-                        <div class="item">
+                        <div class="item" id="a09-2">
                             <div class="item-title">② 코드에서도 한 번 더 줄바꿈 제거 — CrlfUtils 심층 방어</div>
 
                             <div class="story">
@@ -3778,7 +3780,7 @@ public ResponseEntity&lt;...&gt; handleTossPayment(TossPaymentException e) {
                         <hr class="divider">
 
                         <!-- ③ LoginRateLimitFilter -->
-                        <div class="item">
+                        <div class="item" id="a09-3">
                             <div class="item-title">③ 로그인 해킹 시도 탐지 & 차단 — LoginRateLimitFilter</div>
 
                             <div class="story">
