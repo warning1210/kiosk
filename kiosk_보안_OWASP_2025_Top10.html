@@ -1063,7 +1063,12 @@ Access-Control-Allow-Origin: (없음)
                 </div>
                 <hr class="divider">
                 <div class="item">
-                    <div class="item-title">② Nginx 보안 헤더로 클릭재킹과 잘못된 파일 실행 방지</div>
+                    <div class="item-title">② Nginx 보안 헤더로
+                        <span class="click-note"><button type="button" class="click-note-trigger" aria-expanded="false"
+                                aria-describedby="a02-clickjacking-note">클릭재킹</button><span class="click-note-content"
+                                id="a02-clickjacking-note" role="note">정상 화면 위에 투명한 공격 화면을 겹쳐 사용자가 의도하지 않은 버튼이나 링크를 누르게 만드는 공격</span></span>과
+                        잘못된 파일 실행 방지
+                    </div>
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었다</div>
                         <p>Nginx는 화면과 API를 정상적으로 전달하고 있었지만, 브라우저가 지켜야 할 보안 규칙은 보내지 않고 있었다. 이 상태에서는 공격 사이트가
