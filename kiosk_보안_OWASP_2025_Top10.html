@@ -3275,15 +3275,15 @@ async function login() {
                     <div class="section-body">
 
                         <!-- 개념 설명 (A08 공통) -->
-                        <div style="margin-bottom: 40px;">
+                        <!-- <div style="margin-bottom: 40px;">
                             <div class="summary"
                                 style="margin-bottom: 22px; background: #ecfdf5; border-color: #6ee7b7;">
                                 <div class="summary-title" style="color: #047857; font-size: 1.05em;">❓ 소프트웨어·데이터 무결성 실패란?
                                 </div>
-                                <p style="margin: 8px 0 0; font-size: 0.95em; color: #064e3b;">우리 서비스는 우리가 짠 코드만으로 돌아가지 않습니다.
-                                    <strong>Maven/npm 라이브러리, Docker 이미지, 배포 파이프라인(CI/CD)</strong>처럼 외부에서 받아오는 것들 위에서 돌아갑니다.
+                                <p style="margin: 8px 0 0; font-size: 0.95em; color: #064e3b;">해당 서비스는 개발자가 직접 작성한 코드만으로 돌아가지 않는다.
+                                    <strong>Maven/npm 라이브러리, Docker 이미지, 배포 파이프라인(CI/CD)</strong>처럼 외부에서 받아오는 것들이 위에서 돌아간다.
                                     이때 받아온 것이 <strong>변조되지 않았는지 확인하는 절차 없이 무조건 신뢰하고 실행</strong>하면, 공격자가 그 공급 경로(공급망)를
-                                    한 번만 오염시켜도 우리 서버 전체가 넘어갑니다. 이것이 무결성 실패입니다.</p>
+                                    한 번만 오염시켜도 우리 서버 전체가 공격자에게 넘어간다. 이것이 무결성 실패이다.</p>
                             </div>
 
                             <div class="story"
@@ -3296,29 +3296,32 @@ async function login() {
                                     <li>② 빌드 때 받아오는 라이브러리(Maven/npm)의 <strong>체크섬이 틀려도 그대로 통과</strong>됨</li>
                                 </ul>
                             </div>
-                        </div>
+                        </div> -->
 
                         <!-- ① Docker 이미지 digest 고정 -->
                         <div class="item">
                             <div class="item-title">① "어제 받은 프로그램과 오늘 받은 프로그램이 다를 수 있다" — Docker 이미지 digest 고정
                                 (docker-compose.yml)</div>
-                            <p class="term-note"><strong>digest</strong>란 이미지 내용 전체를 요약한 sha256 지문입니다. 태그(<code>latest</code>,
+                            <!-- <p class="term-note"><strong>digest</strong>란 이미지 내용 전체를 요약한 sha256 지문입니다. 태그(<code>latest</code>,
                                 <code>8.0</code>)는 "이름표"라서 가리키는 내용물이 바뀔 수 있지만, digest는 <strong>내용이 1바이트만 달라져도 값이 완전히
-                                    달라집니다.</strong></p>
+                                    달라집니다.</strong></p> -->
 
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
                                 <p>
-                                    우리 DB 관리 도구인 Adminer를 <code>docker-compose.yml</code>에서 <span
-                                        class="hl-red">adminer:latest</span>로 받고 있었습니다. <code>latest</code>는 "그 순간 가장 최신"이라는
+                                    사용 중인 DB 관리 도구인 Adminer를 <code>docker-compose.yml</code>에서 <span
+                                        class="hl-red">adminer:latest</span>로 받고 있다. <code>latest</code>는 "그 순간 가장 최신"이라는
                                     이름표일 뿐이라, <span class="hl-red">오늘 pull한 이미지와 다음 달 pull한 이미지의 내용물이 다를 수 있고, 무엇이 달라졌는지 검증하는
-                                        절차도 없습니다.</span>
+                                        절차도 없다.</span>
                                 </p>
+                            </div>
+                            <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
                                 <p>
-                                    만약 Docker Hub의 Adminer 배포 계정이 해킹당해 악성 이미지가 올라오면(실제로 인기 이미지 계정 탈취 사고가 여러 번 있었습니다), 우리는
+                                    Docker Hub의 Adminer 배포 계정이 해킹당해 악성 이미지가 올라오면(실제로 인기 이미지 계정 탈취 사고가 여러 번 있었다), 개발자는
                                     다음 <code>docker compose pull</code> 때 <span class="hl-red">그 악성 코드를 아무 확인 없이 실행</span>하게
-                                    됩니다. 심지어 Adminer는 <strong>DB 접속 정보를 다루는 컨테이너</strong>라 피해가 가장 큰 자리입니다. DB인
-                                    <code>mysql:8.0</code>도 마이너 버전이 계속 바뀌는 "움직이는 태그"라 같은 문제가 있습니다.
+                                    된다. 심지어 Adminer는 <strong>DB 접속 정보를 다루는 컨테이너</strong>라 피해가 가장 큰 자리이다. DB인
+                                    <code>mysql:8.0</code>도 마이너 버전이 계속 바뀌는 "움직이는 태그"라 같은 문제가 있다.
                                 </p>
                             </div>
 
@@ -3347,7 +3350,7 @@ async function login() {
     image: adminer:latest   # 매 pull마다 무엇이 올지 모름 + 받은 것을 검증하는 절차 없음</code></pre>
                             </div>
 
-                            <div class="compare">
+                            <!-- <div class="compare">
                                 <div class="compare-box before">
                                     <div class="compare-label">❌ 태그만 사용 (내용물 검증 없음)</div>
                                     <pre>image: adminer:latest
@@ -3366,9 +3369,9 @@ async function login() {
   pull 단계에서 거부
 → 업데이트는 내가 지문을 바꿀 때만</pre>
                                 </div>
-                            </div>
+                            </div> -->
 
-                            <div class="code-block">
+                            <!-- <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span> 1단계 — 지금 쓰는 이미지의 digest 확인
                                     (터미널)</div>
@@ -3378,12 +3381,12 @@ docker inspect --format '{{index .RepoDigests 0}}' adminer:latest
 # 출력 예: adminer@sha256:9ab4c1...(64자리 지문)
 docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
 # 출력 예: mysql@sha256:04f3...(64자리 지문)</code></pre>
-                            </div>
+                            </div> -->
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> 2단계 — docker-compose.yml에
-                                    digest 고정 (실제 적용 코드)</div>
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> docker-compose.yml에
+                                    digest 고정 (실제 적용 코드) — (변경 후)</div>
                                 <pre><code class="language-yaml">services:
   mysql:
     # 태그 뒤에 @sha256:... 을 붙이면 Docker는 태그가 아니라 digest로 검증한다
@@ -3393,6 +3396,42 @@ docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
   adminer:
     # latest 태그 제거 → 검증된 지문으로만 실행
     image: adminer@sha256:043db066c4532719f49e35355a620f0bbe48fc862f6bfccda72f441b162f092e</code></pre>
+                            </div>
+                            <div class="story">
+                                <div class="story-label">🧪 실제 테스트 실행</div>                           
+
+                                <div class="compare">
+                                <div class="compare-box before">
+                                    <div class="compare-label">❌ 태그만 사용 (내용물 검증 없음)</div>
+                                    <pre>image: adminer:latest
+
+→ "latest"라는 이름표만 믿고 받음
+→ 배포 계정이 해킹되면
+  악성 이미지도 그대로 실행
+→ 언제 무엇이 바뀌었는지 모름</pre>
+                                </div>
+                                <div class="compare-box after">
+                                    <div class="compare-label">✅ digest 고정 (지문 일치해야만 실행)</div>
+                                    <pre>image: adminer@sha256:9ab...f21
+
+→ 내용의 sha256 지문까지 지정
+→ 지문이 다르면 Docker가
+  pull 단계에서 거부
+→ 업데이트는 내가 지문을 바꿀 때만</pre>
+
+                                </div>
+                                <div class="code-block">
+                                <div class="code-label"><span class="dot dot-r"></span><span
+                                        class="dot dot-y"></span><span class="dot dot-g"></span> 테스트 — 지금 쓰는 이미지의 digest 확인
+                                    (터미널)</div>
+                                <pre><code class="language-bash"># 이미지를 받고, 그 이미지의 digest(지문)를 확인한다
+docker compose pull
+docker inspect --format '{{index .RepoDigests 0}}' adminer:latest
+# 출력 예: adminer@sha256:9ab4c1...(64자리 지문)
+docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
+# 출력 예: mysql@sha256:04f3...(64자리 지문)</code></pre>
+                            </div>
+                            </div> 
                             </div>
 
                             <div class="improve">
@@ -3419,21 +3458,24 @@ docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
 
                         <!-- ② 의존성 지문 검증 (npm ci + Maven strict checksums) -->
                         <div class="item">
-                            <div class="item-title">② 라이브러리 다운로드가 변조돼도 빌드가 통과하던 문제 — 의존성 지문 검증 적용 (npm ci ·
+                            <div class="item-title">② 라이브러리 다운로드가 변조되어도 빌드가 통과하던 문제 — 의존성 지문 검증 적용 (npm ci ·
                                 Maven -C)</div>
 
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었습니다</div>
                                 <p>
-                                    빌드할 때마다 우리 서비스는 수십 개의 라이브러리를 외부 저장소(npm registry, Maven Central)에서 다운로드해서 결과물 안에 넣습니다.
-                                    그런데 <span class="hl-red">받아온 파일이 원본 그대로인지 확인하는 장치가 양쪽 모두 없었습니다.</span> 다운로드 과정에서
-                                    라이브러리가 변조되거나 손상돼도, 그 코드가 <span class="hl-red">아무도 모른 채 서버 결과물 안에 들어가는</span> 상태였습니다.
+                                    빌드할 때마다 서비스는 수십 개의 라이브러리를 외부 저장소(npm registry, Maven Central)에서 다운로드해서 결과물 안에 넣는다.
+                                    그런데 <span class="hl-red">받아온 파일이 원본 그대로인지 확인하는 장치가 양쪽 모두 없다.</span> 다운로드 과정에서
+                                    라이브러리가 변조되거나 손상돼도, 그 코드가 <span class="hl-red">아무도 모른 채 서버 결과물 안에 들어가는</span> 상태이다.
                                 </p>
+                                </div>
+                                <div class="story">
+                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
                                 <p>
                                     프론트엔드의 <code>npm install</code>은 상황에 따라 lock 파일과 다른 버전을 새로 받아올 수 있고, 백엔드 Maven은 체크섬
                                     파일(.sha1)을 함께 받긴 하지만 <span class="hl-red">기본 설정이 "불일치해도 경고(WARNING) 로그만 남기고 빌드를 계속
-                                        진행"</span>입니다. 그래서 양쪽 빌드 모두 <span class="hl-green">"지문이 다르면 빌드 실패"</span>가 되도록
-                                    잠갔습니다.
+                                        진행"</span>된다. 그래서 양쪽 빌드 모두 <span class="hl-green">"지문이 다르면 빌드 실패"</span>가 되도록
+                                    잠갔다.
                                 </p>
                             </div>
 
@@ -3451,7 +3493,7 @@ docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
                                 </div>
                             </div>
 
-                            <div class="compare">
+                            <!-- <div class="compare">
                                 <div class="compare-box before">
                                     <div class="compare-label">❌ 기본 설정 (경고 후 통과)</div>
                                     <pre>[WARNING] Checksum validation failed,
@@ -3469,7 +3511,7 @@ expected abc123 but is def456
 BUILD FAILURE   ← 즉시 차단되어
                   오염된 jar가 만들어지지 않음</pre>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
@@ -3497,6 +3539,29 @@ RUN mvn -B -DskipTests package
 RUN mvn -B -C dependency:go-offline
 ...
 RUN mvn -B -C -DskipTests package</code></pre>
+                            </div>
+
+                            <div class="story">
+                                <div class="story-label">🧪 실제 테스트 실행</div>
+                            <div class="compare">
+                                <div class="compare-box before">
+                                    <div class="compare-label">❌ 기본 설정 (경고 후 통과)</div>
+                                    <pre>[WARNING] Checksum validation failed,
+expected abc123 but is def456
+  - simplemagic-1.17.jar
+
+BUILD SUCCESS   ← 변조됐는데 성공!</pre>
+                                </div>
+                                <div class="compare-box after">
+                                    <div class="compare-label">✅ -C 적용 후 (불일치 = 실패)</div>
+                                    <pre>[ERROR] Checksum validation failed,
+expected abc123 but is def456
+  - simplemagic-1.17.jar
+
+BUILD FAILURE   ← 즉시 차단되어
+                  오염된 jar가 만들어지지 않음</pre>
+                                </div>
+                            </div>
                             </div>
 
                             <div class="improve">
