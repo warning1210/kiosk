@@ -1153,12 +1153,17 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
                             </div>
                             <div class="compare-box after">
                                 <div class="compare-label">✅ 적용 후 — 보안 헤더 응답 확인</div>
-                                <pre>$ curl -I https://kiosk.example
+                                <pre>$ curl.exe -I https://icekiosk.shop/
 
 → Content-Security-Policy: default-src 'self' ...
 → X-Frame-Options: SAMEORIGIN
 → X-Content-Type-Options: nosniff
 → 브라우저 보안 정책 정상 적용</pre>
+                                <div class="screenshot-item">
+                                    <div class="screenshot-label">📷 적용 후 — 실제 운영 서버에서 보안 헤더 응답 확인</div>
+                                    <img src="image_A02-nginx-headers-after.png"
+                                        alt="icekiosk.shop 운영 서버에서 Content-Security-Policy, X-Frame-Options, X-Content-Type-Options 등 Nginx 보안 헤더가 적용된 응답 화면">
+                                </div>
                             </div>
                         </div>
                     </div>
