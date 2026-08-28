@@ -2300,8 +2300,8 @@ public class HqUploadService {
                                 </div>
                             </div>
 
-                            <div class="story">
-                                <div class="story-label">✅ 결과</div>
+                            <div class="improve">
+                                <div class="improve-title">✨ 결론</div>
                                 <p>
                                     확장자별로 허용되는 실제 MIME 타입을 미리 정의해두고, 파일 내용에서 감지된 MIME 타입이 그 목록에
                                     없으면 <span class="hl-green">확장자와 무관하게 업로드를 차단</span>한다.
@@ -2434,8 +2434,8 @@ public PaymentStatusResponse confirm(@PathVariable String qrToken) {
                             </div>
                             </div>
 
-                            <div class="story">
-                                <div class="story-label">✅ 결과</div>
+                            <div class="improve">
+                                <div class="improve-title">✨ 결론</div>
                                 <p>
                                     실제 카드결제 승인은 Toss 검증을 거치는 <span class="hl-green">confirmWithToss()</span> 경로로만 이뤄지며,
                                 결제가 완료되면 <span class="hl-green">그 qrToken은 더 이상 쓸 수 없게</span> 된다.
@@ -2628,8 +2628,8 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
                             </p>
                             </div>
 
-                            <div class="story">
-                                <div class="story-label">✅ 결과</div>
+                            <div class="improve">
+                                <div class="improve-title">✨ 결론</div>
                                 <p>
                                     접속을 계속 진행하면 <span class="hl-green">초반 10번만 접근이 되었고</span>, 그 후의 접근은
                                     <span class="hl-green">429 Too Many Requests</span>로 차단되어 더 이상 시도할 수 없게 된다.
