@@ -807,16 +807,16 @@
                     </div>
 
                     <div class="flow">
-                        <div class="flow-item situation"><span class="step-label">📍 상황</span>매장 공용 PC에서 지점 관리자 로그인
+                        <div class="flow-item situation"><span class="step-label">📍 상황</span>매장 공용 PC에서 관리자 로그인 후 토큰 발급
                         </div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item problem"><span class="step-label">🚨 문제</span>로그아웃해도 복사해둔 토큰이 12시간 그대로 통함
+                        <div class="flow-item problem"><span class="step-label">🚨 문제</span>브라우저에서만 토큰을 삭제해 복사된 토큰은 12시간 동안 계속 사용 가능
                         </div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>토큰에 세대 번호를 서명해 넣고 로그아웃 시 +1
+                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>토큰에 버전 번호를 서명하고 로그아웃 시 서버의 버전 번호를 1 증가
                         </div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item result"><span class="step-label">✅ 결과</span>로그아웃 즉시 기존 토큰 전부 401</div>
+                        <div class="flow-item result"><span class="step-label">✅ 결과</span>버전이 이전 값인 기존 토큰의 요청을 즉시 401로 거부</div>
                     </div>
 
                     <div class="code-block">
@@ -833,13 +833,13 @@
                         <div class="story-label">🔧 적용 사항</div>
                         <p>
                             1. <strong>AdminTokenService.java</strong> — 계정별 <code>토큰 버전</code>을 두고, 토큰 발급 시 그 번호를 payload에 함께 넣어 서명.<br>
-                            2. <strong>AdminTokenService.java</strong> — 토큰 검증 순서에 <code>서명 확인 → 만료 확인 → 세대 대조</code>를 추가해, 세대가 다르면 거부.<br>
-                            3. <strong>LogoutController.java</strong> — 로그아웃 API를 신설해 호출 시 해당 계정의 세대 번호를 <code>+1</code>하고 인증 쿠키를 삭제.
+                            2. <strong>AdminTokenService.java</strong> — 토큰 검증 순서에 <code>서명 확인 → 만료 확인 → 버전 대조</code>를 추가해, 토큰의 버전과 서버의 현재 버전이 다르면 거부.<br>
+                            3. <strong>LogoutController.java</strong> — 로그아웃 API를 신설해 호출 시 해당 계정의 토큰 버전 번호를 <code>+1</code>하고 인증 쿠키를 삭제.
                         </p>
                     </div>
 
                     <div class="code-block">
-                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> AdminTokenService.java (세대 카운터) — 실제 적용 코드 ①</div>
+                        <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span> AdminTokenService.java (토큰 버전 카운터) — 실제 적용 코드 ①</div>
                         <pre><code class="language-java">// adminId -&gt; 현재 토큰 버전. 없으면 0버전.
 private final Map&lt;Long, Integer&gt; tokenVersions = new ConcurrentHashMap&lt;&gt;();
 
@@ -897,11 +897,11 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                                 <p>
                                     ①의 응답을 보면 토큰이 본문이 아니라 <code>Set-Cookie</code>로 내려오고,
                                     <span class="hl-green">HttpOnly</span>가 붙어 있어 화면 스크립트가 값을 읽을 수 없다.
-                                    ③에서 로그아웃이 <span class="hl-green">200</span>으로 처리되며, 이때 서버가 해당 계정의 세대 번호를 올린다.
+                                    ③에서 로그아웃이 <span class="hl-green">200</span>으로 처리되며, 이때 서버가 해당 계정의 토큰 버전 번호를 1 증가시킨다.
                                 </p>
                                 <p>
                                     그 결과 ④에서 같은 쿠키를 그대로 다시 보내면 <span class="hl-green">401</span>로 거부된다.
-                                    서명도 멀쩡하고 만료도 안 됐지만, <strong>토큰에 서명돼 있는 세대 번호가 서버의 현재 값과 달라서</strong> 통과하지 못한다.
+                                    토큰의 서명과 만료 시각에 문제가 없더라도, <strong>토큰에 서명된 버전 번호가 서버의 현재 버전 번호와 다르면</strong> 요청은 통과하지 못한다.
                                 </p>
                             </div>
                         </div>
@@ -955,31 +955,30 @@ public void logout(@RequestHeader(value = "Authorization", required = false) Str
                     <div class="story">
                         <div class="story-label">📖 이런 상황이 있었다</div>
                         <p>
-                            관리자 화면에 상품, 재고, 주문 정보를 보여주려면 프론트엔드가
-                            <span class="click-note"><button type="button" class="click-note-trigger" aria-expanded="false" aria-describedby="a02-api-note">백엔드 API에 요청</button><span class="click-note-content" id="a02-api-note" role="note">관리자 화면 → 상품·재고·주문 API 호출</span></span>을 보내야 한다.
-                            개발 중에는 프론트엔드 주소와 포트가 자주 바뀌었다. 주소가 바뀔 때마다 CORS 설정을 수정하는 것이 번거로워서
-                            <span class="hl-red">모든 출처(<code>*</code>)를 허용</span>해 두었다. 덕분에 어느 개발 주소에서든 API 응답을 바로 확인할 수 있었다.
+                            관리자 화면은 서버의 API를 호출해 상품·재고·주문 정보를 가져온다. 개발 중에는 관리자 화면의 주소와 포트가 자주 바뀌었고,
+                            주소가 변경될 때마다 허용 목록을 수정하는 불편을 줄이기 위해 <span class="hl-red">모든 웹사이트의 API 응답 접근을 허용하는
+                            <code>*</code> 설정</span>을 사용했다.
                         </p>
                         <p>
-                            하지만 운영 서버에서도 모든 출처를 허용하면, 우리 서비스와 관계없는 사이트에도 응답을 보여주게 된다. 예를 들어 관리자가 로그인한 채 공격자가 보낸
-                            링크를 열면, 공격 사이트의 스크립트가 관리자 브라우저를 통해 키오스크 API를 호출할 수 있다. 이때 CORS가 모든 출처를 허용하고 있으면
-                            브라우저가 그 사이트에도 응답을 공개하여 <span class="hl-red">상품·재고·주문 정보가 노출될 수 있다.</span>
+                            이 설정이 운영 서버에도 유지되면 키오스크 서비스와 관계없는 웹사이트도 API 응답을 읽을 수 있다. 예를 들어 관리자가 로그인한 상태에서
+                            공격자가 보낸 링크를 열면, 공격 사이트는 관리자 브라우저를 이용해 키오스크 API를 호출한다. 브라우저는 관리자에게 발급된 인증 정보를 요청에 함께
+                            전송하므로, 모든 사이트가 허용된 상태에서는 <span class="hl-red">공격 사이트가 상품·재고·주문 정보를 읽을 수 있다.</span>
                         </p>
                     </div>
                     <div class="story">
                         <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
-                        <p>모든 Origin을 허용하면 로그인한 관리자가 악성 사이트를 열었을 때 그 사이트의 스크립트도 관리자 API 응답을 읽을 수 있다. CORS는 인증을 대신하지 않으므로 허용 Origin 제한과 API 인증·권한 검사를 함께 적용해야 한다.</p>
+                        <p>CORS는 어떤 웹사이트가 브라우저에서 API 응답을 읽을 수 있는지 정하는 규칙이다. 모든 출처를 허용하면 공격 사이트도 관리자 API의 응답을
+                            읽을 수 있으므로, 실제 관리자 화면과 키오스크 화면의 주소만 허용해야 한다. 또한 CORS는 사용자 인증 기능이 아니므로 API의 로그인 인증과
+                            관리자 권한 검사도 별도로 유지해야 한다.</p>
                     </div>
                     <div class="flow">
-                        <div class="flow-item situation"><span class="step-label">📍 상황</span>브라우저에서 관리자 API 호출</div>
+                        <div class="flow-item situation"><span class="step-label">📍 상황</span>로그인한 관리자가 외부 사이트의 링크를 실행</div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item problem"><span class="step-label">🚨 문제</span>모든 Origin을 허용해 악성 사이트에도 응답
-                            공개</div>
+                        <div class="flow-item problem"><span class="step-label">🚨 문제</span>모든 사이트를 허용해 공격 사이트도 관리자 API 응답을 읽음</div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>환경별 CORS 화이트리스트 사용</div>
+                        <div class="flow-item apply"><span class="step-label">🔧 적용</span>개발·운영 환경별로 허용할 화면 주소만 목록에 등록</div>
                         <div class="flow-arrow">→</div>
-                        <div class="flow-item result"><span class="step-label">✅ 결과</span>미등록 Origin에는 허용 헤더를 반환하지 않음
-                        </div>
+                        <div class="flow-item result"><span class="step-label">✅ 결과</span>등록되지 않은 사이트는 상품·재고·주문 응답을 읽지 못함</div>
                     </div>
                     <div class="code-block">
                         <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
