@@ -3149,24 +3149,6 @@ RUN mvn -B -C dependency:go-offline
 RUN mvn -B -C -DskipTests package</code></pre>
                             </div>
 
-                            <div class="screenshot-row">
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 테스트 ① — 정상 lock 파일: 지문 대조 통과, 179개 패키지 설치 성공</div>
-                                    <img src="image_A08-npmci-ok.png"
-                                        alt="npm ci 실행 결과 added 179 packages 성공 화면">
-                                </div>
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 테스트 ② — 지문 1글자 변조 후: EINTEGRITY 에러로 설치 거부 (wanted
-                                        Ab5... / got Pb5...)</div>
-                                    <img src="image_A08-npmci-fail.png"
-                                        alt="package-lock.json의 integrity 해시를 한 글자 변조한 뒤 npm ci가 EINTEGRITY 에러로 설치를 거부하는 화면">
-                                </div>
-                            </div>
-                            <p class="term-note">테스트 방법: package-lock.json의 <code>"integrity": "sha512-..."</code> 값 첫
-                                글자를 P→A로 바꿔 "다운로드 파일과 정답지가 다른 상황"을 재현했습니다. npm이 계산한 실제 해시(Pb5...)와 정답지(Ab5...)가 달라
-                                설치가 중단됩니다. Maven의 체크섬 불일치는 정답을 주는 외부 서버(Maven Central)를 조작해야만 재현되므로, 같은 원리의 검증을 npm
-                                실험으로 증명했습니다.</p>
-
                             <div class="improve">
                                 <div class="improve-title">✨ 결론</div>
                                 <p>프론트엔드는 <span class="hl-green">npm ci</span>로 lock 파일의 sha512 지문 검증을 강제하고, 백엔드는
