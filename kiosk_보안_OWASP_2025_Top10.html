@@ -3956,6 +3956,158 @@ if (updated.count() > MAX_ATTEMPTS) {
                         </div>
 
                     </div>
+
+                    <hr class="divider">
+
+                    <div class="item" id="a09-4">
+                        <div class="item-title">④ 서버 상태를 실시간 그래프로 확인 — 운영 모니터링 구축 (Actuator + Prometheus + Grafana)</div>
+
+                        <div class="story">
+                            <div class="story-label">📖 이런 상황이 있었다</div>
+                            <p>
+                                AWS에 배포를 마친 뒤 서버가 잘 돌고 있는지 확인할 방법이
+                                <span class="hl-red">SSH로 접속해서 <code>docker logs</code>를 직접 읽는 것뿐</span>이었다.
+                                요청이 몰리는지, 응답이 느려졌는지, 메모리가 차오르는지를 한눈에 볼 화면이 없고,
+                                서버가 멈춰도 사용자가 말해주기 전까지 알 수 없다.
+                            </p>
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">🚨 문제점 분석</div>
+                            <p>
+                                로그는 "무슨 일이 있었는지"를 한 줄씩 남길 뿐, <span class="hl-red">"지금 서버가 어떤 상태인지"</span>
+                                — 초당 요청 수, 응답시간, 메모리·CPU 사용량 — 를 숫자로 보여주지 못한다.
+                                이 수치를 수집하고 저장하고 그래프로 보여주는 도구가 없어서,
+                                장애와 성능 저하를 항상 사후에, 그것도 로그를 뒤져서야 알 수 있는 상태였다.
+                            </p>
+                        </div>
+
+                        <div class="flow">
+                            <div class="flow-item situation"><span class="step-label">📍 상황</span>배포 후 서버 상태 확인은 SSH 로그
+                                조회뿐</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item problem"><span class="step-label">🚨 문제</span>장애·성능 저하를 사용자 신고 전에 알 수
+                                없음</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item apply"><span class="step-label">🔧 적용</span>Actuator 노출 + Prometheus 수집 +
+                                Grafana 시각화</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item result"><span class="step-label">✅ 결과</span>요청 수·응답시간·자원을 실시간 그래프로
+                                확인</div>
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">🔧 적용 사항</div>
+                            <p>
+                                1. <strong>백엔드에 상태 확인용 주소를 추가함</strong> — 의존성 2개(Actuator, Micrometer)를 추가하면
+                                백엔드에 <code>/actuator/prometheus</code>라는 주소가 새로 생긴다.
+                                이 주소에 접속하면 지금까지 받은 요청 수, 응답시간, 메모리 사용량 같은 서버 상태가 숫자 목록으로 나온다.<br>
+                                2. <strong>매니저 EC2가 수집하고 그래프로 보여줌</strong> — 항상 켜 두는 매니저 EC2에서
+                                Prometheus와 Grafana를 컨테이너로 실행했다. Prometheus가 15초마다 백엔드의 위 주소를 읽어 저장하고,
+                                Grafana가 그 숫자를 그래프로 그린다.<br>
+                                3. <strong>외부에서는 볼 수 없게 함</strong> — 상태 주소는 내부 서버에서만 접근할 수 있어 인터넷에서는 닿을 수 없고,
+                                Grafana 화면(3000)은 내 IP에만 열었으며, Prometheus(9090)는 아예 열지 않았다.<br>
+                                4. <strong>백엔드가 다운되면 Discord로 자동 알림</strong> — Prometheus는 15초마다 백엔드에 접속해 상태를 읽어 가는데,
+                                백엔드가 다운되면 이 접속부터 실패한다. <span class="hl-green">접속 실패가 1분 넘게 이어지면 Grafana가 Discord 채널로
+                                "백엔드 다운" 알림 메시지를 보내는 규칙(backend-down)</span>을 만들었다.
+                                즉 대시보드를 보고 있지 않아도, 백엔드가 죽으면 1분 안에 Discord로 알게 된다.
+                            </p>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                    class="dot dot-g"></span> pom.xml — 실제 적용 코드</div>
+                            <pre><code class="language-markup">&lt;!-- 앱 상태를 /actuator/* 주소로 게시하는 기능 --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;!-- 그 상태를 Prometheus가 읽는 형식으로 변환 --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+    &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                    class="dot dot-g"></span> application.yml — 실제 적용 코드</div>
+                            <pre><code class="language-yaml">management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus   # 이 4개 주소만 연다 (env 등 민감한 항목은 열지 않음)
+  metrics:
+    tags:
+      application: kiosk-backend                  # 모든 숫자에 앱 이름표를 붙임 - Grafana에서 이 이름으로 조회
+  endpoint:
+    health:
+      show-details: always                        # /actuator/health 에서 DB 연결 상태까지 표시</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                    class="dot dot-g"></span> prometheus.yml (매니저 EC2) — 실제 적용 코드</div>
+                            <pre><code class="language-yaml">global:
+  scrape_interval: 15s                          # 15초마다 수집
+
+scrape_configs:
+  - job_name: 'kiosk-backend'
+    metrics_path: '/actuator/prometheus'        # 읽어올 주소
+    static_configs:
+      - targets: ['&lt;백엔드프라이빗IP&gt;:8080']    # 같은 VPC 안이라 프라이빗 IP로 직접 접근</code></pre>
+                        </div>
+
+                        <div class="test-execution">
+                            <div class="test-execution-title">🧪 실제 테스트 실행</div>
+                            <p>
+                                Grafana에 공개 대시보드 템플릿 <strong>Spring Boot 3.x Statistics (ID 19004)</strong>를 가져와
+                                가동 시간·메모리·CPU 그래프를 연결하고, 하단에 우리 서비스에 맞는 패널 2개를 직접 추가했다.
+                                아래 캡처는 실제 운영 서버의 대시보드다 — 컨테이너 시작 시각과 가동 시간이 표시되고,
+                                사이트를 사용한 시간대에만 요청 수가 튀어 오르며, 평균 응답시간은 밀리초 단위로 유지된다.
+                            </p>
+
+                            <p>
+                                하단 두 패널은 직접 추가한 것이다 — <strong>초당 HTTP 요청 수</strong>(지금 서버에 요청이 얼마나 들어오는가)와
+                                <strong>평균 응답시간</strong>(요청 하나를 처리하는 데 걸리는 시간).
+                            </p>
+
+                            <div class="screenshot-single">
+                                <div class="screenshot-item">
+                                    <div class="screenshot-label">📷 운영 대시보드 — 상단: 템플릿 기본 패널(Uptime·Heap·CPU) / 하단: 직접 추가한 초당 HTTP 요청 수·평균 응답시간</div>
+                                    <img src="grafana-panels.png" alt="그라파나 대시보드: 초당 HTTP 요청 수와 평균 응답시간 그래프">
+                                </div>
+                            </div>
+
+                            <div class="screenshot-single">
+                                <div class="screenshot-item">
+                                    <div class="screenshot-label">📷 Discord 자동 알림 — backend-down 규칙 발동 확인 (instance = 백엔드 프라이빗 IP)</div>
+                                    <img src="discord-alert.png" alt="Grafana가 Discord로 보낸 backend-down 알림 메시지">
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="improve">
+                            <div class="improve-title">✨ 결론</div>
+                            <p>
+                                ①~③의 로그가 <span class="hl-green">"무슨 일이 있었는지"</span>를 남긴다면,
+                                모니터링은 <span class="hl-green">"지금 서버가 어떤 상태인지"</span>를 실시간 그래프로 보여준다.
+                                이제 장애와 성능 저하를 사용자 신고 이전에 발견할 수 있고,
+                                배포 이후 안정 운영 여부를 데이터로 판단할 수 있다.
+                                백엔드가 1분 넘게 응답하지 않으면 Discord 알림까지 자동으로 도착하므로, 대시보드를 보고 있지 않아도 장애를 즉시 알 수 있다.
+                            </p>
+                        </div>
+
+                        <div class="summary">
+                            <div class="summary-title">💡 핵심 정리</div>
+                            <ul>
+                                <li>백엔드는 <span class="hl-blue">의존성 2개 + 설정 몇 줄</span>로 자기 상태를 숫자로 게시한다 (Actuator + Micrometer)</li>
+                                <li>매니저 EC2의 Prometheus가 15초마다 수집하고, Grafana가 그래프로 보여준다</li>
+                                <li>백엔드가 <span class="hl-blue">1분 넘게 응답이 없으면</span> Grafana가 <span class="hl-green">Discord로 자동 알림</span>을 보낸다 (backend-down 규칙)</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -4280,156 +4432,6 @@ ABC → default 분기
         </div>
     </div>
 </div>
-
-
-            <!-- ===================== 운영 모니터링 적용: Prometheus + Grafana ===================== -->
-            <div class="section">
-                <div class="section-header plan">
-                    <span class="owasp-badge badge-plan">APPLIED</span>
-                    <h2>운영 모니터링 적용 현황 (Actuator + Prometheus + Grafana)</h2>
-                    <p class="subtitle">기존 임시 계획 내용을 현재 키오스크 배포 환경에 실제 적용한 구성 기준으로 갱신</p>
-                </div>
-
-                <div class="section-body">
-                    <div class="item" id="monitoring-applied-1">
-                        <div class="item-title">① 백엔드 메트릭 노출 — Spring Boot Actuator + Micrometer</div>
-
-                        <div class="story">
-                            <div class="story-label">✅ 적용 내용</div>
-                            <p>
-                                백엔드에 <strong>Spring Boot Actuator</strong>와 <strong>micrometer-registry-prometheus</strong>를 적용해
-                                <code>/actuator/prometheus</code>에서 JVM, HTTP 요청, CPU, DB 커넥션 등의 운영 지표를
-                                Prometheus 형식으로 노출하도록 구성했다.
-                            </p>
-                            <p>
-                                모든 지표에는 <code>application: kiosk-backend</code> 태그를 붙여
-                                Grafana에서 우리 백엔드만 선택해 조회할 수 있도록 했다.
-                            </p>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>pom.xml — 실제 적용 의존성</div>
-                            <pre><code class="language-markup">&lt;dependency&gt;
-    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
-    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
-&lt;/dependency&gt;
-&lt;dependency&gt;
-    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
-    &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
-&lt;/dependency&gt;</code></pre>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>application.yml — 실제 적용 설정</div>
-                            <pre><code class="language-yaml">management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  metrics:
-    tags:
-      application: kiosk-backend
-  endpoint:
-    health:
-      show-details: always</code></pre>
-                        </div>
-
-                        <div class="improve">
-                            <div class="improve-title">🔒 접근 범위</div>
-                            <p>
-                                백엔드 8080 포트는 보안그룹상 프론트·매니저 EC2에서만 접근 가능하고,
-                                프론트 Nginx가 <code>/api</code>와 <code>/uploads</code>만 프록시하므로
-                                <code>/actuator/prometheus</code>가 인터넷에 직접 노출되지 않도록 구성했다.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="item" id="monitoring-applied-2">
-                        <div class="item-title">② 매니저 EC2에 Prometheus + Grafana 실행</div>
-
-                        <div class="story">
-                            <div class="story-label">✅ 실제 아키텍처</div>
-                            <p>
-                                기존에 상시 사용하는 <strong>매니저 EC2</strong>에 Prometheus와 Grafana를 Docker Compose로 실행했다.
-                                Prometheus는 백엔드 EC2의 프라이빗 IP를 대상으로 <strong>15초마다</strong>
-                                <code>/actuator/prometheus</code>를 수집하고, Grafana는 같은 Docker 네트워크의
-                                <code>http://prometheus:9090</code>을 데이터소스로 사용한다.
-                            </p>
-                        </div>
-
-                        <div class="flow">
-                            <div class="flow-item situation"><span class="step-label">백엔드 EC2</span>Actuator가 메트릭 노출</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item apply"><span class="step-label">매니저 EC2</span>Prometheus가 15초마다 수집</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item result"><span class="step-label">Grafana</span>Prometheus 지표 시각화</div>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>prometheus.yml — 적용 구조</div>
-                            <pre><code class="language-yaml">global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'kiosk-backend'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['&lt;백엔드프라이빗IP&gt;:8080']</code></pre>
-                        </div>
-
-                        <div class="improve">
-                            <div class="improve-title">🛡️ 포트 운영</div>
-                            <p>
-                                Grafana 화면용 매니저 EC2 <code>3000</code> 포트만 접속자 IP 기준으로 열고,
-                                Prometheus <code>9090</code>은 외부에 개방하지 않는 구조로 구성했다.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="item" id="monitoring-applied-3">
-                        <div class="item-title">③ Grafana JVM 대시보드 연결 및 서비스 맞춤 패널 구성</div>
-
-                        <div class="story">
-                            <div class="story-label">📊 현재 적용 상태</div>
-                            <p>
-                                Grafana의 <strong>JVM (Micrometer) 템플릿(ID 4701)</strong>을 가져와 Prometheus와 연결했고,
-                                대시보드 상단에서 <code>Application = kiosk-backend</code>와 백엔드 인스턴스가 인식되는 것까지 확인했다.
-                            </p>
-                            <p>
-                                현재 기본 JVM 패널 일부가 <span class="hl-yellow">N/A / No data</span>로 표시되어
-                                시간 범위·트래픽 발생 여부·메트릭 쿼리를 확인하면서 서비스 맞춤 패널을 추가하고 있다.
-                                즉, 모니터링 스택과 데이터소스 연결은 구성되어 있고 대시보드 지표 표현을 점검하는 단계다.
-                            </p>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label" style="background:#4f46e5;">🔧 직접 추가하는 핵심 패널</div>
-                            <p><strong>초당 HTTP 요청 수</strong></p>
-                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[1m]))</code></pre>
-                            <p><strong>5xx 에러 비율</strong></p>
-                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend",status=~"5.."}[5m]))
-/
-sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
-                            <p><strong>평균 응답시간</strong></p>
-                            <pre><code>sum(rate(http_server_requests_seconds_sum{application="kiosk-backend"}[5m]))
-/
-sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
-                        </div>
-
-                        <div class="summary">
-                            <div class="summary-title">💡 현재 기준 핵심 정리</div>
-                            <ul>
-                                <li>백엔드에 Actuator + Micrometer를 적용해 Prometheus용 메트릭을 노출했다.</li>
-                                <li>매니저 EC2에 Prometheus + Grafana를 실행하고 내부 네트워크로 연결했다.</li>
-                                <li>Prometheus는 15초마다 백엔드 메트릭을 수집하도록 구성했다.</li>
-                                <li>Grafana에 JVM (Micrometer) 대시보드를 Import했고 <code>kiosk-backend</code> 애플리케이션과 인스턴스가 선택되는 것을 확인했다.</li>
-                                <li>HTTP 요청량·5xx 에러율·평균 응답시간 등의 서비스 맞춤 패널을 추가하면서 일부 No data 항목을 점검 중이다.</li>
-                                <li>Discord 웹훅 알림은 아직 적용 완료 내용으로 적지 않고 후속 확장 항목으로 남겼다.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
 
             <dialog class="image-lightbox" id="imageLightbox" aria-label="확대한 이미지">
