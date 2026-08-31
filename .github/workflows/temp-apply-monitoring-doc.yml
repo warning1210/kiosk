@@ -3,7 +3,8 @@ name: Temporary apply monitoring doc
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/temp-apply-monitoring-doc.yml]
+    paths:
+      - '.github/workflows/temp-apply-monitoring-doc.yml'
 
 permissions:
   contents: write
@@ -16,7 +17,6 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Update owasp_top10 HTML
         shell: bash
         run: |
@@ -24,177 +24,23 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin owasp_top10
           git checkout -B owasp_top10 origin/owasp_top10
-
-          python3 - <<'PY'
+          SECTION_B64='ICAgICAgICAgICAgPCEtLSA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09IOyatOyYgeyZuOuLiO2EsOungOungCDsoIHsmqk6IFByb21ldGhldXMgKyBHcmFmYW5hID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09LS0+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9InNlY3Rpb24iPgogICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2VjdGlvbi1oZWFkZXIgcGxhbiI+CiAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3M9Im93YXNwLWJhZGdlIGJhZGdlLXBsYW4iPkFQUExJRUQ8L3NwYW4+CiAgICAgICAgICAgICAgICAgICAgPGgyPuyatOyYgeyZuOuLiO2EsOungOungCDsoIHsmqkg7ZiE7Zm9IChBY3R1YXRvciArIFByb21ldGhldXMgKyBHcmFmYW5hKTwvaDI+CiAgICAgICAgICAgICAgICAgICAgPHAgY2xhc3M9InN1YnRpdGxlIj7quLDsoZwg7J6E7IucIOqzhO2ajSDrgbTsoJXsnYQg7ZiE7J6sIOyCpOyjvCDsiJjtlZjsmrQg67Cw7Y+sIO2ZmOqyvOyXkCDsi6TsoJwg7KCB7Jqp7ZWcIOq1rOyEsSDquLDspIDsnLzroZwg6rCB7IugPC9wPgogICAgICAgICAgICAgICAgPC9kaXY+CgogICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2VjdGlvbi1ib2R5Ij4KICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpdGVtIiBpZD0ibW9uaXRvcmluZy1hcHBsaWVkLTEiPgogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpdGVtLXRpdGxlIj7jgZEg67Cx7JeU65OcIOuplO2KuOumrSDri4jslYQg4oCUIFNwcmluZyBCb290IEFjdHVhdG9yICsgTWljcm9tZXRlcjwvZGl2PgoKICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic3RvcnkiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic3RvcnktbGFiZWwiPuKchSDsoIHsmqkg64K07JqpPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cD4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICDrsLHsl5Trk5zsl5AgPHN0cm9uZz5TcHJpbmcgQm9vdCBBY3R1YXRvcjwvc3Ryb25nPeyZgAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzdHJvbmc+bWljcm9tZXRlci1yZWdpc3RyeS1wcm9tZXRoZXVzPC9zdHJvbmc+66W8IOyggOyaqe2VtAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxjb2RlPi9hY3R1YXRvci9wcm9tZXRoZXVzPC9jb2RlPuyXkOyEnCBKVk0sIEhUVFAg7JqU7LKtLCBDUFUsIERCIOy7pOuEkOyFmCDrk7HsnZgg7Jq07JiBIOyngO2RnOulvAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFByb21ldGhldXMg7ZiV7Iud7Jy866GcIOuFuOy2nO2VmOuPhOuhnCDqtazshLHtlZjripQuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cD4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICDrqqjrk6Ag7KeA7ZGc7JeQ64qUIDxjb2RlPmFwcGxpY2F0aW9uOiBraW9zay1iYWNrZW5kPC9jb2RlPiDthZzqt7jrpbwg67aZ7JesCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgR3JhZmFuYeuhnCDsmrDrpqwg67Cx7JeU65Oc66eMIOyEoO2Dne2VtCDsooDtmZztlaAg7IiYIOyeiOuPhOuhnCDtlZjripQuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PgoKICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iY29kZS1ibG9jayI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJjb2RlLWxhYmVsIj48c3BhbiBjbGFzcz0iZG90IGRvdC1yIj48L3NwYW4+PHNwYW4gY2xhc3M9ImRvdCBkb3QteSI+PC9zcGFuPjxzcGFuIGNsYXNzPSJkb3QgZG90LWciPjwvc3Bhbj5wb20ueG1sIOKAlCDsi6TsoJwg7KCB7JqpIOydmOyhseyEsTwvZGl2PgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHByZT48Y29kZSBjbGFzcz0ibGFuZ3VhZ2UtbWFya3VwIj4mbHQ7ZGVwZW5kZW5jeSZndDsKICAgICZsdDtncm91cElkJmd0O29yZy5zcHJpbmdmcmFtZXdvcmsuYm9vdCZsdDsvZ3JvdXBJZCZndDsKICAgICZsdDthcnRpZmFjdElkJmd0O3NwcmluZy1ib290LXN0YXJ0ZXItYWN0dWF0b3ImbHQ7L2FydGlmYWN0SWQmZ3Q7CiZsdDsvZGVwZW5kZW5jeSZndDsKJmx0O2RlcGVuZGVuY3kmZ3Q7CiAgICAmbHQ7Z3JvdXBJZCZndDtpby5taWNyb21ldGVyJmx0Oy9ncm91cElkJmd0OwogICAgJmx0O2FydGlmYWN0SWQmZ3Q7bWljcm9tZXRlci1yZWdpc3RyeS1wcm9tZXRoZXVzJmx0Oy9hcnRpZmFjdElkJmd0OwombHQ7L2RlcGVuZGVuY3kmZ3Q7PC9jb2RlPjwvcHJlPgogICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNvZGUtYmxvY2siPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iY29kZS1sYWJlbCI+PHNwYW4gY2xhc3M9ImRvdCBkb3QtciI+PC9zcGFuPjxzcGFuIGNsYXNzPSJkb3QgZG90LXkiPjwvc3Bhbj48c3BhbiBjbGFzcz0iZG90IGRvdC1nIj48L3NwYW4+YXBwbGljYXRpb24ueW1sIOKAlCDsi6TsoJwg7KCB7JqpIOyEpOyglTwvZGl2PgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHByZT48Y29kZSBjbGFzcz0ibGFuZ3VhZ2UteWFtbCI+bWFuYWdlbWVudDoKICBlbmRwb2ludHM6CiAgICB3ZWI6CiAgICAgIGV4cG9zdXJlOgogICAgICAgIGluY2x1ZGU6IGhlYWx0aCxpbmZvLG1ldHJpY3MscHJvbWV0aGV1cwogIG1ldHJpY3M6CiAgICB0YWdzOgogICAgICBhcHBsaWNhdGlvbjoga2lvc2stYmFja2VuZAogIGVuZHBvaW50OgogICAgaGVhbHRoOgogICAgICBzaG93LWRldGFpbHM6IGFsd2F5czwvY29kZT48L3ByZT4KICAgICAgICAgICAgICAgICAgICAgICAgPC9kaXY+CgogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpbXByb3ZlIj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImltcHJvdmUtdGl0bGUiPvCflpSIOuyggOq3vSDrsoTsnYQ8L2Rpdj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxwPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIOuwseyXlOuTnCA4MDgwIO2PrO2KuOuKlCDrs7TslaHqt7jrpoDsg4Hsg4Eg7ZSE66Gg7Yq47Iuc66ek64uI7KCAIEVDMuyXkOyEnOunjCDrsoHqt7wg6rCA64ql7ZWY6rOgLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIO2UhOuhnO2KuCBOZ2lueOqwgCA8Y29kZT4vYXBpPC9jb2RlPeyZgCA8Y29kZT4vdXBsb2FkczwvY29kZT7rp4wg7ZSE66Gc7Iuc7ZWY66mA66GcCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPGNvZGU+L2FjdHVhdG9yL3Byb21ldGhldXM8L2NvZGU+6rCAIOyduO2EsOuEtOyXkCDsp4HsoJEg64W47LaY65CY7KeAIOyViuuPhOuhnCDqtazshLHtlZjripQuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgICAgIDwvZGl2PgoKICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpdGVtIiBpZD0ibW9uaXRvcmluZy1hcHBsaWVkLTIiPgogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpdGVtLXRpdGxlIj7jgZIg66ek64uI7KCAIEVDMuyXkCBQcm9tZXRoZXVzICsgR3JhZmFuYSDsi6Ttlok8L2Rpdj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InN0b3J5Ij4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InN0b3J5LWxhYmVsIj7inIUg7Iuk7KCcIOyVhO2CpO2FjeyypjwvZGl2PgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHA+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg6riw7KG07JeQIOyDgeyLnCDsgqzsmqntlZjripQgPHN0cm9uZz7rp6Tri4jsoIAgRUMyPC9zdHJvbmc+7JeQIFByb21ldGhldXPsmYAgR3JhZmFuYeulvCBEb2NrZXIgQ29tcG9zZeuhnCDsi6TtlontlojripQuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgUHJvbWV0aGV1c+qwgCDrsLHsl5Trk5wgRUMy7J2YIO2UhOudvOydtOuylSDJUPulvCDrjIDsg4HsnLzroZwgPHN0cm9uZz4xNOy0iOuniOuLpDwvc3Ryb25nPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxjb2RlPi9hY3R1YXRvci9wcm9tZXRoZXVzPC9jb2RlPoutvCDsiJjsp5HtlZjripQgR3JhZmFuYeuKlCDqsJnsnYAgRG9ja2VyIOuEpO2KuOybnO2BrOydmQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxjb2RlPmh0dHA6Ly9wcm9tZXRoZXVzOjkwOTA8L2NvZGU+7J2EIOuNsOydtO2EsOyGjOyKpOuhnCDsgqzsmqntlZjripQuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PgoKICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iZmxvdyI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJmbG93LWl0ZW0gc2l0dWF0aW9uIj48c3BhbiBjbGFzcz0ic3RlcC1sYWJlbCI+67Cx7JeU65OcIEVDMjwvc3Bhbj5BY3R1YXRvcOqwgCDrqZTrqZTrppkg64W47LaYPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJmbG93LWFycm93Ij7ihpI8L2Rpdj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImZsb3ctaXRlbSBhcHBseSI+PHNwYW4gY2xhc3M9InN0ZXAtbGFiZWwiPuuu매니저 EC2PC9zcGFuPlByb21ldGhldXPqsIAgMTXstIjsnbTri6TqsIAg7IiY7KeRPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJmbG93LWFycm93Ij7ihpI8L2Rpdj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImZsb3ctaXRlbSByZXN1bHQiPjxzcGFuIGNsYXNzPSJzdGVwLWxhYmVsIj5HcmFmYW5hPC9zcGFuPlByb21ldGhldXMg7KeA7ZGcIOyLnOqwgO2ZlDwvZGl2PgogICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNvZGUtYmxvY2siPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iY29kZS1sYWJlbCI+PHNwYW4gY2xhc3M9ImRvdCBkb3QtciI+PC9zcGFuPjxzcGFuIGNsYXNzPSJkb3QgZG90LXkiPjwvc3Bhbj48c3BhbiBjbGFzcz0iZG90IGRvdC1nIj48L3NwYW4+cHJvbWV0aGV1cy55bWwg4oCUIOyggOyaqSDqtazsobA8L2Rpdj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxwcmU+PGNvZGUgY2xhc3M9Imxhbmd1YWdlLXlhbWwiPmdsb2JhbDoKICBzY3JhcGVfaW50ZXJ2YWw6IDE1cwoKc2NyYXBlX2NvbmZpZ3M6CiAgLSBqb2JfbmFtZTogJ2tpb3NrLWJhY2tlbmQnCiAgICBtZXRyaWNzX3BhdGg6ICcvYWN0dWF0b3IvcHJvbWV0aGV1cycKICAgIHN0YXRpY19jb25maWdzOgogICAgICAtIHRhcmdldHM6IFsnJmx0O+uwseyXlOuTnO2UhOudvOydtOuylSTJUCZndDs6ODA4MCddPC9jb2RlPjwvcHJlPgogICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImltcHJvdmUiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iaW1wcm92ZS10aXRsZSI+8J+blCDtj6ztirgg7Jq07JiBPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cD4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBHcmFmYW5hIO2ZlOuptOyaqCDrp6Tri4jssoAgRUMyIDxjb2RlPjMwMDA8L2NvZGU+IO2PrO2KuOunjCDrsoHsoI3snpAgSVAg6riw7KSA7Jy866GcIOyXtOqzoCwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBQcm9tZXRoZXVzIDxjb2RlPjkwOTA8L2NvZGU+7J2AIOyZuOu2gOyXkCDqsJzrsKntlZjsp4Ag7JWK64qUIOq1rOyhsOuhnCDqtazshLHtlZjripQuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgICAgIDwvZGl2PgoKICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpdGVtIiBpZD0ibW9uaXRvcmluZy1hcHBsaWVkLTMiPgogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpdGVtLXRpdGxlIj7jgZMgR3JhZmFuYSBKVk0g64yA7Iuc67O064OcIOyXsOqysCDrrI8g7ISc67mE7IqkIOunnu2ShCDtjKjrhJA=" 
+          SECTION_B64="$SECTION_B64" python3 - <<'PY'
+          import os, base64
           from pathlib import Path
-          p = Path('kiosk_보안_OWASP_2025_Top10.html')
-          s = p.read_text(encoding='utf-8')
-          a = '            <!-- ===================== 향후 계획: EC2 + Grafana 모니터링 ===================== -->'
-          b = '            <dialog class="image-lightbox"'
-          i, j = s.index(a), s.index(b, s.index(a))
-          section = '''            <!-- ===================== 운영 모니터링 적용: Prometheus + Grafana ===================== -->
-            <div class="section">
-                <div class="section-header plan">
-                    <span class="owasp-badge badge-plan">APPLIED</span>
-                    <h2>운영 모니터링 적용 현황 (Actuator + Prometheus + Grafana)</h2>
-                    <p class="subtitle">
-                        기존의 임시 계획 내용을 실제 키오스크 배포 환경에 적용한 구성 기준으로 갱신
-                    </p>
-                </div>
-
-                <div class="section-body">
-                    <div class="item" id="monitoring-applied-1">
-                        <div class="item-title">① 백엔드 메트릭 노출 — Spring Boot Actuator + Micrometer</div>
-
-                        <div class="story">
-                            <div class="story-label">✅ 적용 내용</div>
-                            <p>
-                                백엔드에 <strong>Spring Boot Actuator</strong>와
-                                <strong>micrometer-registry-prometheus</strong>를 적용해
-                                <code>/actuator/prometheus</code>에서 JVM, HTTP 요청, CPU, DB 커넥션 등 운영 지표를
-                                Prometheus 형식으로 노출하도록 구성했다.
-                            </p>
-                            <p>
-                                모든 지표에는 <code>application: kiosk-backend</code> 태그를 붙여
-                                Grafana에서 우리 백엔드만 선택해 조회할 수 있도록 했다.
-                            </p>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>pom.xml — 실제 적용 의존성</div>
-                            <pre><code class="language-markup">&lt;dependency&gt;
-    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
-    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
-&lt;/dependency&gt;
-&lt;dependency&gt;
-    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
-    &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
-&lt;/dependency&gt;</code></pre>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>application.yml — 실제 적용 설정</div>
-                            <pre><code class="language-yaml">management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  metrics:
-    tags:
-      application: kiosk-backend
-  endpoint:
-    health:
-      show-details: always</code></pre>
-                        </div>
-
-                        <div class="improve">
-                            <div class="improve-title">🔒 접근 범위</div>
-                            <p>
-                                메트릭은 백엔드 <code>8080</code>의 <code>/actuator/prometheus</code>에서 제공하지만,
-                                백엔드 보안그룹과 Nginx 경로 구성을 이용해 인터넷에 직접 노출하지 않고
-                                매니저 EC2의 Prometheus가 내부에서 수집하는 구조로 구성했다.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="item" id="monitoring-applied-2">
-                        <div class="item-title">② 매니저 EC2에 Prometheus + Grafana 실행</div>
-
-                        <div class="story">
-                            <div class="story-label">✅ 실제 아키텍처</div>
-                            <p>
-                                기존에 상시 사용하는 <strong>매니저 EC2</strong>에 Prometheus와 Grafana를 Docker Compose로 실행했다.
-                                Prometheus는 백엔드 EC2의 프라이빗 IP를 대상으로 <strong>15초마다</strong>
-                                <code>/actuator/prometheus</code>를 수집하고, Grafana는 같은 Docker 네트워크의
-                                <code>http://prometheus:9090</code>을 데이터소스로 사용한다.
-                            </p>
-                        </div>
-
-                        <div class="flow">
-                            <div class="flow-item situation"><span class="step-label">백엔드 EC2</span>Actuator가 메트릭 노출</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item apply"><span class="step-label">매니저 EC2</span>Prometheus가 15초마다 수집</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item result"><span class="step-label">Grafana</span>Prometheus 지표 시각화</div>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>prometheus.yml — 적용 구조</div>
-                            <pre><code class="language-yaml">global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'kiosk-backend'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['&lt;백엔드프라이빗IP&gt;:8080']</code></pre>
-                        </div>
-
-                        <div class="improve">
-                            <div class="improve-title">🛡️ 포트 운영</div>
-                            <p>
-                                브라우저에서 사용하는 Grafana <code>3000</code> 포트만 접속자 IP 기준으로 열고,
-                                Prometheus <code>9090</code>은 외부에서 사용할 필요가 없어 별도로 공개하지 않는다.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="item" id="monitoring-applied-3">
-                        <div class="item-title">③ Grafana JVM 대시보드 연결 및 서비스 맞춤 패널 구성</div>
-
-                        <div class="story">
-                            <div class="story-label">📊 현재 적용 상태</div>
-                            <p>
-                                Grafana의 <strong>JVM (Micrometer) 템플릿(ID 4701)</strong>을 가져와 Prometheus와 연결했고,
-                                대시보드 상단에서 <code>Application = kiosk-backend</code>와 백엔드 인스턴스가 인식되는 것까지 확인했다.
-                            </p>
-                            <p>
-                                현재 기본 JVM 패널 일부가 <span class="hl-yellow">N/A / No data</span>로 표시되어
-                                시간 범위·트래픽 발생 여부·메트릭 쿼리를 확인하면서 서비스 맞춤 패널을 추가하고 있다.
-                                즉, 모니터링 스택과 데이터소스 연결은 구성되어 있고 대시보드 지표 표현을 점검하는 단계다.
-                            </p>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label" style="background:#4f46e5;">🔧 직접 추가하는 핵심 패널</div>
-                            <p><strong>초당 HTTP 요청 수</strong></p>
-                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[1m]))</code></pre>
-                            <p><strong>5xx 에러 비율</strong></p>
-                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend",status=~"5.."}[5m]))
-/
-sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
-                            <p><strong>평균 응답시간</strong></p>
-                            <pre><code>sum(rate(http_server_requests_seconds_sum{application="kiosk-backend"}[5m]))
-/
-sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
-                        </div>
-
-                        <div class="summary">
-                            <div class="summary-title">💡 현재 기준 핵심 정리</div>
-                            <ul>
-                                <li>백엔드에 Actuator + Micrometer를 적용해 Prometheus용 메트릭을 노출했다.</li>
-                                <li>매니저 EC2에 Prometheus + Grafana를 실행하고 내부 네트워크로 연결했다.</li>
-                                <li>Prometheus는 15초마다 백엔드 메트릭을 수집하도록 구성했다.</li>
-                                <li>Grafana에 JVM (Micrometer) 대시보드를 Import했고 <code>kiosk-backend</code> 애플리케이션과 인스턴스가 선택되는 것을 확인했다.</li>
-                                <li>HTTP 요청량·5xx 에러율·평균 응답시간 등의 서비스 맞춤 패널을 추가하면서 일부 No data 항목을 점검 중이다.</li>
-                                <li>Discord 웹훅 알림은 아직 적용 완료 내용으로 적지 않고, 필요 시 후속 단계로 확장한다.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-'''
-          p.write_text(s[:i] + section + s[j:], encoding='utf-8')
+          p=Path('kiosk_보안_OWASP_2025_Top10.html')
+          s=p.read_text(encoding='utf-8')
+          a='            <!-- ===================== 향후 계획: EC2 + Grafana 모니터링 ===================== -->'
+          b='            <dialog class="image-lightbox"'
+          i=s.index(a); j=s.index(b,i)
+          section=base64.b64decode(os.environ['SECTION_B64']).decode('utf-8')
+          p.write_text(s[:i]+section+s[j:],encoding='utf-8')
           PY
-
           rm -f .github/workflows/apply-monitoring-doc-update.yml
           git add kiosk_보안_OWASP_2025_Top10.html .github/workflows/apply-monitoring-doc-update.yml
           git commit -m "docs: update Grafana section to current applied state"
           git push origin HEAD:owasp_top10
-
-      - name: Remove this temporary workflow from main
+      - name: Remove temporary workflow from main
         shell: bash
         run: |
           git checkout main
