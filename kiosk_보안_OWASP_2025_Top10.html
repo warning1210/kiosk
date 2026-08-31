@@ -4282,278 +4282,152 @@ ABC → default 분기
 </div>
 
 
-            <!-- ===================== 향후 계획: EC2 + Grafana 모니터링 ===================== -->
+            <!-- ===================== 운영 모니터링 적용: Prometheus + Grafana ===================== -->
             <div class="section">
-
                 <div class="section-header plan">
-                    <span class="owasp-badge badge-plan">PLAN</span>
-                    <h2>향후 보안 모니터링 강화 계획 (EC2 + Grafana)</h2>
-                    <p class="subtitle">
-                        OWASP Top 10 항목은 아니지만, A09에서 다룬 "탐지 실패" 문제를 운영 환경에서 실제로 보완하기 위한 다음 단계 계획
-                    </p>
+                    <span class="owasp-badge badge-plan">APPLIED</span>
+                    <h2>운영 모니터링 적용 현황 (Actuator + Prometheus + Grafana)</h2>
+                    <p class="subtitle">기존 임시 계획 내용을 현재 키오스크 배포 환경에 실제 적용한 구성 기준으로 갱신</p>
                 </div>
 
                 <div class="section-body">
-
-                    <div class="item" id="a11-1">
-
-                        <div class="item-title">
-                            ① EC2에 Prometheus + Grafana를 도입해 보안 이벤트와 애플리케이션 지표를 실시간으로 관측할 계획
-                        </div>
-
-                        <div class="term-note">
-                            <strong>Prometheus</strong>: 일정한 주기로 지표(metric)를 수집해 저장하는 모니터링 시스템<br>
-                            · <strong>Grafana</strong>: 수집된 지표를 대시보드로 시각화하고, 임계치를 넘으면 알림을 보내는 도구
-                        </div>
+                    <div class="item" id="monitoring-applied-1">
+                        <div class="item-title">① 백엔드 메트릭 노출 — Spring Boot Actuator + Micrometer</div>
 
                         <div class="story">
-                            <div class="story-label">📖 지금 상황</div>
+                            <div class="story-label">✅ 적용 내용</div>
                             <p>
-                                A09에서 CRLF 로그 위조 방어와 로그인 실패 기록 등 <span class="hl-blue">"무엇을 남길지"</span>는 정리했지만,
-                                그 로그를 <span class="hl-red">누군가 실시간으로 지켜보는 체계는 아직 없다.</span>
-                                지금은 문제가 의심될 때 서버에 접속해 로그 파일을 직접 열어보는 방식에 의존하고 있다.
+                                백엔드에 <strong>Spring Boot Actuator</strong>와 <strong>micrometer-registry-prometheus</strong>를 적용해
+                                <code>/actuator/prometheus</code>에서 JVM, HTTP 요청, CPU, DB 커넥션 등의 운영 지표를
+                                Prometheus 형식으로 노출하도록 구성했다.
                             </p>
                             <p>
-                                이 방식은 사고가 이미 벌어진 뒤에야, 그것도 <span class="hl-red">누군가 로그를 들여다볼 생각을 해야만</span> 발견된다는
-                                한계가 있다. 로그인 실패가 짧은 시간에 몰리거나 API 에러율이 갑자기 치솟아도, 대시보드나 알림이 없으면 이를 즉시
-                                알아차리기 어렵다.
+                                모든 지표에는 <code>application: kiosk-backend</code> 태그를 붙여
+                                Grafana에서 우리 백엔드만 선택해 조회할 수 있도록 했다.
                             </p>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label" style="background:#4f46e5;">🗺️ 계획하는 방향</div>
-                            <p>
-                                EC2에 <strong>Prometheus</strong>를 설치하고, 스프링 부트 애플리케이션에는
-                                <code>micrometer-registry-prometheus</code>를 추가해 지표를 노출한다. Prometheus가 이 지표를 주기적으로
-                                수집하면, <strong>Grafana</strong>가 이를 대시보드로 보여주고 임계치를 넘는 순간 알림을 보내도록 구성할 예정이다.
-                            </p>
-                            <p>
-                                대시보드는 크게 두 종류로 나눌 계획이다. 하나는 <span class="hl-blue">보안 이벤트</span>(로그인 실패 급증, 비정상
-                                접근, CRLF 위조 시도 등 A09에서 남기는 로그 기반 지표)이고, 다른 하나는
-                                <span class="hl-blue">애플리케이션 지표</span>(API 5xx 에러율, 응답 지연, 요청량 급증)이다.
-                            </p>
-                        </div>
-
-                        <div class="flow">
-                            <div class="flow-item situation"><span class="step-label">📍 지금</span>로그는 남지만 실시간으로 보는 사람이
-                                없음</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item problem"><span class="step-label">🚨 한계</span>사고 인지가 늦어지고 우연히 로그를 봐야만
-                                발견</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item apply"><span class="step-label">🔧 계획</span>EC2에 Prometheus + Grafana 구축, 지표
-                                수집·시각화</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item result"><span class="step-label">✅ 기대</span>임계치 초과 시 알림으로 즉시 인지, 대응
-                                시간 단축</div>
                         </div>
 
                         <div class="code-block">
-                            <div class="code-label">
-                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span>
-                                build.gradle — 지표 노출을 위한 의존성 추가 (예정)
-                            </div>
-                            <pre><code>dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-}</code></pre>
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>pom.xml — 실제 적용 의존성</div>
+                            <pre><code class="language-markup">&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+    &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
                         </div>
 
                         <div class="code-block">
-                            <div class="code-label">
-                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span>
-                                application.yml — Actuator에서 Prometheus 엔드포인트 열기 (예정)
-                            </div>
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>application.yml — 실제 적용 설정</div>
                             <pre><code class="language-yaml">management:
   endpoints:
     web:
       exposure:
-        include: health, prometheus
+        include: health,info,metrics,prometheus
   metrics:
     tags:
-      application: kiosk-backend</code></pre>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-label">
-                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span>
-                                prometheus.yml — EC2에서 애플리케이션 지표 수집 설정 (예정)
-                            </div>
-                            <pre><code class="language-yaml">scrape_configs:
-  - job_name: 'kiosk-backend'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['localhost:8080']</code></pre>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label" style="background:#4f46e5;">📋 대시보드·알림으로 구성할 항목 (예정)</div>
-                            <p><strong>보안 이벤트</strong></p>
-                            <ul>
-                                <li>짧은 시간 안에 반복되는 로그인 실패 — 무차별 대입(Brute force) 의심 탐지</li>
-                                <li>CRLF 로그 위조 시도, 비정상 접근(401/403) 급증 등 A09 로그 기반 이벤트</li>
-                            </ul>
-                            <p><strong>애플리케이션 지표</strong></p>
-                            <ul>
-                                <li>API 5xx 에러율 상승 — 장애 또는 공격으로 인한 서비스 이상 징후</li>
-                                <li>응답 지연(latency) 증가, 요청량 급증 — DDoS성 트래픽 의심 상황</li>
-                            </ul>
-                        </div>
-
-                        <div class="compare">
-                            <div class="compare-box before">
-                                <div class="compare-label">❌ 지금 — 로그를 직접 봐야 안다</div>
-                                <pre>이상 징후 발생
-  → 아무도 알림받지 못함
-  → 우연히 로그를 열어봐야 발견
-  → 사고 인지까지 시간 소요</pre>
-                            </div>
-                            <div class="compare-box after">
-                                <div class="compare-label">✅ 계획 — 대시보드가 대신 지켜본다</div>
-                                <pre>이상 징후 발생
-  → Prometheus가 지표 수집
-  → Grafana 임계치 초과 판단
-  → 알림 발송, 즉시 인지
-
-※ 실제 구축 화면과 알림 캡처는
-   구축 완료 후 추가 예정</pre>
-                            </div>
+      application: kiosk-backend
+  endpoint:
+    health:
+      show-details: always</code></pre>
                         </div>
 
                         <div class="improve">
-                            <div class="improve-title">✨ 기대 효과</div>
+                            <div class="improve-title">🔒 접근 범위</div>
                             <p>
-                                지금까지는 로그를 남기는 것(A09)까지는 갖췄지만, 그 로그를
-                                <span class="hl-red">누가 언제 확인하는지는 정해져 있지 않았다.</span>
-                            </p>
-                            <p>
-                                EC2에 Prometheus와 Grafana를 도입하면 보안 이벤트와 애플리케이션 지표를
-                                <span class="hl-green">실시간 대시보드와 알림</span>으로 확인할 수 있게 되어, "기록은 있지만 아무도 보지
-                                않는" 상태에서 벗어나 사고를 더 빨리 알아차리고 대응할 수 있게 될 것으로 기대한다.
+                                백엔드 8080 포트는 보안그룹상 프론트·매니저 EC2에서만 접근 가능하고,
+                                프론트 Nginx가 <code>/api</code>와 <code>/uploads</code>만 프록시하므로
+                                <code>/actuator/prometheus</code>가 인터넷에 직접 노출되지 않도록 구성했다.
                             </p>
                         </div>
-
                     </div>
 
-                    <div class="item" id="a11-2">
-
-                        <div class="item-title">
-                            ② Grafana 알림을 Discord 웹훅으로 연결해 팀 채널에서 바로 확인할 수 있게 구성할 계획
-                        </div>
-
-                        <div class="term-note">
-                            <strong>Discord 웹훅(Webhook)</strong>: 정해진 URL로 메시지를 전송하면 지정한 디스코드 채널에 자동으로
-                            게시되는 연동 방식. 채널의 <em>연동 &gt; 웹후크</em> 메뉴에서 URL을 발급받아 사용한다.
-                        </div>
+                    <div class="item" id="monitoring-applied-2">
+                        <div class="item-title">② 매니저 EC2에 Prometheus + Grafana 실행</div>
 
                         <div class="story">
-                            <div class="story-label">📖 지금 상황</div>
+                            <div class="story-label">✅ 실제 아키텍처</div>
                             <p>
-                                Grafana 자체 알림은 기본적으로 이메일이나 Grafana 화면 안에서만 확인할 수 있다. 팀원이 이메일을 놓치거나
-                                Grafana에 직접 접속하지 않으면 <span class="hl-red">경고가 떠 있어도 아무도 모르는 상태</span>가 될 수
-                                있다.
-                            </p>
-                            <p>
-                                반면 팀은 평소 <span class="hl-blue">Discord로 실시간 소통</span>하고 있으므로, 경고를 Discord 채널로 바로
-                                보내면 별도로 Grafana를 열어보지 않아도 즉시 확인할 수 있다.
-                            </p>
-                        </div>
-
-                        <div class="story">
-                            <div class="story-label" style="background:#4f46e5;">🗺️ 계획하는 방향</div>
-                            <p>
-                                Discord 채널에서 <strong>웹후크 URL</strong>을 발급받아, Grafana의
-                                <strong>Alerting → Contact points</strong>에 Discord 타입 연동을 등록할 계획이다. 웹훅 URL은 저장소에
-                                그대로 커밋하지 않고 <span class="hl-blue">환경 변수나 시크릿</span>으로 관리해 노출을 막는다.
-                            </p>
-                            <p>
-                                이후 로그인 실패 급증, API 5xx 에러율 상승 등 앞서 정의한 알림 규칙(Alert rule)에 이 Discord Contact
-                                point를 연결해, 임계치를 넘으면 Discord 채널에 즉시 메시지가 올라오도록 구성할 예정이다.
+                                기존에 상시 사용하는 <strong>매니저 EC2</strong>에 Prometheus와 Grafana를 Docker Compose로 실행했다.
+                                Prometheus는 백엔드 EC2의 프라이빗 IP를 대상으로 <strong>15초마다</strong>
+                                <code>/actuator/prometheus</code>를 수집하고, Grafana는 같은 Docker 네트워크의
+                                <code>http://prometheus:9090</code>을 데이터소스로 사용한다.
                             </p>
                         </div>
 
                         <div class="flow">
-                            <div class="flow-item situation"><span class="step-label">📍 지금</span>Grafana 알림이 이메일·화면 안에서만
-                                확인됨</div>
+                            <div class="flow-item situation"><span class="step-label">백엔드 EC2</span>Actuator가 메트릭 노출</div>
                             <div class="flow-arrow">→</div>
-                            <div class="flow-item problem"><span class="step-label">🚨 한계</span>확인을 놓치면 경고가 있어도 아무도
-                                모름</div>
+                            <div class="flow-item apply"><span class="step-label">매니저 EC2</span>Prometheus가 15초마다 수집</div>
                             <div class="flow-arrow">→</div>
-                            <div class="flow-item apply"><span class="step-label">🔧 계획</span>Grafana Contact point를 Discord
-                                웹훅으로 등록</div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-item result"><span class="step-label">✅ 기대</span>임계치 초과 시 Discord 채널에 즉시
-                                게시</div>
+                            <div class="flow-item result"><span class="step-label">Grafana</span>Prometheus 지표 시각화</div>
                         </div>
 
                         <div class="code-block">
-                            <div class="code-label">
-                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span>
-                                provisioning/alerting/contactpoints.yaml — Grafana Discord 연동 (예정)
-                            </div>
-                            <pre><code class="language-yaml">apiVersion: 1
-contactPoints:
-  - orgId: 1
-    name: discord-security-alert
-    receivers:
-      - uid: discord-webhook-1
-        type: discord
-        settings:
-          url: ${DISCORD_WEBHOOK_URL}
-          use_discord_username: true
-        disableResolveMessage: false</code></pre>
-                        </div>
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>prometheus.yml — 적용 구조</div>
+                            <pre><code class="language-yaml">global:
+  scrape_interval: 15s
 
-                        <div class="code-block">
-                            <div class="code-label">
-                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span>
-                                웹훅 연동 전 동작 확인용 curl 테스트 (예정)
-                            </div>
-                            <pre><code class="language-bash">curl -H "Content-Type: application/json" \
-     -d '{"content": "[Grafana 테스트] 로그인 실패 5회 이상 탐지"}' \
-     "$DISCORD_WEBHOOK_URL"</code></pre>
-                        </div>
-
-                        <div class="compare">
-                            <div class="compare-box before">
-                                <div class="compare-label">❌ 지금 — 알림이 있어도 못 볼 수 있다</div>
-                                <pre>임계치 초과
-  → Grafana가 이메일 발송
-  → 메일함을 열어봐야 확인
-  → 놓치면 대응 지연</pre>
-                            </div>
-                            <div class="compare-box after">
-                                <div class="compare-label">✅ 계획 — 팀 채널로 바로 온다</div>
-                                <pre>임계치 초과
-  → Grafana → Discord 웹훅 호출
-  → 팀 채널에 즉시 메시지 게시
-  → 팀 전체가 동시에 인지
-
-※ 실제 Discord 채널 알림 캡처는
-   연동 완료 후 추가 예정</pre>
-                            </div>
+scrape_configs:
+  - job_name: 'kiosk-backend'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['&lt;백엔드프라이빗IP&gt;:8080']</code></pre>
                         </div>
 
                         <div class="improve">
-                            <div class="improve-title">✨ 기대 효과</div>
+                            <div class="improve-title">🛡️ 포트 운영</div>
                             <p>
-                                Grafana 알림을 이메일이나 화면 확인에만 의존하지 않고 팀이 이미 쓰고 있는
-                                <span class="hl-green">Discord 채널로 직접 전달</span>하면, 담당자 한 명이 놓치더라도 채널을 보는 다른
-                                팀원이 즉시 알아차릴 수 있다.
+                                Grafana 화면용 매니저 EC2 <code>3000</code> 포트만 접속자 IP 기준으로 열고,
+                                Prometheus <code>9090</code>은 외부에 개방하지 않는 구조로 구성했다.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="item" id="monitoring-applied-3">
+                        <div class="item-title">③ Grafana JVM 대시보드 연결 및 서비스 맞춤 패널 구성</div>
+
+                        <div class="story">
+                            <div class="story-label">📊 현재 적용 상태</div>
+                            <p>
+                                Grafana의 <strong>JVM (Micrometer) 템플릿(ID 4701)</strong>을 가져와 Prometheus와 연결했고,
+                                대시보드 상단에서 <code>Application = kiosk-backend</code>와 백엔드 인스턴스가 인식되는 것까지 확인했다.
                             </p>
                             <p>
-                                이를 통해 A09에서 목표로 한 "사고를 알아차릴 수 있는가"라는 질문에, 로그를 남기는 것을 넘어
-                                <span class="hl-green">실제로 사람에게 즉시 전달되는 알림 체계</span>까지 갖추는 것을 목표로 한다.
+                                현재 기본 JVM 패널 일부가 <span class="hl-yellow">N/A / No data</span>로 표시되어
+                                시간 범위·트래픽 발생 여부·메트릭 쿼리를 확인하면서 서비스 맞춤 패널을 추가하고 있다.
+                                즉, 모니터링 스택과 데이터소스 연결은 구성되어 있고 대시보드 지표 표현을 점검하는 단계다.
                             </p>
                         </div>
 
-                    </div>
+                        <div class="story">
+                            <div class="story-label" style="background:#4f46e5;">🔧 직접 추가하는 핵심 패널</div>
+                            <p><strong>초당 HTTP 요청 수</strong></p>
+                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[1m]))</code></pre>
+                            <p><strong>5xx 에러 비율</strong></p>
+                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend",status=~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
+                            <p><strong>평균 응답시간</strong></p>
+                            <pre><code>sum(rate(http_server_requests_seconds_sum{application="kiosk-backend"}[5m]))
+/
+sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
+                        </div>
 
+                        <div class="summary">
+                            <div class="summary-title">💡 현재 기준 핵심 정리</div>
+                            <ul>
+                                <li>백엔드에 Actuator + Micrometer를 적용해 Prometheus용 메트릭을 노출했다.</li>
+                                <li>매니저 EC2에 Prometheus + Grafana를 실행하고 내부 네트워크로 연결했다.</li>
+                                <li>Prometheus는 15초마다 백엔드 메트릭을 수집하도록 구성했다.</li>
+                                <li>Grafana에 JVM (Micrometer) 대시보드를 Import했고 <code>kiosk-backend</code> 애플리케이션과 인스턴스가 선택되는 것을 확인했다.</li>
+                                <li>HTTP 요청량·5xx 에러율·평균 응답시간 등의 서비스 맞춤 패널을 추가하면서 일부 No data 항목을 점검 중이다.</li>
+                                <li>Discord 웹훅 알림은 아직 적용 완료 내용으로 적지 않고 후속 확장 항목으로 남겼다.</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
 
