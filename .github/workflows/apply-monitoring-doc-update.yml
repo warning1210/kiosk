@@ -1,0 +1,283 @@
+name: Apply monitoring documentation update
+
+on:
+  push:
+    branches:
+      - owasp_top10
+    paths:
+      - .github/workflows/apply-monitoring-doc-update.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-html:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout owasp_top10
+        uses: actions/checkout@v4
+        with:
+          ref: owasp_top10
+          fetch-depth: 0
+
+      - name: Replace temporary monitoring plan with applied configuration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('kiosk_보안_OWASP_2025_Top10.html')
+          text = path.read_text(encoding='utf-8')
+
+          start_marker = '            <!-- ===================== 향후 계획: EC2 + Grafana 모니터링 ===================== -->'
+          end_marker = '            <dialog class="image-lightbox"'
+
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+
+          new_section = r'''            <!-- ===================== 운영 모니터링 적용: Prometheus + Grafana ===================== -->
+            <div class="section">
+
+                <div class="section-header plan">
+                    <span class="owasp-badge badge-plan">APPLIED</span>
+                    <h2>운영 모니터링 적용 (Spring Boot Actuator + Prometheus + Grafana)</h2>
+                    <p class="subtitle">
+                        A09에서 다룬 탐지·모니터링 한계를 보완하기 위해, 실제 배포 환경의 백엔드 지표를 수집하고 Grafana에서 실시간으로 확인할 수 있도록 구성
+                    </p>
+                </div>
+
+                <div class="section-body">
+
+                    <div class="item" id="monitoring-1">
+
+                        <div class="item-title">
+                            ① Spring Boot Actuator + Micrometer로 백엔드 메트릭을 Prometheus 형식으로 노출
+                        </div>
+
+                        <div class="term-note">
+                            <strong>Actuator</strong>: 애플리케이션 상태와 JVM·HTTP·DB 커넥션 등의 운영 지표를 제공<br>
+                            · <strong>Micrometer Prometheus Registry</strong>: Actuator 지표를 Prometheus가 수집할 수 있는 형식으로 변환
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">📖 적용 배경</div>
+                            <p>
+                                기존에는 장애가 의심될 때 서버 로그를 직접 확인해야 해서, 요청량 증가·5xx 오류·응답 지연·메모리 사용량 같은
+                                <span class="hl-red">서비스 상태 변화를 한눈에 확인하기 어려웠다.</span>
+                            </p>
+                            <p>
+                                그래서 백엔드에 <strong>Spring Boot Actuator</strong>와
+                                <strong>micrometer-registry-prometheus</strong>를 추가하고,
+                                <code>/actuator/prometheus</code>에서 운영 지표를 노출하도록 변경했다.
+                            </p>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                pom.xml — 모니터링 의존성 적용
+                            </div>
+                            <pre><code class="language-markup">&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+    &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                application.yml — Actuator / Prometheus 엔드포인트 및 애플리케이션 태그
+                            </div>
+                            <pre><code class="language-yaml">management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: kiosk-backend
+  endpoint:
+    health:
+      show-details: always</code></pre>
+                        </div>
+
+                        <div class="improve">
+                            <div class="improve-title">🔒 메트릭 엔드포인트 노출 범위</div>
+                            <p>
+                                백엔드의 <code>8080</code> 포트는 보안그룹상 프론트·매니저 EC2에서만 접근할 수 있고,
+                                프론트 Nginx는 <code>/api</code>와 <code>/uploads</code>만 프록시하므로
+                                <span class="hl-green"><code>/actuator/prometheus</code>가 인터넷에 직접 노출되지 않도록 구성</span>했다.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="item" id="monitoring-2">
+
+                        <div class="item-title">
+                            ② 매니저 EC2에서 Prometheus가 15초마다 수집하고 Grafana가 시각화하도록 구성
+                        </div>
+
+                        <div class="term-note">
+                            서비스 백엔드·프론트에 모니터링 도구를 추가로 올리지 않고, 기존에 상시 가동 중인 <strong>매니저 EC2</strong>에 Prometheus와 Grafana를 Docker Compose로 실행
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">⚙️ 실제 구성</div>
+                            <p>
+                                Prometheus는 백엔드 EC2의 <strong>프라이빗 IP</strong>와
+                                <code>/actuator/prometheus</code> 경로를 대상으로 <strong>15초 간격</strong>으로 메트릭을 수집한다.
+                                Grafana는 같은 Docker Compose 네트워크에서 Prometheus를 데이터소스로 사용한다.
+                            </p>
+                            <p>
+                                브라우저에서 Grafana에 접속하기 위한 매니저 EC2의 <code>3000</code> 포트만 접속자 IP로 제한해 열고,
+                                Prometheus의 <code>9090</code> 포트는 외부에 개방하지 않는 구조로 운영한다.
+                            </p>
+                        </div>
+
+                        <div class="flow">
+                            <div class="flow-item situation"><span class="step-label">① 백엔드</span>Actuator / Micrometer<br>메트릭 생성</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item apply"><span class="step-label">② Prometheus</span>15초마다<br>메트릭 수집</div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-item result"><span class="step-label">③ Grafana</span>대시보드로<br>실시간 시각화</div>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                prometheus.yml — 백엔드 EC2 메트릭 수집 설정
+                            </div>
+                            <pre><code class="language-yaml">global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'kiosk-backend'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['&lt;백엔드프라이빗IP&gt;:8080']</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                Grafana Prometheus 데이터소스
+                            </div>
+                            <pre><code>http://prometheus:9090</code></pre>
+                        </div>
+
+                        <div class="compare">
+                            <div class="compare-box before">
+                                <div class="compare-label">❌ 이전 — 문제가 생긴 뒤 직접 확인</div>
+                                <pre>서비스 이상 발생
+  → 서버 접속
+  → 로그 직접 확인
+  → 원인 추적</pre>
+                            </div>
+                            <div class="compare-box after">
+                                <div class="compare-label">✅ 적용 후 — 수치 변화를 대시보드에서 확인</div>
+                                <pre>백엔드가 메트릭 노출
+  → Prometheus가 15초마다 수집
+  → Grafana가 그래프로 시각화
+  → 요청·오류·JVM 상태를 즉시 확인</pre>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="item" id="monitoring-3">
+
+                        <div class="item-title">
+                            ③ JVM (Micrometer) 대시보드와 서비스 맞춤 PromQL 패널로 핵심 지표 확인
+                        </div>
+
+                        <div class="term-note">
+                            Grafana의 <strong>JVM (Micrometer) 대시보드(ID 4701)</strong>를 Prometheus 데이터소스와 연결하고,
+                            <code>application="kiosk-backend"</code> 태그를 기준으로 우리 서비스 지표를 조회
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label">📊 확인하는 지표</div>
+                            <p>
+                                기본 JVM 대시보드에서는 힙/논힙 메모리, CPU, 스레드, GC 등 JVM 상태를 확인하고,
+                                서비스 맞춤 패널에서는 <span class="hl-blue">초당 HTTP 요청 수, 5xx 에러 비율, 평균 응답시간</span>처럼
+                                실제 서비스 운영에 필요한 지표를 PromQL로 직접 구성한다.
+                            </p>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                초당 HTTP 요청 수
+                            </div>
+                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[1m]))</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                5xx 에러 비율
+                            </div>
+                            <pre><code>sum(rate(http_server_requests_seconds_count{application="kiosk-backend",status=~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label">
+                                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+                                평균 응답시간
+                            </div>
+                            <pre><code>sum(rate(http_server_requests_seconds_sum{application="kiosk-backend"}[5m]))
+/
+sum(rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m]))</code></pre>
+                        </div>
+
+                        <div class="story">
+                            <div class="story-label" style="background:#4f46e5;">🔎 추가로 확장 가능한 패널</div>
+                            <ul>
+                                <li>JVM Heap 사용량 — <code>jvm_memory_used_bytes{application="kiosk-backend",area="heap"}</code></li>
+                                <li>애플리케이션 CPU 사용률 — <code>process_cpu_usage{application="kiosk-backend"}</code></li>
+                                <li>DB 커넥션 사용 수 — <code>hikaricp_connections_active{application="kiosk-backend"}</code></li>
+                                <li>살아있는 스레드 수 — <code>jvm_threads_live_threads{application="kiosk-backend"}</code></li>
+                                <li>URL별 요청량 TOP 5 — <code>topk(5, sum by (uri) (rate(http_server_requests_seconds_count{application="kiosk-backend"}[5m])))</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="improve">
+                            <div class="improve-title">✨ 적용 효과</div>
+                            <p>
+                                애플리케이션 내부 상태를 수치로 지속 수집하고 Grafana에서 시각화함으로써,
+                                단순히 로그를 남기는 수준을 넘어 <span class="hl-green">요청량·오류·응답시간·JVM 자원 상태의 변화를 빠르게 확인할 수 있는 운영 모니터링 기반</span>을 마련했다.
+                            </p>
+                            <p>
+                                이후 필요하면 Grafana Alerting과 Discord 웹훅을 연결해 백엔드 다운이나 5xx 오류 발생 시 자동 알림까지 확장할 수 있다.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+'''
+
+          updated = text[:start] + new_section + text[end:]
+          path.write_text(updated, encoding='utf-8')
+          print('Monitoring section updated:', path)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kiosk_보안_OWASP_2025_Top10.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "docs: replace temporary Grafana plan with applied monitoring"
+          git push origin HEAD:owasp_top10
