@@ -1056,28 +1056,11 @@ configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));</code
                         <div class="compare">
                             <div class="compare-box before">
                                 <div class="compare-label">❌ 적용 전 — 모든 출처 허용되어 미등록 출처도 통과</div>
-                                <pre>Origin: https://evil.example
-
-Access-Control-Allow-Origin: *
-Access-Control-Allow-Credentials: true
-
-→ 등록하지 않은 사이트도 응답을 읽을 수 있음</pre>
-                                <div class="screenshot-item before-evidence">
-                                    <div class="screenshot-label">📷 적용 전 — 모든 출처 허용으로 공격 사이트의 Origin도 통과</div>
                                     <img src="image_A02-cors-before.png"
                                         alt="A02 CORS 적용 전 테스트에서 공격 사이트 Origin이 허용되고 테스트가 통과한 터미널 화면">
-                                </div>
                             </div>
                             <div class="compare-box after">
-                                <div class="compare-label">✅ 적용 후 — 등록된 출처만 허용, 허용 목록 외 차단</div>
-                                <pre>Origin: https://evil.example
-
-Access-Control-Allow-Origin: (없음)
-
-→ 브라우저가 응답 사용을 차단
-→ 운영 프론트엔드 Origin만 정상 허용</pre>
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 적용 후 — 공격 사이트 차단, 등록된 관리자 화면만 허용</div>
+                                <div class="compare-label">적용 후 — 등록된 출처만 허용, 허용 목록 외 차단</div>
                                     <img src="image_A02-cors-after.png"
                                         alt="A02 CORS 적용 후 테스트에서 공격 사이트는 차단되고 관리자 화면은 허용된 터미널 화면">
                                 </div>
@@ -1181,18 +1164,10 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
                             </div>
                             <div class="compare-box after">
                                 <div class="compare-label">✅ 적용 후 — 보안 헤더 응답 확인</div>
-                                <pre>$ curl.exe -I https://icekiosk.shop/
-
-→ Content-Security-Policy: default-src 'self' ...
-→ X-Frame-Options: SAMEORIGIN
-→ X-Content-Type-Options: nosniff
-→ 브라우저 보안 정책 정상 적용</pre>
-                                <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 적용 후 — 실제 운영 서버에서 보안 헤더 응답 확인</div>
                                     <img src="image_A02-nginx-headers-after.png"
                                         alt="icekiosk.shop 운영 서버에서 Content-Security-Policy, X-Frame-Options, X-Content-Type-Options 등 Nginx 보안 헤더가 적용된 응답 화면">
+                                        <div>적용 후 — 실제 운영 서버에서 보안 헤더 응답 확인</div>
                                 </div>
-                            </div>
                         </div>
                     </div>
                     <div class="improve">
@@ -2310,28 +2285,17 @@ void treatsAnInjectionPayloadAsAParameterInsteadOfSql() {
                             </div>
                             <div class="compare">
                                 <div class="compare-box before">
-                                    <div class="compare-label">🧪 공격 입력</div>
-                                    <pre>x' OR '1'='1
-
-문자열 치환이면 SQL 구조를
-바꾸는 조건으로 실행될 수 있음</pre>
-                                    <div class="screenshot-item before-evidence">
-                                        <div class="screenshot-label">📷 적용 전 — 공격 문자열이 SQL 조건으로 결합되는 취약 동작 재현</div>
+                                    <div class="compare-label">🧪 공격 입력</div>  
                                         <img src="image_A05-sql-before.png"
                                             alt="A05 적용 전 테스트에서 SQL 인젝션 공격 문자열이 SQL 구조에 포함된 터미널 화면">
+                                        <div class="screenshot-label">적용 전 — 공격 문자열이 SQL 조건으로 결합되는 취약 동작 재현</div>
                                     </div>
                                 </div>
                                 <div class="compare-box after">
                                     <div class="compare-label">✅ 실제 테스트 결과 — PASS</div>
-                                    <pre>SQL: mobile_number_hash = ?
-Parameter: "x' OR '1'='1"
-
-공격 문자열이 SQL 본문에 없음
-→ 명령이 아닌 값으로 바인딩</pre>
-                                    <div class="screenshot-item">
-                                        <div class="screenshot-label">📷 적용 후 — 공격 문자열을 하나의 값으로 바인딩, 테스트 통과</div>
                                         <img src="image_A05-sql-after.png"
                                             alt="A05 적용 후 MyBatis가 공격 문자열을 물음표 파라미터 하나로 바인딩하고 테스트가 통과한 터미널 화면">
+                                        <div class="screenshot-label">적용 후 — 공격 문자열을 하나의 값으로 바인딩, 테스트 통과</div>
                                     </div>
                                 </div>
                             </div>
