@@ -2189,31 +2189,6 @@ Optional&lt;Item&gt; findById(@Param("itemId") String itemId);
 // ${itemId}가 SQL 문자열에 그대로 합쳐져
 // 공격 입력이 SQL 조건을 변경할 수 있음</code></pre>
                             </div>
-                            <div class="compare">
-                                <div class="compare-box before">
-                                    <div class="compare-label">❌ 취약한 문자열 치환</div>
-                                    <pre>입력: 999999 OR 1=1
-
-WHERE item_id = ${itemId}
-
-실행 SQL:
-WHERE item_id = 999999 OR 1=1
-
-→ 조건이 항상 참이 되어 조회 범위가 바뀜</pre>
-                                </div>
-                                <div class="compare-box after">
-                                    <div class="compare-label">✅ 안전한 값 바인딩</div>
-                                    <pre>입력: 999999 OR 1=1
-
-WHERE item_id = #{itemId}
-
-실행 개념:
-WHERE item_id = ?
-값: "999999 OR 1=1"
-
-→ SQL 구조는 그대로, 입력은 값 하나</pre>
-                                </div>
-                            </div>
                             <div class="story">
                                 <div class="story-label">🔧 적용 사항</div>
                                 <p>
