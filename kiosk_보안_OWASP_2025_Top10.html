@@ -3891,8 +3891,8 @@ if (updated.count() > MAX_ATTEMPTS) {
                         <div class="story">
                             <div class="story-label">🔧 적용 사항</div>
                             <p>
-                                1. <strong>백엔드가 자기 상태를 게시하게 함</strong> — <code>pom.xml</code>에 라이브러리 2개(Actuator, Micrometer)를 추가하고,
-                                <code>application.yml</code>에서 어떤 정보를 어느 주소(<code>/actuator/prometheus</code>)에 공개할지 정했다.<br>
+                                1. <strong>백엔드에 상태 확인용 주소 추가</strong> — <code>pom.xml</code>에 라이브러리 2개(Actuator, Micrometer)를 추가하고,
+                                <code>application.yml</code>에서 어떤 정보를 <code>/actuator/prometheus</code> 주소로 제공할지 정했다.<br>
                                 2. <strong>매니저 EC2가 수집하고 그래프로 보여줌</strong> — <code>docker-compose.yml</code>로 수집 도구(Prometheus)와
                                 그래프·알림 도구(Grafana)를 실행하고, <code>prometheus.yml</code>로 백엔드 주소를 5초마다 읽으라고 지시했다.<br>
                                 3. <strong>로그인 공격 시도가 감지되면 Discord로 자동 알림</strong> — ③의 LoginRateLimitFilter는 한 IP에서
