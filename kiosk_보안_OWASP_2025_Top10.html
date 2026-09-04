@@ -3184,7 +3184,7 @@ async function login() {
                     <div class="section-header a08">
                         <span class="owasp-badge badge-a08">A08:2025</span>
                         <h2>소프트웨어 및 데이터 무결성 실패 (Software or Data Integrity Failures)</h2>
-                        <p class="subtitle">지금 다운로드해서 실행하는 코드가 "진짜 그 코드"인지 지문(해시·서명)으로 확인하는 절차</p>
+                        <p class="subtitle">외부에서 받아오는 라이브러리와 Docker 이미지가 변조되지 않았는지 해시값으로 확인하는 절차</p>
                     </div>
                     <div class="section-body">
 
@@ -3212,206 +3212,40 @@ async function login() {
                             </div>
                         </div> -->
 
-                        <!-- ① Docker 이미지 digest 고정 -->
+                        <!-- ① 의존성 해시 검증 (npm ci + Maven strict checksums) -->
                         <div class="item" id="a08-1">
-                            <div class="item-title">① "어제 받은 프로그램과 오늘 받은 프로그램이 다를 수 있다" — Docker 이미지 digest 고정
-                                (docker-compose.yml)</div>
-                            <!-- <p class="term-note"><strong>digest</strong>란 이미지 내용 전체를 요약한 sha256 지문이다. 태그(<code>latest</code>,
-                                <code>8.0</code>)는 "이름표"라서 가리키는 내용물이 바뀔 수 있지만, digest는 <strong>내용이 1바이트만 달라져도 값이 완전히
-                                    달라진다.</strong></p> -->
-
-                            <div class="story">
-                                <div class="story-label">📖 이런 상황이 있었다</div>
-                                <p>
-                                    사용 중인 DB 관리 도구인 Adminer를 <code>docker-compose.yml</code>에서 <span
-                                        class="hl-red">adminer:latest</span>로 받고 있다. <code>latest</code>는 "그 순간 가장
-                                    최신"이라는
-                                    이름표일 뿐이라, <span class="hl-red">오늘 pull한 이미지와 다음 달 pull한 이미지의 내용물이 다를 수 있고, 무엇이 달라졌는지
-                                        검증하는
-                                        절차도 없다.</span>
-                                </p>
-                            </div>
-                            <div class="story">
-                                <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
-                                <p>
-                                    Docker Hub의 Adminer 배포 계정이 해킹당해 악성 이미지가 올라오면(실제로 인기 이미지 계정 탈취 사고가 여러 번 있었다), 개발자는
-                                    다음 <code>docker compose pull</code> 때 <span class="hl-red">그 악성 코드를 아무 확인 없이
-                                        실행</span>하게
-                                    된다. 심지어 Adminer는 <strong>DB 접속 정보를 다루는 컨테이너</strong>라 피해가 가장 큰 자리이다. DB인
-                                    <code>mysql:8.0</code>도 마이너 버전이 계속 바뀌는 "움직이는 태그"라 같은 문제가 있다.
-                                </p>
-                            </div>
-
-                            <div class="flow">
-                                <div class="flow-item situation"><span class="step-label">📍 상황</span>compose가
-                                    latest/8.0
-                                    태그로 이미지를 pull함</div>
-                                <div class="flow-arrow">→</div>
-                                <div class="flow-item problem"><span class="step-label">🚨 문제</span>태그의 내용물이 바뀌어도 검증 없이
-                                    그대로 실행</div>
-                                <div class="flow-arrow">→</div>
-                                <div class="flow-item apply"><span class="step-label">🔧 적용</span>이미지를 sha256 digest로 고정
-                                </div>
-                                <div class="flow-arrow">→</div>
-                                <div class="flow-item result"><span class="step-label">✅ 결과</span>내용이 1바이트라도 다르면 pull
-                                    자체가
-                                    실패</div>
-                            </div>
-
-                            <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> docker-compose.yml —
-                                    문제가 있었던 코드 (변경 전)</div>
-                                <pre><code class="language-yaml">services:
-  mysql:
-    image: mysql:8.0        # "8.0"이라는 이름표만 지정 - 가리키는 내용물이 바뀌어도 모름
-  adminer:
-    image: adminer:latest   # 매 pull마다 무엇이 올지 모름 + 받은 것을 검증하는 절차 없음</code></pre>
-                            </div>
-
-                            <!-- <div class="compare">
-                                <div class="compare-box before">
-                                    <div class="compare-label">❌ 태그만 사용 (내용물 검증 없음)</div>
-                                    <pre>image: adminer:latest
-
-→ "latest"라는 이름표만 믿고 받음
-→ 배포 계정이 해킹되면
-  악성 이미지도 그대로 실행
-→ 언제 무엇이 바뀌었는지 모름</pre>
-                                </div>
-                                <div class="compare-box after">
-                                    <div class="compare-label">✅ digest 고정 (지문 일치해야만 실행)</div>
-                                    <pre>image: adminer@sha256:9ab...f21
-
-→ 내용의 sha256 지문까지 지정
-→ 지문이 다르면 Docker가
-  pull 단계에서 거부
-→ 업데이트는 내가 지문을 바꿀 때만</pre>
-                                </div>
-                            </div> -->
-
-                            <!-- <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> 1단계 — 지금 쓰는 이미지의 digest 확인
-                                    (터미널)</div>
-                                <pre><code class="language-bash"># 이미지를 받고, 그 이미지의 digest(지문)를 확인한다
-docker compose pull
-docker inspect --format '{{index .RepoDigests 0}}' adminer:latest
-# 출력 예: adminer@sha256:9ab4c1...(64자리 지문)
-docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
-# 출력 예: mysql@sha256:04f3...(64자리 지문)</code></pre>
-                            </div> -->
-
-                            <div class="code-block">
-                                <div class="code-label"><span class="dot dot-r"></span><span
-                                        class="dot dot-y"></span><span class="dot dot-g"></span> docker-compose.yml에
-                                    digest 고정 (실제 적용 코드) — (변경 후)</div>
-                                <pre><code class="language-yaml">services:
-  mysql:
-    # 태그 뒤에 @sha256:... 을 붙이면 Docker는 태그가 아니라 digest로 검증한다
-    # (태그는 사람이 읽기 위한 주석 역할로 남겨둔다)
-    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
-
-  adminer:
-    # latest 태그 제거 → 검증된 지문으로만 실행
-    image: adminer@sha256:043db066c4532719f49e35355a620f0bbe48fc862f6bfccda72f441b162f092e</code></pre>
-                            </div>
-                            <div class="story">
-                                <div class="story-label">🧪 실제 테스트 실행</div>
-
-                                <div class="compare">
-                                    <div class="compare-box before">
-                                        <div class="compare-label">❌ 태그만 사용 (내용물 검증 없음)</div>
-                                        <pre>image: adminer:latest
-
-→ "latest"라는 이름표만 믿고 받음
-→ 배포 계정이 해킹되면
-  악성 이미지도 그대로 실행
-→ 언제 무엇이 바뀌었는지 모름</pre>
-                                    </div>
-                                    <div class="compare-box after">
-                                        <div class="compare-label">✅ digest 고정 (지문 일치해야만 실행)</div>
-                                        <pre>image: adminer@sha256:9ab...f21
-
-→ 내용의 sha256 지문까지 지정
-→ 지문이 다르면 Docker가
-  pull 단계에서 거부
-→ 업데이트는 내가 지문을 바꿀 때만</pre>
-
-                                    </div>
-                                    <div class="code-block">
-                                        <div class="code-label"><span class="dot dot-r"></span><span
-                                                class="dot dot-y"></span><span class="dot dot-g"></span> 테스트 — 지금 쓰는
-                                            이미지의 digest 확인
-                                            (터미널)</div>
-                                        <pre><code class="language-bash"># 이미지를 받고, 그 이미지의 digest(지문)를 확인한다
-docker compose pull
-docker inspect --format '{{index .RepoDigests 0}}' adminer:latest
-# 출력 예: adminer@sha256:9ab4c1...(64자리 지문)
-docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
-# 출력 예: mysql@sha256:04f3...(64자리 지문)</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="improve">
-                                <div class="improve-title">✨ 결론</div>
-                                <p>이미지 주소 뒤에 <span class="hl-green">@sha256 지문을 붙이는 것만으로</span>, 공급자 쪽에서 이미지가 바꿔치기되어도 우리
-                                    서버는 <b>pull 단계에서 거부</b>하게 되었다. 업데이트가 필요할 때는 새 버전의 지문을 확인하고 우리가 직접 지문을 갱신한다 —
-                                    즉 <b>"자동으로 바뀌는 것"에서 "우리가 승인해야 바뀌는 것"</b>으로 통제권이 넘어왔다.</p>
-                            </div>
-
-                            <div class="summary">
-                                <div class="summary-title">💡 핵심 정리</div>
-                                <ul>
-                                    <li>태그 = <span class="hl-red">이름표</span> (내용물이 바뀔 수 있음) / digest = <span
-                                            class="hl-green">내용물의 지문</span> (바뀌면 값이 달라짐)</li>
-                                    <li>backend/frontend의 Dockerfile 베이스 이미지(<code>maven:3.9</code>,
-                                        <code>node:20-alpine</code> 등)도 같은 원리로 고정할 수 있음 (심화)
-                                    </li>
-                                    <li>digest를 고정하면 업데이트를 놓칠 수 있으므로, <span class="hl-blue">dependabot.yml에 docker 생태계를
-                                            추가</span>해 새 지문 갱신 PR을 자동으로 받는 것까지가 한 세트</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <hr class="divider">
-
-                        <!-- ② 의존성 지문 검증 (npm ci + Maven strict checksums) -->
-                        <div class="item" id="a08-2">
-                            <div class="item-title">② 라이브러리 다운로드가 변조되어도 빌드가 통과하던 문제 — 의존성 지문 검증 적용 (npm ci ·
+                            <div class="item-title">① 라이브러리 다운로드가 변조되어도 빌드가 통과하던 문제 — 의존성 해시 검증 적용 (npm ci ·
                                 Maven -C)</div>
 
                             <div class="story">
                                 <div class="story-label">📖 이런 상황이 있었다</div>
                                 <p>
                                     빌드할 때마다 서비스는 수십 개의 라이브러리를 외부 저장소(npm registry, Maven Central)에서 다운로드해서 결과물 안에 넣는다.
-                                    그런데 <span class="hl-red">받아온 파일이 원본 그대로인지 확인하는 장치가 양쪽 모두 없다.</span> 다운로드 과정에서
-                                    라이브러리가 변조되거나 손상돼도, 그 코드가 <span class="hl-red">아무도 모른 채 서버 결과물 안에 들어가는</span> 상태이다.
+                                    그런데 <span class="hl-red">받아온 파일이 원본과 같은지 확인하는 절차가 프론트엔드와 백엔드 모두에 없다.</span> 다운로드 과정에서
+                                    라이브러리가 변조되거나 손상되어도, 그 코드가 <span class="hl-red">확인되지 않은 채 빌드 결과물에 포함되는</span> 상태이다.
                                 </p>
-                            </div>
-                            <div class="story">
+                                </div>
+                                <div class="story">
                                 <div class="story-label" style="background: #ef4444;">🚨 문제점 분석</div>
                                 <p>
                                     프론트엔드의 <code>npm install</code>은 상황에 따라 lock 파일과 다른 버전을 새로 받아올 수 있고, 백엔드 Maven은 체크섬
                                     파일(.sha1)을 함께 받긴 하지만 <span class="hl-red">기본 설정이 "불일치해도 경고(WARNING) 로그만 남기고 빌드를 계속
-                                        진행"</span>된다. 그래서 양쪽 빌드 모두 <span class="hl-green">"지문이 다르면 빌드 실패"</span>가 되도록
-                                    잠갔다.
+                                        진행"</span>된다. 그래서 양쪽 빌드 모두 <span class="hl-green">"해시값이 다르면 빌드 실패"</span>가 되도록
+                                    설정했다.
                                 </p>
                             </div>
 
                             <div class="flow">
-                                <div class="flow-item situation"><span class="step-label">📍 상황</span>빌드 때 외부 저장소에서
-                                    라이브러리
+                                <div class="flow-item situation"><span class="step-label">📍 상황</span>빌드 때 외부 저장소에서 라이브러리
                                     수십 개 다운로드</div>
                                 <div class="flow-arrow">→</div>
                                 <div class="flow-item problem"><span class="step-label">🚨 문제</span>변조·손상돼도 검증 없이 결과물에
                                     포함됨</div>
                                 <div class="flow-arrow">→</div>
-                                <div class="flow-item apply"><span class="step-label">🔧 적용</span>npm ci + Maven -C로 지문
+                                <div class="flow-item apply"><span class="step-label">🔧 적용</span>npm ci + Maven -C로 해시
                                     검증 강제</div>
                                 <div class="flow-arrow">→</div>
-                                <div class="flow-item result"><span class="step-label">✅ 결과</span>지문 불일치 = 빌드 실패로 즉시 차단
+                                <div class="flow-item result"><span class="step-label">✅ 결과</span>해시 불일치 = 빌드 실패로 즉시 차단
                                 </div>
                             </div>
 
@@ -3422,7 +3256,7 @@ docker inspect --format '{{index .RepoDigests 0}}' mysql:8.0
 expected abc123 but is def456
   - simplemagic-1.17.jar
 
-BUILD SUCCESS   ← 변조됐는데 성공!</pre>
+BUILD SUCCESS   ← 변조된 파일이 포함된 채 빌드 성공</pre>
                                 </div>
                                 <div class="compare-box after">
                                     <div class="compare-label">✅ -C 적용 후 (불일치 = 실패)</div>
@@ -3430,80 +3264,78 @@ BUILD SUCCESS   ← 변조됐는데 성공!</pre>
 expected abc123 but is def456
   - simplemagic-1.17.jar
 
-BUILD FAILURE   ← 즉시 차단되어
-                  오염된 jar가 만들어지지 않음</pre>
+BUILD FAILURE   ← 빌드가 중단되어
+                  변조된 jar가 만들어지지 않음</pre>
                                 </div>
                             </div> -->
+
+                            <div class="term-note"><strong>package-lock.json</strong>: 개발할 때 실제로 설치된 라이브러리의 정확한 버전과 파일 해시값(<code>integrity</code>)을 npm이 자동 기록한 파일<br>· <strong>npm ci</strong>: 이 기록대로만 설치하고, 받아온 파일의 해시값이 기록과 다르면 설치를 중단하는 명령</div>
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span> frontend/Dockerfile —
-                                    npm install 대신 npm ci로 지문 검증 강제</div>
-                                <pre><code class="language-docker"># 변경 전: install은 상황에 따라 lock 파일과 다른 버전을 새로 받아올 수 있다
-RUN npm install
+                                    npm install 대신 npm ci로 해시 검증 강제</div>
+                                <pre><code class="language-docker"># 변경 전
+RUN npm install                          # 라이브러리 설치. 버전이 범위로 적혀 있어 그때그때 최신을 받아올 수 있음
 
-# 변경 후: ci는 package-lock.json에 기록된 버전·지문(integrity: sha512)대로만 설치하고,
-#          지문이 다른 패키지가 오면 EINTEGRITY 에러로 설치 자체를 실패시킨다
-COPY package.json package-lock.json ./
-RUN npm ci</code></pre>
+# 변경 후
+COPY package.json package-lock.json ./   # lock 파일을 이미지 안으로 복사 (npm ci는 이 파일이 없으면 실행되지 않음)
+RUN npm ci                               # lock 파일에 기록된 버전·해시값대로만 설치. 해시값이 다르면 설치 중단</code></pre>
                             </div>
+
+                            <div class="term-note"><strong>체크섬(.sha1)</strong>: Maven Central이 라이브러리 파일마다 함께 제공하는 해시값. Maven은 다운로드 후 이 값과 비교하지만 기본 설정은 틀려도 경고만 남기고 계속 진행<br>· <strong>-C (--strict-checksums)</strong>: 체크섬이 틀리면 빌드를 실패시키는 옵션</div>
 
                             <div class="code-block">
                                 <div class="code-label"><span class="dot dot-r"></span><span
                                         class="dot dot-y"></span><span class="dot dot-g"></span> backend/Dockerfile —
                                     Maven에 -C 옵션 추가 (두 글자)</div>
                                 <pre><code class="language-docker"># 변경 전
-RUN mvn -B dependency:go-offline
+RUN mvn -B dependency:go-offline         # 라이브러리 전부 미리 다운로드 (-B: 화면 출력 최소화, 보안과 무관)
 ...
-RUN mvn -B -DskipTests package
+RUN mvn -B -DskipTests package           # 소스를 컴파일해 jar로 묶음 (빠진 라이브러리가 있으면 여기서도 다운로드)
 
-# 변경 후: -C(--strict-checksums) = 체크섬 불일치 시 빌드 실패
-RUN mvn -B -C dependency:go-offline
+# 변경 후: 라이브러리를 받는 두 단계 모두에 -C 추가
+RUN mvn -B -C dependency:go-offline      # -C: 받은 파일의 체크섬이 다르면 경고가 아니라 빌드 실패
 ...
 RUN mvn -B -C -DskipTests package</code></pre>
                             </div>
 
                             <div class="story">
                                 <div class="story-label">🧪 실제 테스트 실행</div>
-                                <div class="compare">
-                                    <div class="compare-box before">
-                                        <div class="compare-label">❌ 기본 설정 (경고 후 통과)</div>
-                                        <pre>[WARNING] Checksum validation failed,
-expected abc123 but is def456
-  - simplemagic-1.17.jar
-
-BUILD SUCCESS   ← 변조됐는데 성공!</pre>
+                                <p>백엔드: 라이브러리 <code>simplemagic-1.17.jar</code>의 체크섬 파일(<code>.sha1</code>)을 다르게 바꾼 뒤,
+                                    같은 상태에서 <code>-C</code> 없이 한 번, <code>-C</code>를 붙여 한 번 빌드했다.</p>
+                                <div class="screenshot-row">
+                                    <div class="screenshot-item before-evidence">
+                                        <div class="screenshot-label">📷 변경 전 — 체크섬 불일치 경고만 남기고 BUILD SUCCESS</div>
+                                        <img src="A08-2-maven-before.png" alt="mvn 기본 설정: Checksum validation failed 경고 후 BUILD SUCCESS">
                                     </div>
-                                    <div class="compare-box after">
-                                        <div class="compare-label">✅ -C 적용 후 (불일치 = 실패)</div>
-                                        <pre>[ERROR] Checksum validation failed,
-expected abc123 but is def456
-  - simplemagic-1.17.jar
-
-BUILD FAILURE   ← 즉시 차단되어
-                  오염된 jar가 만들어지지 않음</pre>
+                                    <div class="screenshot-item">
+                                        <div class="screenshot-label">📷 변경 후 — -C 옵션으로 같은 상황에서 BUILD FAILURE</div>
+                                        <img src="A08-2-maven-after.png" alt="mvn -C: Checksum validation failed로 BUILD FAILURE">
+                                    </div>
+                                </div>
+                                <p style="margin-top:18px;">프론트엔드: <code>package-lock.json</code>의 vue 해시값(<code>integrity</code>) 끝자리를 일부러 바꾼 뒤 <code>npm ci</code>를 실행했다.</p>
+                                <div class="screenshot-single">
+                                    <div class="screenshot-item">
+                                        <div class="screenshot-label">📷 npm ci — 기록된 해시값과 다르면 오류로 설치 중단</div>
+                                        <img src="A08-2-npm-ci.png" alt="npm ci 실행 결과: EINTEGRITY integrity checksum failed">
                                     </div>
                                 </div>
                             </div>
 
                             <div class="improve">
                                 <div class="improve-title">✨ 결론</div>
-                                <p>프론트엔드는 <span class="hl-green">npm ci</span>로 lock 파일의 sha512 지문 검증을 강제하고, 백엔드는
-                                    <span class="hl-green">-C 옵션</span>으로 "경고하고 통과"를 <b>"불일치면 빌드 실패"</b>로 바꿨다. 이제
-                                    npm(프론트)과 Maven(백엔드) <b>양쪽 모두</b> 지문이 맞지 않는 코드는 빌드 결과물에 들어올 수 없다.
-                                </p>
+                                <p>프론트엔드는 <span class="hl-green">npm ci</span>, 백엔드는 <span class="hl-green">-C 옵션</span>을 적용해
+                                    <b>해시값이 다른 라이브러리가 오면 빌드가 실패</b>하도록 했다. 변조된 라이브러리는 이제 빌드 결과물에 들어갈 수 없다.</p>
                             </div>
 
                             <div class="summary">
                                 <div class="summary-title">💡 핵심 정리</div>
                                 <ul>
-                                    <li>npm: <span class="hl-red">install(lock과 달라질 수 있음)</span> → <span
-                                            class="hl-green">ci(lock의 sha512 지문 강제)</span>로 교체</li>
-                                    <li>Maven: 기본값 <span class="hl-red">warn(경고만)</span> → <span class="hl-green">-C로
-                                            fail(실패)</span>로 승격</li>
-                                    <li>같은 "무결성 검증"이라도 생태계마다 기본값이 다르므로, <span class="hl-blue">빌드 경로마다 하나씩 확인</span>하는 것이
-                                        A08 점검의 핵심</li>
-                                </ul>
+                                    <li>프론트(npm): <span class="hl-red">npm install</span>은 최신 버전을 받아올 수 있음 → <span
+                                            class="hl-green">npm ci</span>는 lock 파일에 기록된 버전·해시값 그대로만 설치</li>
+                                    <li>백엔드(Maven): 해시값이 틀려도 <span class="hl-red">경고만 하고 빌드 성공</span> → <span class="hl-green">-C 옵션</span>을 붙이면
+                                        빌드 실패</li>                                </ul>
                             </div>
                         </div>
 
@@ -4027,20 +3859,17 @@ if (updated.count() > MAX_ATTEMPTS) {
                         <div class="story">
                             <div class="story-label">📖 이런 상황이 있었다</div>
                             <p>
-                                AWS에 배포를 마친 뒤 서버가 잘 돌고 있는지 확인할 방법이
-                                <span class="hl-red">SSH로 접속해서 <code>docker logs</code>를 직접 읽는 것뿐</span>이었다.
-                                요청이 몰리는지, 응답이 느려졌는지, 메모리가 차오르는지를 한눈에 볼 화면이 없고,
-                                서버가 멈춰도 사용자가 말해주기 전까지 알 수 없다.
+                                AWS에 배포를 마친 뒤 서버가 잘 돌고 있는지 확인하려면
+                                <span class="hl-red">SSH로 접속해 직접 확인하는 방법뿐</span>이었다.
+                                서버 상태를 한눈에 볼 화면이 없어, 서버가 멈춰도 사용자가 알려주기 전까지 모른다.
                             </p>
                         </div>
 
                         <div class="story">
                             <div class="story-label">🚨 문제점 분석</div>
                             <p>
-                                로그는 "무슨 일이 있었는지"를 한 줄씩 남길 뿐, <span class="hl-red">"지금 서버가 어떤 상태인지"</span>
-                                — 초당 요청 수, 응답시간, 메모리·CPU 사용량 — 를 숫자로 보여주지 못한다.
-                                이 수치를 수집하고 저장하고 그래프로 보여주는 도구가 없어서,
-                                장애와 성능 저하를 항상 사후에, 그것도 로그를 뒤져서야 알 수 있는 상태였다.
+                                로그는 "무슨 일이 있었는지"를 한 줄씩 남길 뿐, <span class="hl-red">"지금 서버가 어떤 상태인지"</span>를 숫자로 보여주지 못한다.
+                                이 수치를 수집해 그래프로 보여주는 도구가 없어서, 장애가 나도 나중에 로그를 뒤져야 알 수 있었다.
                             </p>
                         </div>
 
@@ -4062,30 +3891,27 @@ if (updated.count() > MAX_ATTEMPTS) {
                         <div class="story">
                             <div class="story-label">🔧 적용 사항</div>
                             <p>
-                                1. <strong>백엔드에 상태 확인용 주소를 추가함</strong> — 의존성 2개(Actuator, Micrometer)를 추가하면
-                                백엔드에 <code>/actuator/prometheus</code>라는 주소가 새로 생긴다.
-                                이 주소에 접속하면 지금까지 받은 요청 수, 응답시간, 메모리 사용량 같은 서버 상태가 숫자 목록으로 나온다.<br>
-                                2. <strong>매니저 EC2가 수집하고 그래프로 보여줌</strong> — 항상 켜 두는 매니저 EC2에서
-                                Prometheus와 Grafana를 컨테이너로 실행했다. Prometheus가 15초마다 백엔드의 위 주소를 읽어 저장하고,
-                                Grafana가 그 숫자를 그래프로 그린다.<br>
-                                3. <strong>외부에서는 볼 수 없게 함</strong> — 상태 주소는 내부 서버에서만 접근할 수 있어 인터넷에서는 닿을 수 없고,
-                                Grafana 화면(3000)은 내 IP에만 열었으며, Prometheus(9090)는 아예 열지 않았다.<br>
-                                4. <strong>백엔드가 다운되면 Discord로 자동 알림</strong> — Prometheus는 15초마다 백엔드에 접속해 상태를 읽어 가는데,
-                                백엔드가 다운되면 이 접속부터 실패한다. <span class="hl-green">접속 실패가 1분 넘게 이어지면 Grafana가 Discord 채널로
-                                    "백엔드 다운" 알림 메시지를 보내는 규칙(backend-down)</span>을 만들었다.
-                                즉 대시보드를 보고 있지 않아도, 백엔드가 죽으면 1분 안에 Discord로 알게 된다.
+                                1. <strong>백엔드가 자기 상태를 게시하게 함</strong> — <code>pom.xml</code>에 라이브러리 2개(Actuator, Micrometer)를 추가하고,
+                                <code>application.yml</code>에서 어떤 정보를 어느 주소(<code>/actuator/prometheus</code>)에 공개할지 정했다.<br>
+                                2. <strong>매니저 EC2가 수집하고 그래프로 보여줌</strong> — <code>docker-compose.yml</code>로 수집 도구(Prometheus)와
+                                그래프·알림 도구(Grafana)를 실행하고, <code>prometheus.yml</code>로 백엔드 주소를 5초마다 읽으라고 지시했다.<br>
+                                3. <strong>로그인 공격 시도가 감지되면 Discord로 자동 알림</strong> — ③의 LoginRateLimitFilter는 한 IP에서
+                                로그인을 10번 넘게 시도하면 429 응답을 돌려준다. <span class="hl-green">이 429 응답이 발생하면 Grafana가 Discord로
+                                "로그인 공격 감지" 알림을 보내는 규칙(login-attack)</span>을 만들었다. 대시보드를 보고 있지 않아도 공격을 바로 알 수 있다.
                             </p>
                         </div>
 
                         <div class="code-block">
                             <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span> pom.xml — 실제 적용 코드</div>
-                            <pre><code class="language-markup">&lt;!-- 앱 상태를 /actuator/* 주소로 게시하는 기능 --&gt;
+                                    class="dot dot-g"></span> ① pom.xml (백엔드 저장소)</div>
+                            <pre><code class="language-markup">&lt;!-- [모니터링] Actuator: 서버가 잘 돌아가는지 보여주는 정보(요청 수, 응답 시간,
+     메모리 사용량, DB 연결 상태)를 /actuator/* 주소에서 볼 수 있게 한다. --&gt;
 &lt;dependency&gt;
     &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
     &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
 &lt;/dependency&gt;
-&lt;!-- 그 상태를 Prometheus가 읽는 형식으로 변환 --&gt;
+&lt;!-- [모니터링] Micrometer: 위 정보를 Prometheus가 읽을 수 있는 형식으로 바꿔
+     /actuator/prometheus 주소로 제공한다. --&gt;
 &lt;dependency&gt;
     &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
     &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
@@ -4094,58 +3920,84 @@ if (updated.count() > MAX_ATTEMPTS) {
 
                         <div class="code-block">
                             <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span> application.yml — 실제 적용 코드</div>
-                            <pre><code class="language-yaml">management:
+                                    class="dot dot-g"></span> ② application.yml (백엔드 저장소)</div>
+                            <pre><code class="language-yaml"># ── 모니터링 (Actuator + Prometheus) ─────────────────────────────
+# 서버가 잘 돌아가는지 보여주는 정보를 /actuator/* 주소에서 볼 수 있게 하고,
+# Prometheus가 이 정보를 주기적으로 읽어 가면 Grafana가 그래프로 보여준다.
+management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus   # 이 4개 주소만 연다 (env 등 민감한 항목은 열지 않음)
+        # 필요한 4개만 공개한다. (health: 서버·DB 상태 / info: 기본 정보 /
+        # metrics: 정보 목록 / prometheus: Prometheus가 읽어 가는 주소)
+        # env는 비밀값이 보이고 loggers는 로그 설정을 바꿀 수 있어 공개하지 않는다.
+        include: health,info,metrics,prometheus
   metrics:
     tags:
-      application: kiosk-backend                  # 모든 숫자에 앱 이름표를 붙임 - Grafana에서 이 이름으로 조회
+      # 모든 정보에 앱 이름(kiosk-backend)을 붙여 Grafana에서 이 앱 것만 골라 본다.
+      application: kiosk-backend
   endpoint:
     health:
-      show-details: always                        # /actuator/health 에서 DB 연결 상태까지 표시</code></pre>
+      # health 응답에 DB 연결 상태 같은 자세한 내용까지 보여준다.
+      show-details: always</code></pre>
                         </div>
 
                         <div class="code-block">
                             <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
-                                    class="dot dot-g"></span> prometheus.yml (매니저 EC2) — 실제 적용 코드</div>
-                            <pre><code class="language-yaml">global:
-  scrape_interval: 15s                          # 15초마다 수집
+                                    class="dot dot-g"></span> ③ docker-compose.yml (매니저 EC2 ~/monitoring/)</div>
+                            <pre><code class="language-yaml"># ── 모니터링 도구 실행 (매니저 EC2) ─────────────────────────────
+# 백엔드 정보를 수집·저장하는 Prometheus와, 그 정보를 그래프로 보여주고
+# 알림을 보내는 Grafana 두 프로그램을 컨테이너로 실행한다.
+services:
+  prometheus:
+    image: prom/prometheus:latest        # 정보 수집·저장 담당
+    container_name: prometheus
+    restart: unless-stopped              # EC2가 재부팅돼도 자동으로 다시 실행
+    ports:
+      - "9090:9090"                      # 접속 포트(외부는 보안그룹이 막아 내부 점검용)
 
+  grafana:
+    image: grafana/grafana:latest        # 그래프 표시·알림 담당
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"                      # Grafana 웹 화면 접속 포트
+    depends_on:
+      - prometheus                       # Prometheus가 먼저 실행된 뒤 시작</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="code-label"><span class="dot dot-r"></span><span class="dot dot-y"></span><span
+                                    class="dot dot-g"></span> ④ prometheus.yml (매니저 EC2 ~/monitoring/)</div>
+                            <pre><code class="language-yaml"># ── 수집 설정 (매니저 EC2) ─────────────────────────────
+# Prometheus에게 "백엔드의 어느 주소를, 몇 초마다 읽을지" 알려준다.
 scrape_configs:
-  - job_name: 'kiosk-backend'
-    metrics_path: '/actuator/prometheus'        # 읽어올 주소
+  - job_name: 'kiosk-backend'            # 이 수집 작업의 이름(Grafana에서 이 이름으로 조회)
+    scrape_interval: 5s                  # 5초마다 수집
+    metrics_path: '/actuator/prometheus' # 백엔드가 정보를 게시하는 주소(②에서 연 그 주소)
     static_configs:
-      - targets: ['&lt;백엔드프라이빗IP&gt;:8080']    # 같은 VPC 안이라 프라이빗 IP로 직접 접근</code></pre>
+      - targets: ['172.31.43.129:8080']  # 수집 대상 = 백엔드 EC2의 내부 IP(같은 VPC라 인터넷 안 거침)</code></pre>
                         </div>
 
                         <div class="test-execution">
                             <div class="test-execution-title">🧪 실제 테스트 실행</div>
                             <p>
-                                Grafana에 공개 대시보드 템플릿을 가져와
-                                가동 시간·메모리·CPU 그래프를 연결하고, 하단에 우리 서비스에 맞는 패널 2개를 직접 추가했다.
-                            </p>
-
-                            <p>
-                                하단 두 패널은 직접 추가한 것이다 — <strong>초당 HTTP 요청 수</strong>(지금 서버에 요청이 얼마나 들어오는가)와
-                                <strong>평균 응답시간</strong>(요청 하나를 처리하는 데 걸리는 시간).
+                                PowerShell에서 운영 서버의 로그인 주소로 틀린 비밀번호를 15번 연속 보냈다.
+                                11번째부터 429 응답이 돌아오자 Grafana 그래프에 429 발생량이 나타나고,
+                                규칙 상태가 <strong>Firing</strong>(발동)으로 바뀌면서 Discord로 알림이 갔다.
                             </p>
 
                             <div class="screenshot-single">
                                 <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 운영 대시보드 — 상단: 템플릿 기본 패널(Uptime·Heap·CPU) / 하단: 직접
-                                        추가한 초당 HTTP 요청 수·평균 응답시간</div>
-                                    <img src="grafana-panels.png" alt="그라파나 대시보드: 초당 HTTP 요청 수와 평균 응답시간 그래프">
+                                    <div class="screenshot-label">📷 Grafana 규칙 화면 — 로그인 15회 시도 직후 429 응답이 발생해 규칙이 Firing 상태로 바뀐 모습</div>
+                                    <img src="grafana-panels.png" alt="Grafana login-attack 규칙: 429 응답 비율 그래프가 급증하며 Firing 상태">
                                 </div>
                             </div>
 
                             <div class="screenshot-single">
                                 <div class="screenshot-item">
-                                    <div class="screenshot-label">📷 Discord 자동 알림 — backend-down 규칙 발동 확인 (instance =
-                                        백엔드 프라이빗 IP)</div>
-                                    <img src="discord-alert.png" alt="Grafana가 Discord로 보낸 backend-down 알림 메시지">
+                                    <div class="screenshot-label">📷 한 IP에서 로그인을 15회 연속 시도하자 Grafana가 Discord로 보낸 "로그인 공격 감지" 알림</div>
+                                    <img src="discord-alert.png" alt="Grafana가 Discord로 보낸 login-attack 알림 메시지">
                                 </div>
                             </div>
 
@@ -4154,22 +4006,16 @@ scrape_configs:
                         <div class="improve">
                             <div class="improve-title">✨ 결론</div>
                             <p>
-                                ①~③의 로그가 <span class="hl-green">"무슨 일이 있었는지"</span>를 남긴다면,
-                                모니터링은 <span class="hl-green">"지금 서버가 어떤 상태인지"</span>를 실시간 그래프로 보여준다.
-                                이제 장애와 성능 저하를 사용자 신고 이전에 발견할 수 있고,
-                                배포 이후 안정 운영 여부를 데이터로 판단할 수 있다.
-                                백엔드가 1분 넘게 응답하지 않으면 Discord 알림까지 자동으로 도착하므로, 대시보드를 보고 있지 않아도 장애를 즉시 알 수 있다.
+                                전에는 SSH로 접속해 직접 확인해야 했지만, 이제는 서버 상태를 <span class="hl-green">실시간 그래프</span>로 보고
+                                로그인 공격은 <span class="hl-green">Discord 알림</span>으로 바로 안다.
                             </p>
                         </div>
 
                         <div class="summary">
                             <div class="summary-title">💡 핵심 정리</div>
                             <ul>
-                                <li>백엔드는 <span class="hl-blue">의존성 2개 + 설정 몇 줄</span>로 자기 상태를 숫자로 게시한다 (Actuator +
-                                    Micrometer)</li>
-                                <li>매니저 EC2의 Prometheus가 15초마다 수집하고, Grafana가 그래프로 보여준다</li>
-                                <li>백엔드가 <span class="hl-blue">1분 넘게 응답이 없으면</span> Grafana가 <span
-                                        class="hl-green">Discord로 자동 알림</span>을 보낸다 (backend-down 규칙)</li>
+                                <li>백엔드(Actuator)가 상태 정보를 제공 → 매니저 EC2(Prometheus)가 5초마다 수집 → Grafana가 <span class="hl-blue">그래프로 표시</span></li>
+                                <li>로그인 10회 초과로 <span class="hl-blue">429 응답이 발생하면</span> Grafana 규칙이 발동해 <span class="hl-green">Discord로 자동 알림</span></li>
                             </ul>
                         </div>
                     </div>
